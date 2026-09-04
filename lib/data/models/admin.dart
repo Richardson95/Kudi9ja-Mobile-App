@@ -1,0 +1,207 @@
+/// What an admin is allowed to do. Roles are hierarchical: an owner can do
+/// everything, a viewer can only look.
+enum AdminRole { owner, admin, support, viewer }
+
+extension AdminRoleX on AdminRole {
+  String get label => switch (this) {
+    AdminRole.owner => 'Owner',
+    AdminRole.admin => 'Administrator',
+    AdminRole.support => 'Support',
+    AdminRole.viewer => 'Viewer',
+  };
+
+  String get blurb => switch (this) {
+    AdminRole.owner =>
+      'Full control, including rates and managing the admin team',
+    AdminRole.admin => 'Everything except adding or removing other admins',
+    AdminRole.support => 'View customers and act on loans; cannot change rates',
+    AdminRole.viewer => 'Read-only access to the panel',
+  };
+
+  /// Can change platform rates, limits and feature switches.
+  bool get canEditSettings =>
+      this == AdminRole.owner || this == AdminRole.admin;
+
+  /// Can add, demote or remove other admins.
+  bool get canManageTeam => this == AdminRole.owner;
+
+  /// Can approve, decline or write off a loan.
+  bool get canActOnLoans => this != AdminRole.viewer;
+
+  /// Can open a customer's full record.
+  bool get canViewCustomers => true;
+}
+
+/// Someone with access to the admin panel. Membership is by email — whoever
+/// signs in with a listed address gets the panel.
+class AdminUser {
+  AdminUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.addedAt,
+    this.phone = '',
+    this.addedBy = '',
+    this.active = true,
+    this.lastActive,
+  });
+
+  final String id;
+  final String name;
+  final String email;
+  final String phone;
+  final AdminRole role;
+  final DateTime addedAt;
+  final String addedBy;
+  final bool active;
+  final DateTime? lastActive;
+
+  AdminUser copyWith({AdminRole? role, bool? active, DateTime? lastActive}) =>
+      AdminUser(
+        id: id,
+        name: name,
+        email: email,
+        phone: phone,
+        role: role ?? this.role,
+        addedAt: addedAt,
+        addedBy: addedBy,
+        active: active ?? this.active,
+        lastActive: lastActive ?? this.lastActive,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'role': role.index,
+    'addedAt': addedAt.toIso8601String(),
+    'addedBy': addedBy,
+    'active': active,
+    'lastActive': lastActive?.toIso8601String(),
+  };
+
+  factory AdminUser.fromJson(Map<String, dynamic> j) => AdminUser(
+    id: j['id'] as String,
+    name: j['name'] as String,
+    email: j['email'] as String,
+    phone: j['phone'] as String? ?? '',
+    role: AdminRole.values[j['role'] as int],
+    addedAt: DateTime.parse(j['addedAt'] as String),
+    addedBy: j['addedBy'] as String? ?? '',
+    active: j['active'] as bool? ?? true,
+    lastActive: j['lastActive'] == null
+        ? null
+        : DateTime.parse(j['lastActive'] as String),
+  );
+}
+
+/// An immutable record of something an admin did. Rate changes, team changes
+/// and loan decisions all land here.
+class AuditEntry {
+  AuditEntry({
+    required this.id,
+    required this.actor,
+    required this.action,
+    required this.detail,
+    required this.date,
+    this.category = AuditCategory.general,
+  });
+
+  final String id;
+  final String actor;
+  final String action;
+  final String detail;
+  final DateTime date;
+  final AuditCategory category;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'actor': actor,
+    'action': action,
+    'detail': detail,
+    'date': date.toIso8601String(),
+    'category': category.index,
+  };
+
+  factory AuditEntry.fromJson(Map<String, dynamic> j) => AuditEntry(
+    id: j['id'] as String,
+    actor: j['actor'] as String,
+    action: j['action'] as String,
+    detail: j['detail'] as String,
+    date: DateTime.parse(j['date'] as String),
+    category: AuditCategory.values[j['category'] as int? ?? 0],
+  );
+}
+
+enum AuditCategory { general, settings, team, customer, loan }
+
+extension AuditCategoryX on AuditCategory {
+  String get label => switch (this) {
+    AuditCategory.general => 'General',
+    AuditCategory.settings => 'Settings',
+    AuditCategory.team => 'Admin team',
+    AuditCategory.customer => 'Customer',
+    AuditCategory.loan => 'Lending',
+  };
+}
+
+/// A customer as the admin panel sees them.
+///
+/// The account held on this device is the only real record; [isSample] rows
+/// stand in for the wider customer base that a live API would return, and are
+/// labelled as such everywhere they appear.
+class CustomerRecord {
+  const CustomerRecord({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.phone,
+    required this.accountNumber,
+    required this.joinedAt,
+    required this.balance,
+    required this.totalSaved,
+    required this.totalOwed,
+    required this.interestPaid,
+    required this.creditScore,
+    required this.plansCount,
+    required this.loansCount,
+    this.state = '',
+    this.bvn = '',
+    this.nin = '',
+    this.address = '',
+    this.gender = '',
+    this.dateOfBirth,
+    this.verified = true,
+    this.frozen = false,
+    this.isSample = false,
+    this.isThisDevice = false,
+  });
+
+  final String id;
+  final String fullName;
+  final String email;
+  final String phone;
+  final String accountNumber;
+  final DateTime joinedAt;
+  final double balance;
+  final double totalSaved;
+  final double totalOwed;
+  final double interestPaid;
+  final int creditScore;
+  final int plansCount;
+  final int loansCount;
+  final String state;
+  final String bvn;
+  final String nin;
+  final String address;
+  final String gender;
+  final DateTime? dateOfBirth;
+  final bool verified;
+  final bool frozen;
+  final bool isSample;
+  final bool isThisDevice;
+
+  double get netWorth => balance + totalSaved;
+}
