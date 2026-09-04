@@ -82,6 +82,12 @@ choice is wrong.
    remove themselves. Self-lockout is impossible by construction.
 10. **Passcodes, PINs and passwords are never stored or transmitted in the
     clear**, and never returned by any endpoint.
+11. **Nothing is given away.** There is no sign-up bonus and no free credit.
+    A new account starts at zero with an empty ledger; every naira in a
+    wallet was paid in, earned on a savings plan, or borrowed.
+12. **The app claims no licence it does not hold.** No "licensed lender",
+    no "CBN compliant", no "NDIC insured". If that standing is obtained,
+    the claim is a deliberate content change, not a default.
 
 ---
 
@@ -817,6 +823,14 @@ make them true.
   material change to the documents.
 - **Document versioning.** Serve versioned legal documents and record which
   version each customer accepted.
+- **No unearned regulatory claims.** The app asserts no licence, no CBN
+  compliance and no NDIC cover, and a test fails the build if one reappears
+  outside the legal documents — which *deny* these things rather than claim
+  them. The onboarding footer names the company and its RC number instead.
+  If licensing is obtained, changing this is a deliberate content decision.
+- **No inducement to borrow.** There is no sign-up bonus, no free credit and
+  no promotion running. Anything introduced later is discretionary, needs
+  published rules, and the Terms already carry the clause governing it.
 
 ---
 
@@ -841,6 +855,7 @@ migration checklist.
 | **Maturity, overdue, auto-save** — lazily on app open | Scheduled jobs |
 | **Transfers** — no real recipient resolution | Name enquiry then transfer |
 | **Payout account** — unverified | Name enquiry; refuse a mismatch |
+| **Data at rest** — `shared_preferences`, unencrypted | Encrypted storage; the app no longer claims otherwise, so nothing has to be walked back |
 
 ---
 
@@ -898,6 +913,6 @@ Collection  Zenith Bank · 1018548852 · Quadrilateral Technologies Ltd
 
 ---
 
-*Generated from the Kudi9ja Flutter client at commit `3e11542`. Where this
+*Generated from the Kudi9ja Flutter client at commit `608aaaf`. Where this
 document and the code disagree, the code is the current behaviour and this
 document is the intent — reconcile deliberately, not by assumption.*
