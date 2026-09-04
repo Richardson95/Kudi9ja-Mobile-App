@@ -8,8 +8,9 @@ import '../../core/constants/app_config.dart';
 class PlatformSettings {
   const PlatformSettings({
     this.savingsAnnualRate = AppConfig.savingsAnnualRate,
-    this.minLockMonths = AppConfig.minLockMonths,
-    this.maxLockMonths = AppConfig.maxLockMonths,
+    this.minLockDays = AppConfig.minLockDays,
+    this.maxLockDays = AppConfig.maxLockDays,
+    this.daysPerYear = AppConfig.daysPerYear,
     this.minSavingsAmount = AppConfig.minSavingsAmount,
     this.targetRateShort = AppConfig.targetRateShort,
     this.targetRateMedium = AppConfig.targetRateMedium,
@@ -51,6 +52,12 @@ class PlatformSettings {
     this.creditScoreCeiling = AppConfig.creditScoreCeiling,
     this.maxPasscodeAttempts = AppConfig.maxPasscodeAttempts,
     this.lockTimeoutMinutes = AppConfig.lockTimeoutMinutes,
+    this.minDepositAmount = AppConfig.minDepositAmount,
+    this.minWithdrawalAmount = AppConfig.minWithdrawalAmount,
+    this.minCircleContribution = AppConfig.minCircleContribution,
+    this.minCircleMembers = AppConfig.minCircleMembers,
+    this.maxCircleMembers = AppConfig.maxCircleMembers,
+    this.otpResendSeconds = AppConfig.otpResendSeconds,
     this.companyAccountName = AppConfig.companyAccountName,
     this.companyAccountNumber = AppConfig.companyAccountNumber,
     this.companyBank = AppConfig.companyBank,
@@ -58,8 +65,12 @@ class PlatformSettings {
 
   // Savings ----------------------------------------------------------------
   final double savingsAnnualRate;
-  final int minLockMonths;
-  final int maxLockMonths;
+  /// Fixed Savings locks in days, not months.
+  final int minLockDays;
+  final int maxLockDays;
+
+  /// The year the annual savings rate is spread over.
+  final int daysPerYear;
   final double minSavingsAmount;
   final double targetRateShort;
   final double targetRateMedium;
@@ -125,6 +136,16 @@ class PlatformSettings {
 
   /// Idle minutes before the app locks itself.
   final int lockTimeoutMinutes;
+
+  // Pay-in, payout and thrift ----------------------------------------------
+  final double minDepositAmount;
+  final double minWithdrawalAmount;
+  final double minCircleContribution;
+  final int minCircleMembers;
+  final int maxCircleMembers;
+
+  /// Seconds before a one-time code can be resent.
+  final int otpResendSeconds;
 
   // Collection account -----------------------------------------------------
   final String companyAccountName;
@@ -232,8 +253,9 @@ class PlatformSettings {
 
   PlatformSettings copyWith({
     double? savingsAnnualRate,
-    int? minLockMonths,
-    int? maxLockMonths,
+    int? minLockDays,
+    int? maxLockDays,
+    int? daysPerYear,
     double? minSavingsAmount,
     double? targetRateShort,
     double? targetRateMedium,
@@ -275,13 +297,20 @@ class PlatformSettings {
     int? creditScoreCeiling,
     int? maxPasscodeAttempts,
     int? lockTimeoutMinutes,
+    double? minDepositAmount,
+    double? minWithdrawalAmount,
+    double? minCircleContribution,
+    int? minCircleMembers,
+    int? maxCircleMembers,
+    int? otpResendSeconds,
     String? companyAccountName,
     String? companyAccountNumber,
     String? companyBank,
   }) => PlatformSettings(
     savingsAnnualRate: savingsAnnualRate ?? this.savingsAnnualRate,
-    minLockMonths: minLockMonths ?? this.minLockMonths,
-    maxLockMonths: maxLockMonths ?? this.maxLockMonths,
+    minLockDays: minLockDays ?? this.minLockDays,
+    maxLockDays: maxLockDays ?? this.maxLockDays,
+    daysPerYear: daysPerYear ?? this.daysPerYear,
     minSavingsAmount: minSavingsAmount ?? this.minSavingsAmount,
     targetRateShort: targetRateShort ?? this.targetRateShort,
     targetRateMedium: targetRateMedium ?? this.targetRateMedium,
@@ -325,6 +354,12 @@ class PlatformSettings {
     creditScoreCeiling: creditScoreCeiling ?? this.creditScoreCeiling,
     maxPasscodeAttempts: maxPasscodeAttempts ?? this.maxPasscodeAttempts,
     lockTimeoutMinutes: lockTimeoutMinutes ?? this.lockTimeoutMinutes,
+    minDepositAmount: minDepositAmount ?? this.minDepositAmount,
+    minWithdrawalAmount: minWithdrawalAmount ?? this.minWithdrawalAmount,
+    minCircleContribution: minCircleContribution ?? this.minCircleContribution,
+    minCircleMembers: minCircleMembers ?? this.minCircleMembers,
+    maxCircleMembers: maxCircleMembers ?? this.maxCircleMembers,
+    otpResendSeconds: otpResendSeconds ?? this.otpResendSeconds,
     companyAccountName: companyAccountName ?? this.companyAccountName,
     companyAccountNumber: companyAccountNumber ?? this.companyAccountNumber,
     companyBank: companyBank ?? this.companyBank,
@@ -332,8 +367,9 @@ class PlatformSettings {
 
   Map<String, dynamic> toJson() => {
     'savingsAnnualRate': savingsAnnualRate,
-    'minLockMonths': minLockMonths,
-    'maxLockMonths': maxLockMonths,
+    'minLockDays': minLockDays,
+    'maxLockDays': maxLockDays,
+    'daysPerYear': daysPerYear,
     'minSavingsAmount': minSavingsAmount,
     'targetRateShort': targetRateShort,
     'targetRateMedium': targetRateMedium,
@@ -378,6 +414,12 @@ class PlatformSettings {
     'creditScoreCeiling': creditScoreCeiling,
     'maxPasscodeAttempts': maxPasscodeAttempts,
     'lockTimeoutMinutes': lockTimeoutMinutes,
+    'minDepositAmount': minDepositAmount,
+    'minWithdrawalAmount': minWithdrawalAmount,
+    'minCircleContribution': minCircleContribution,
+    'minCircleMembers': minCircleMembers,
+    'maxCircleMembers': maxCircleMembers,
+    'otpResendSeconds': otpResendSeconds,
     'companyAccountName': companyAccountName,
     'companyAccountNumber': companyAccountNumber,
     'companyBank': companyBank,
@@ -387,8 +429,14 @@ class PlatformSettings {
     savingsAnnualRate:
         (j['savingsAnnualRate'] as num?)?.toDouble() ??
         AppConfig.savingsAnnualRate,
-    minLockMonths: j['minLockMonths'] as int? ?? AppConfig.minLockMonths,
-    maxLockMonths: j['maxLockMonths'] as int? ?? AppConfig.maxLockMonths,
+    // Settings saved when locks were counted in months are converted at
+    // 365/12 days a month, which turns the old 1-month floor into 30 days
+    // and the old 60-month ceiling into exactly 1,825.
+    minLockDays: j['minLockDays'] as int? ?? _daysFromMonths(j['minLockMonths'])
+        ?? AppConfig.minLockDays,
+    maxLockDays: j['maxLockDays'] as int? ?? _daysFromMonths(j['maxLockMonths'])
+        ?? AppConfig.maxLockDays,
+    daysPerYear: j['daysPerYear'] as int? ?? AppConfig.daysPerYear,
     minSavingsAmount:
         (j['minSavingsAmount'] as num?)?.toDouble() ??
         AppConfig.minSavingsAmount,
@@ -456,6 +504,15 @@ class PlatformSettings {
     creditScoreCeiling: j['creditScoreCeiling'] as int? ?? AppConfig.creditScoreCeiling,
     maxPasscodeAttempts: j['maxPasscodeAttempts'] as int? ?? AppConfig.maxPasscodeAttempts,
     lockTimeoutMinutes: j['lockTimeoutMinutes'] as int? ?? AppConfig.lockTimeoutMinutes,
+    minDepositAmount:
+        (j['minDepositAmount'] as num?)?.toDouble() ?? AppConfig.minDepositAmount,
+    minWithdrawalAmount:
+        (j['minWithdrawalAmount'] as num?)?.toDouble() ?? AppConfig.minWithdrawalAmount,
+    minCircleContribution:
+        (j['minCircleContribution'] as num?)?.toDouble() ?? AppConfig.minCircleContribution,
+    minCircleMembers: j['minCircleMembers'] as int? ?? AppConfig.minCircleMembers,
+    maxCircleMembers: j['maxCircleMembers'] as int? ?? AppConfig.maxCircleMembers,
+    otpResendSeconds: j['otpResendSeconds'] as int? ?? AppConfig.otpResendSeconds,
     companyAccountName:
         j['companyAccountName'] as String? ?? AppConfig.companyAccountName,
     companyAccountNumber:
@@ -463,6 +520,12 @@ class PlatformSettings {
     companyBank: j['companyBank'] as String? ?? AppConfig.companyBank,
   );
 }
+
+/// Converts a stored month count to days, for settings written before Fixed
+/// Savings locked in days. Returns null when there was no month value.
+int? _daysFromMonths(Object? months) => months is num
+    ? (months * AppConfig.daysPerYear / 12).round()
+    : null;
 
 /// Rebuilds the rate table from stored JSON, migrating the two earlier
 /// shapes so an upgrade never silently reprices a lender's book:

@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kudi9ja/data/models/models.dart';
 import 'package:kudi9ja/data/services/security_service.dart';
 import 'package:kudi9ja/data/services/storage_service.dart';
 import 'package:kudi9ja/state/app_state.dart';
@@ -40,6 +43,115 @@ void main() {
     test('an OTP is always six digits', () {
       for (var i = 0; i < 50; i++) {
         expect(SecurityService.issueOtp(), matches(RegExp(r'^\d{6}$')));
+      }
+    });
+  });
+
+  group('Accounts and verification', () {
+    test('Kudi9ja issues no account number of its own', () {
+      // The old build minted a NUBAN-style number from the phone. Nothing
+      // may do that again: a Kudi9ja "account number" is not a real bank
+      // account and cannot be paid into.
+      final source = File('lib/data/services/security_service.dart')
+          .readAsStringSync();
+      expect(source.contains('accountNumberFrom'), isFalse);
+
+      final user = AppUser(
+        id: 'a1b2c3d4-e5f6-7788-99aa-bbccddeeff00',
+        fullName: 'Ada Customer',
+        email: 'ada@example.com',
+        phone: '08031234567',
+        dateOfBirth: DateTime(1995, 4, 12),
+        gender: 'Female',
+        bvn: '22112233445',
+        nin: '11223344556',
+        address: '1 Test Street',
+        state: 'Lagos',
+        payoutBank: 'GTBank',
+        payoutAccountNumber: '0123456789',
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      // Money leaves to the customer's own bank account.
+      expect(user.hasPayoutAccount, isTrue);
+      expect(user.payoutBank, 'GTBank');
+      expect(user.payoutAccountNumber, '0123456789');
+
+      // The reference is an identifier, never a payable account, and it is
+      // not derived from the phone number.
+      expect(user.customerRef, 'K9-A1B2C3');
+      expect(user.customerRef.contains(user.phone), isFalse);
+    });
+
+    test('a customer without a payout account is flagged, not blocked', () {
+      final user = AppUser(
+        id: 'a1b2c3d4-e5f6-7788-99aa-bbccddeeff00',
+        fullName: 'Ada Customer',
+        email: 'ada@example.com',
+        phone: '08031234567',
+        dateOfBirth: DateTime(1995, 4, 12),
+        gender: 'Female',
+        bvn: '22112233445',
+        nin: '11223344556',
+        address: '1 Test Street',
+        state: 'Lagos',
+        payoutBank: '',
+        payoutAccountNumber: '',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      expect(user.hasPayoutAccount, isFalse);
+    });
+
+    test('sign-up verifies the email only — there is no SMS step', () {
+      final flow = File('lib/features/auth/signup/signup_flow.dart')
+          .readAsStringSync();
+      expect(flow.contains('phone-otp'), isFalse);
+      expect(flow.contains('OtpChannel'), isFalse);
+      expect(flow.contains('email-otp'), isTrue);
+
+      // The OTP screen itself no longer knows how to send an SMS.
+      final otp = File('lib/features/auth/signup/steps/otp_step.dart')
+          .readAsStringSync();
+      expect(otp.contains('OtpChannel'), isFalse);
+      expect(otp.contains('sms'), isFalse);
+
+      // And the draft carries no phone-verified flag to set.
+      final draft = File('lib/features/auth/signup/signup_draft.dart')
+          .readAsStringSync();
+      expect(draft.contains('phoneVerified'), isFalse);
+      expect(draft.contains('payoutAccountNumber'), isTrue);
+    });
+  });
+
+  group('Dashboard balance card', () {
+    test('the credit score is not a wallet figure and is off the card', () {
+      final card = File('lib/features/dashboard/balance_card.dart')
+          .readAsStringSync();
+
+      // It belongs with borrowing — the Loans tab and Profile still show it.
+      expect(card.contains('creditScore'), isFalse);
+      expect(card.contains('creditBand'), isFalse);
+
+      // What replaced it is money the customer has actually been paid.
+      expect(card.contains('Earned so far'), isTrue);
+      expect(card.contains('totalInterestEarned'), isTrue);
+
+      // And it honours the hide-balances toggle, like every other figure.
+      expect(
+        RegExp(r"hidden[\s\S]{0,80}totalInterestEarned").hasMatch(card),
+        isTrue,
+        reason: 'earnings must be masked when balances are hidden',
+      );
+
+      for (final path in const [
+        'lib/features/loans/loans_screen.dart',
+        'lib/features/profile/profile_screen.dart',
+      ]) {
+        expect(
+          File(path).readAsStringSync().contains('creditScore'),
+          isTrue,
+          reason: '$path should still surface the score',
+        );
       }
     });
   });

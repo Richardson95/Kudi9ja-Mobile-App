@@ -10,7 +10,7 @@ import '../../data/models/models.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 import '../shell/home_shell.dart';
-import 'fund_wallet_screen.dart';
+import 'pay_in_screen.dart';
 import 'transaction_list.dart';
 import 'transfer_screen.dart';
 import 'withdraw_screen.dart';
@@ -198,7 +198,7 @@ class _BalanceStrip extends StatelessWidget {
                   label: 'Add',
                   onTap: () => Navigator.of(
                     context,
-                  ).push(slideRoute(const FundWalletScreen())),
+                  ).push(slideRoute(const PayInScreen())),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

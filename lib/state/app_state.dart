@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +15,7 @@ import '../data/services/storage_service.dart';
 import '../data/models/platform_settings.dart';
 
 const _uuid = Uuid();
+final _random = Random.secure();
 
 /// One contributor to the credit score, shown on the breakdown screen.
 class CreditFactor {
@@ -457,6 +459,13 @@ class AppState extends ChangeNotifier {
     return tx;
   }
 
+  /// Credits the wallet directly, with no claim and no approval.
+  ///
+  /// **This is not a customer path.** Money only reaches a wallet when an
+  /// admin confirms a deposit claim against the bank statement — see
+  /// [submitDepositClaim] and [confirmDeposit]. This exists to seed a wallet
+  /// in tests.
+  @visibleForTesting
   Future<Transaction> fundWallet(double amount, String source) async {
     final tx = await _credit(
       amount,
@@ -487,7 +496,7 @@ class AppState extends ChangeNotifier {
     final request = WithdrawalRequest(
       id: tx.id,
       customerName: _user?.fullName ?? 'Customer',
-      customerAccount: _user?.accountNumber ?? '',
+      customerAccount: _user?.customerRef ?? '',
       amount: amount,
       bank: bank,
       destinationAccount: accountNumber,
@@ -533,19 +542,19 @@ class AppState extends ChangeNotifier {
   Future<SavingsPlan> createFixedPlan({
     required String title,
     required double principal,
-    required int months,
+    required int days,
     String emoji = '🔒',
   }) async {
-    final interest = Finance.savingsInterest(principal, months);
+    final interest = Finance.savingsInterest(principal, days);
     final now = DateTime.now();
     final plan = SavingsPlan(
       id: _uuid.v4(),
       title: title,
       principal: principal,
-      lockMonths: months,
+      lockDays: days,
       interestPaid: interest,
       startDate: now,
-      maturityDate: Finance.addMonths(now, months),
+      maturityDate: now.add(Duration(days: days)),
       type: SavingsType.fixed,
       emoji: emoji,
     );
@@ -585,15 +594,18 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     final amount = Finance.targetPerDeposit(goal, frequency, months);
     final rate = Finance.targetRateFor(months);
+    final maturity = Finance.addMonths(now, months);
 
     final plan = SavingsPlan(
       id: _uuid.v4(),
       title: title,
       principal: 0,
-      lockMonths: months,
+      // Target terms are chosen in months; the plan still records the real
+      // span in days so every screen can speak the same unit.
+      lockDays: maturity.difference(now).inDays,
       interestPaid: 0,
       startDate: now,
-      maturityDate: Finance.addMonths(now, months),
+      maturityDate: maturity,
       type: SavingsType.target,
       targetAmount: goal,
       emoji: emoji,
@@ -687,8 +699,8 @@ class AppState extends ChangeNotifier {
     if (!p.isOpen || amount <= 0) return false;
 
     if (p.isFixed) {
-      final monthsLeft = _monthsLeft(p);
-      final interest = Finance.savingsInterest(amount, monthsLeft);
+      final daysLeft = _daysLeft(p);
+      final interest = Finance.savingsInterest(amount, daysLeft);
 
       _plans[i] = p.copyWith(
         principal: p.principal + amount,
@@ -725,9 +737,11 @@ class AppState extends ChangeNotifier {
   }
 
   /// Whole months still to run on a plan, floored at one.
-  int _monthsLeft(SavingsPlan p) {
+  /// Whole days a plan still has to run. A top-up earns the return for the
+  /// time it will actually be locked, not for the plan's original term.
+  int _daysLeft(SavingsPlan p) {
     final days = p.maturityDate.difference(DateTime.now()).inDays;
-    return (days / 30).ceil().clamp(1, settings.maxLockMonths);
+    return days.clamp(0, settings.maxLockDays);
   }
 
   /// Releases a matured plan. A Fixed plan returns its principal (the 17%
@@ -1089,13 +1103,21 @@ class AppState extends ChangeNotifier {
   }
 
   /// Grants panel access to an email address.
+  /// Grants panel access to an account that already exists.
+  ///
+  /// Membership is keyed on the **email address** and nothing else: access is
+  /// matched on it at every sign-in, so it is the only field that decides
+  /// anything. The name and phone are copied off the chosen account for the
+  /// team list to show — never typed, so an owner cannot grant access to an
+  /// address nobody holds by mistyping it.
   Future<({bool ok, String message})> addAdmin({
-    required String name,
-    required String email,
-    required String phone,
+    required CustomerRecord customer,
     required AdminRole role,
   }) async {
-    final clean = email.trim().toLowerCase();
+    final clean = customer.email.trim().toLowerCase();
+    if (clean.isEmpty) {
+      return (ok: false, message: 'That account has no email address.');
+    }
     if (_admins.any((a) => a.email.toLowerCase() == clean)) {
       return (ok: false, message: 'That email already has panel access.');
     }
@@ -1106,9 +1128,11 @@ class AppState extends ChangeNotifier {
     _admins.add(
       AdminUser(
         id: _uuid.v4(),
-        name: name.trim(),
+        name: customer.fullName.trim().isEmpty
+            ? clean
+            : customer.fullName.trim(),
         email: clean,
-        phone: phone.trim(),
+        phone: customer.phone.trim(),
         role: role,
         addedAt: DateTime.now(),
         addedBy: _user?.fullName ?? 'Unknown',
@@ -1118,10 +1142,10 @@ class AppState extends ChangeNotifier {
     await _log(
       AuditCategory.team,
       'Admin added',
-      '${name.trim()} ($clean) was granted ${role.label} access.',
+      '$clean was granted ${role.label} access.',
     );
     notifyListeners();
-    return (ok: true, message: '${name.trim()} now has ${role.label} access.');
+    return (ok: true, message: '$clean now has ${role.label} access.');
   }
 
   Future<void> changeAdminRole(String id, AdminRole role) async {
@@ -1225,7 +1249,7 @@ class AppState extends ChangeNotifier {
       fullName: u.fullName,
       email: u.email,
       phone: u.phone,
-      accountNumber: u.accountNumber,
+      accountNumber: u.customerRef,
       joinedAt: u.createdAt,
       balance: _balance,
       totalSaved: totalSaved,
@@ -1383,15 +1407,34 @@ class AppState extends ChangeNotifier {
   /// Everything waiting on an admin, in or out.
   int get pendingPaymentCount => pendingDepositCount + pendingWithdrawalCount;
 
-  /// The narration a customer must quote so their transfer can be matched.
-  String get paymentReference =>
-      _user == null ? '' : 'K9-${_user!.accountNumber}';
+  /// The narration a customer must quote so a transfer can be matched.
+  ///
+  /// Every pay-in gets its **own** reference, not one shared across all of a
+  /// customer's payments: two transfers of the same amount on the same day
+  /// are otherwise impossible to tell apart on a bank statement. The
+  /// customer's own code is embedded in it, so an admin reading a narration
+  /// can find the person without a lookup.
+  ///
+  ///     K9-A1B2C3-7F4K
+  ///     ^^^^^^^^^ the customer   ^^^^ this payment
+  String newPaymentReference() {
+    final base = _user?.customerRef ?? 'K9-000000';
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final suffix = List.generate(
+      4,
+      (_) => alphabet[_random.nextInt(alphabet.length)],
+    ).join();
+    return '$base-$suffix';
+  }
 
   /// A customer says they have paid into the collection account. Nothing
   /// moves until an admin matches the receipt against the bank statement.
   Future<DepositClaim> submitDepositClaim({
     required double amount,
     required DepositPurpose purpose,
+    /// The narration the customer was shown and quoted on the transfer.
+    /// Generated by [newPaymentReference] when the pay-in screen opened.
+    required String reference,
     String receiptPath = '',
     String senderName = '',
     String? loanId,
@@ -1400,10 +1443,10 @@ class AppState extends ChangeNotifier {
     final claim = DepositClaim(
       id: _uuid.v4(),
       customerName: _user?.fullName ?? 'Customer',
-      customerAccount: _user?.accountNumber ?? '',
+      customerAccount: _user?.customerRef ?? '',
       amount: amount,
       claimedAt: DateTime.now(),
-      reference: paymentReference,
+      reference: reference,
       purpose: purpose,
       loanId: loanId,
       loanPurpose: loanPurpose,
@@ -1609,6 +1652,20 @@ class AppState extends ChangeNotifier {
   /// Every transaction on a customer's record, for the admin panel. The
   /// device account returns its real ledger; sample customers return a
   /// clearly-labelled illustrative history.
+  /// Every pay-in this customer has claimed, newest first — pending ones
+  /// included, so an admin sees what is waiting on them without leaving the
+  /// customer's record.
+  List<DepositClaim> depositsFor(CustomerRecord customer) => customer
+      .isThisDevice
+      ? deposits
+      : const <DepositClaim>[];
+
+  /// Every withdrawal this customer has requested, newest first.
+  List<WithdrawalRequest> withdrawalsFor(CustomerRecord customer) => customer
+      .isThisDevice
+      ? withdrawals
+      : const <WithdrawalRequest>[];
+
   List<Transaction> transactionsFor(CustomerRecord customer) =>
       customer.isThisDevice ? transactions : _sampleLedger(customer);
 

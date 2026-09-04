@@ -12,9 +12,11 @@ import 'primitives.dart';
 /// The collection account every incoming payment goes to, with copy buttons
 /// and the narration the customer must quote so it can be matched.
 class CompanyAccountCard extends StatelessWidget {
-  const CompanyAccountCard({super.key, required this.reference, this.amount});
+  const CompanyAccountCard({super.key, this.reference, this.amount});
 
-  final String reference;
+  /// The narration for one specific payment. Null where the card is shown
+  /// for reference rather than against a payment being made.
+  final String? reference;
   final String? amount;
 
   @override
@@ -90,7 +92,7 @@ class CompanyAccountCard extends StatelessWidget {
           ),
         ),
 
-        if (reference.isNotEmpty) ...[
+        if (reference != null && reference!.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.lg),
           const HairLine(),
           const SizedBox(height: AppSpacing.md),
@@ -109,7 +111,7 @@ class CompanyAccountCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      reference,
+                      reference!,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -120,7 +122,7 @@ class CompanyAccountCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _CopyButton(value: reference, label: 'Reference copied'),
+              _CopyButton(value: reference!, label: 'Reference copied'),
             ],
           ),
         ],

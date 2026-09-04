@@ -20,7 +20,7 @@ never does its own maths.
 | Rule | Value |
 |---|---|
 | Fixed Savings | **17% per annum**, paid to the wallet the instant the plan starts |
-| Fixed lock period | **1 month → 5 years** (60 months) |
+| Fixed lock period | **30 days → 5 years** (1,825 days), chosen in days |
 | Fixed early exit | **None — a Fixed plan can never be broken** (top-ups welcome) |
 | Target Savings | Bonus on the final day: **2.5%** (3–5mo), **5%** (6–11mo), **10%** (1yr+) |
 | Target minimum term | **3 months** |
@@ -35,13 +35,33 @@ never does its own maths.
 
 ### The two savings products
 
-**Fixed Savings** — one lump sum, locked for a set term. Interest is pro-rated
-over the lock (`principal × 0.17 × months / 12`) and paid into the wallet
-**immediately**, free to spend the same day. ₦100,000 for a year pays ₦17,000 on
-day one; for five years, ₦85,000 on day one.
+**Fixed Savings** — one lump sum, locked for a term the customer picks **in
+days**, anywhere from 30 to 1,825. Interest is pro-rated straight off the annual
+rate:
 
-You can **top it up whenever you like**, and each top-up earns its own 17%
-pro-rated over the months still to run, paid to the wallet immediately.
+```
+interest = principal × 0.17 × days ÷ 365
+```
+
+Nothing is rounded to whole months, so an odd term is priced exactly and the
+customer sees the naira figure the instant they pick the number:
+
+| Lock | Yield | ₦100,000 earns |
+| --- | --- | --- |
+| 30 days (1 month) | 1.397% | ₦1,397.26 |
+| 90 days (3 months) | 4.192% | ₦4,191.78 |
+| 171 days (5 months, 3 weeks) | 7.964% | ₦7,964.38 |
+| 365 days (1 year) | 17.000% | ₦17,000.00 |
+| 730 days (2 years) | 34.000% | ₦34,000.00 |
+| 1,825 days (5 years) | 85.000% | ₦85,000.00 |
+
+Periods are always shown in days with the human equivalent in brackets, and the
+picker offers presets, a slider and a field for typing an exact number.
+
+The whole return is paid into the wallet **immediately**, free to spend the same
+day. You can **top it up whenever you like**, and each top-up earns its own 17%
+pro-rated over the days still to run — not the plan's original term — paid to
+the wallet immediately.
 
 What you cannot do is take money out. There is no early exit at any price — the
 principal is released only on the maturity date. The app says so before you
@@ -168,14 +188,29 @@ Two independent codes, both salted-SHA-256 hashed before they ever touch disk
 ### Signup verification — 8 gated steps
 
 1. Personal details — name, email, phone, DOB (18+ enforced), gender
-2. **Email OTP** — 6-digit code, 45-second resend cooldown
-3. **Phone OTP** — separate code to the registered line
-4. **Identity** — BVN (11 digits) + NIN (11 digits) + address + state, run through
+2. **Email OTP** — 6-digit code, 45-second resend cooldown. Email is the only
+   channel verified; the phone number is collected so support can reach a
+   customer, not as a second factor, so there is no SMS step to wait on
+3. **Identity** — BVN (11 digits) + NIN (11 digits) + address + state, run through
    a verification check that must pass before the step unlocks
+4. **Payout account** — the customer's own bank and account number
 5. Password — strength meter with live requirement checks + security question
 6. Sign-in passcode — set, then confirm
 7. Transaction PIN — set, then confirm
 8. Review — full summary, explicit terms acceptance
+
+### Kudi9ja issues no account numbers
+
+There is no Kudi9ja account number, and nothing is minted from a phone number.
+Money earned or borrowed lands in the wallet, and leaves it to **a bank account
+the customer already holds in their own name**, nominated at sign-up and
+changeable at any time. The withdrawal screen starts on that account and lets
+them send an individual payout somewhere else.
+
+What each customer does have is a short **customer reference** (`K9-A1B2C3`,
+derived from their id) — an identifier for matching a bank transfer to them and
+for the admin queues. It is not payable into, and `app_boot_test.dart` fails the
+build if anything reintroduces a generated account number.
 
 ---
 
@@ -221,8 +256,20 @@ Zenith Bank
 ```
 
 Whether they are funding a wallet, opening savings or repaying a loan, that is
-where it goes. The card is shown with copy buttons and a **narration** unique to
-the customer (`K9-<their account number>`) so the payment can be matched.
+where it goes. **Bank transfer is the only way in** — there is no card and no
+USSD, and no path anywhere in the app credits a wallet without approval.
+
+Every pay-in mints **its own reference** the moment the screen opens:
+
+```
+K9-A1B2C3-7F4K
+^^^^^^^^^ the customer   ^^^^ this payment
+```
+
+The customer quotes it as the transfer narration. Because it is per-payment and
+not per-customer, two transfers of the same amount on the same day are still
+tellable apart on a bank statement, and the embedded customer code means an
+admin reading a narration can find the person without a lookup.
 
 **Nothing is credited on the customer's word.** The flow is:
 
@@ -277,6 +324,18 @@ revoking someone ejects them immediately rather than at their next cold start.
 **Bootstrap:** the first account opened on a device becomes the **owner**, so the
 panel is reachable at all. Every later admin is added from inside it.
 
+**Granting access is a search, not a form.** An owner searches people who have
+already signed up and picks one — there is no name, email or phone to type.
+Membership is keyed on the account's **email address** and nothing else; the
+name and phone shown in the team list are copied off that account. Adding
+somebody creates no account and no password: it only means that when they sign
+in with that address, the panel appears. Remove them and it disappears on the
+next build.
+
+Because nothing is typed, an owner cannot grant the panel to an address that
+belongs to nobody — the old form would happily accept a typo and leave a
+dangling grant.
+
 ### Five sections
 
 | Section | What it does |
@@ -286,7 +345,7 @@ panel is reachable at all. Every later admin is added from inside it.
 | **Payments** | Both directions. **Money in:** claimed transfers with the customer's receipt shown inline, tap to enlarge — confirm or reject. **Money out:** the withdrawal queue |
 | **Lending** | Exposure, collections and fee income; every loan with its schedule; overdue reminders |
 | **Controls** | Every rate, limit and switch (below) |
-| **Team** | Add, promote, suspend and remove admins |
+| **Team** | Grant the panel to an existing account, promote, suspend and remove admins |
 
 Plus an **audit log** (top-right) — an append-only timeline of every rate change,
 team change and customer action, with actor and timestamp.
@@ -309,6 +368,15 @@ holds the live ones, and every calculation in the app reads the live one.
 | **Collection account** | Bank, account name and number |
 | **Switches** | Savings, lending, Ajo circles, maintenance mode |
 
+| **Pay-in and payout** | Smallest pay-in we will match; smallest withdrawal |
+| **Thrift circles** | Minimum contribution per cycle; smallest and largest circle |
+| **Sign-up** | One-time code resend delay |
+
+**Every value can be typed, not just nudged.** Sliders and +/− steppers remain,
+but each figure is also a tap target: tapping opens a keypad sheet with the
+current value, the allowed range, and Save. Nobody has to drag a slider from 17
+to 85, and the bounds are enforced on the typed value exactly as on the slider.
+
 **Passcode and PIN lengths are deliberately not settable.** Every customer code
 is stored as a hash of a code of that length, so changing it would lock out
 everyone who already has one. The panel says so where the control would be.
@@ -323,12 +391,25 @@ terms they were opened on** — a rate change never rewrites history.
 
 ### Roles
 
-| Role | Rates | Team | Loan actions | Customers |
-|---|---|---|---|---|
-| Owner | ✓ | ✓ | ✓ | ✓ |
-| Administrator | ✓ | — | ✓ | ✓ |
-| Support | — | — | ✓ | ✓ |
-| Viewer | — | — | — | ✓ |
+| What they can do | Owner | Administrator | Support | Viewer |
+|---|:---:|:---:|:---:|:---:|
+| See customers and their full records | ✓ | ✓ | ✓ | ✓ |
+| Read the audit log | ✓ | ✓ | ✓ | ✓ |
+| Confirm pay-ins and approve withdrawals | ✓ | ✓ | ✓ | — |
+| Act on loans — remind, write off | ✓ | ✓ | ✓ | — |
+| Flag or freeze a customer | ✓ | ✓ | ✓ | — |
+| Change rates, limits and switches | ✓ | ✓ | — | — |
+| Add, promote, suspend or remove admins | ✓ | — | — | — |
+
+Read down the columns and the roles are cumulative: a **Viewer** looks and
+changes nothing; **Support** moves money and works customers but cannot reprice
+the product; an **Administrator** owns the economics too; only the **Owner**
+touches the team.
+
+The panel renders this same table under **Team → What each role can do**, built
+from `kAdminCapabilities` — and each row reads the very getter that gates the
+real screen, so the table cannot drift from what the panel allows.
+`admin_test.dart` pins the whole matrix.
 
 Self-lockout is impossible by construction: an admin cannot suspend, demote or
 remove their own access, since each of those would revoke the permission needed

@@ -85,7 +85,7 @@ LegalDocument privacyPolicy() => LegalDocument(
         ),
         (
           'Account data',
-          'Your Kudi9ja account number, verification tier, the date you '
+          'Your Kudi9ja customer reference, verification tier, the date you '
               'joined, and your notification and display preferences.',
         ),
         (
@@ -102,8 +102,9 @@ LegalDocument privacyPolicy() => LegalDocument(
         ),
         (
           'Bank details',
-          'The bank, account number and account name you ask us to withdraw '
-              'to.',
+          'The bank and account number you nominate for payouts, and any '
+              'other account of your own you ask us to withdraw to. Kudi9ja '
+              'issues no account numbers of its own.',
         ),
         (
           'Security data',

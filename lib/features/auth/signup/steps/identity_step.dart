@@ -49,6 +49,14 @@ class _IdentityStepState extends State<IdentityStep> {
     await Future<void>.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
 
+    // Commit what was checked before showing the confirmation. The verified
+    // view reads these back, so writing them on Continue instead would leave
+    // that screen displaying an empty BVN and NIN.
+    widget.draft
+      ..bvn = _bvn.text.trim()
+      ..nin = _nin.text.trim()
+      ..address = _address.text.trim();
+
     setState(() {
       _checking = false;
       _verified = true;
@@ -57,11 +65,7 @@ class _IdentityStepState extends State<IdentityStep> {
   }
 
   void _continue() {
-    widget.draft
-      ..bvn = _bvn.text
-      ..nin = _nin.text
-      ..address = _address.text
-      ..identityVerified = true;
+    widget.draft.identityVerified = true;
     widget.onNext();
   }
 
@@ -269,8 +273,10 @@ class _VerifiedView extends StatelessWidget {
     );
   }
 
-  static String _mask(String v) =>
-      v.length < 11 ? v : '${v.substring(0, 3)}*****${v.substring(8)}';
+  static String _mask(String v) {
+    if (v.isEmpty) return '-';
+    return v.length < 11 ? v : '${v.substring(0, 3)}*****${v.substring(8)}';
+  }
 }
 
 class _Row extends StatelessWidget {

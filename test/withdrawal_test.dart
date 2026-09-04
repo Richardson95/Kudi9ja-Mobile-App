@@ -20,7 +20,8 @@ AppUser _user() => AppUser(
   nin: '70112233445',
   address: '1 Test Road',
   state: 'Lagos',
-  accountNumber: '8031234567',
+  payoutBank: 'GTBank',
+      payoutAccountNumber: '0123456789',
   createdAt: DateTime.now(),
 );
 
@@ -260,7 +261,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'School fees',
         principal: 100000,
-        months: 12,
+        days: 365,
       );
 
       final before = app.balance;
@@ -281,7 +282,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'Sealed',
         principal: 100000,
-        months: 12,
+        days: 365,
       );
       await app.topUpPlan(plan.id, 25000);
 

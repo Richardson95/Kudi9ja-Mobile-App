@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/models.dart';
 import '../../../data/models/thrift.dart';
+import '../../../data/models/platform_settings.dart';
 import '../../../state/app_state.dart';
 import '../../../widgets/inputs.dart';
 import '../../../widgets/primitives.dart';
@@ -40,8 +41,8 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
 
   bool get _canSubmit =>
       _name.text.trim().isNotEmpty &&
-      _amount >= 1000 &&
-      _members.length >= 2 &&
+      _amount >= settings.minCircleContribution &&
+      _members.length >= settings.minCircleMembers &&
       !_busy;
 
   @override
@@ -55,8 +56,12 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
   void _addMember() {
     final name = _memberName.text.trim();
     if (name.isEmpty) return;
-    if (_members.length >= 12) {
-      showToast(context, 'A circle tops out at 12 members', error: true);
+    if (_members.length >= settings.maxCircleMembers) {
+      showToast(
+        context,
+        'A circle tops out at ${settings.maxCircleMembers} members',
+        error: true,
+      );
       return;
     }
     setState(() {
@@ -140,7 +145,8 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
                       keyboardType: TextInputType.number,
                       inputFormatters: [ThousandsFormatter()],
                       onChanged: (_) => setState(() {}),
-                      helper: 'Minimum ₦1,000 per cycle',
+                      helper:
+                          'Minimum ${settings.minCircleContribution.asNairaFlat} per cycle',
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const _Label('HOW OFTEN'),
@@ -193,20 +199,33 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
                     const _Label('MEMBERS'),
                     const SizedBox(height: AppSpacing.md),
                     Row(
+                      // The helper under the field makes it taller than the
+                      // button, so pin both to the top rather than letting
+                      // the row centre them against each other.
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: KField(
-                            label: '',
-                            hint: 'Add a name',
+                            label: 'Add full name',
+                            hint: 'e.g. Adebayo Ogunlesi',
                             controller: _memberName,
                             prefixIcon: Icons.person_add_alt_rounded,
                             textCapitalization: TextCapitalization.words,
+                            // A circle only works if every member is a real
+                            // Kudi9ja account we can debit, so say so where
+                            // the name is actually typed.
+                            helper:
+                                'They must already have a Kudi9ja account. '
+                                'Type their full name exactly as it is '
+                                'registered on the app.',
                             onChanged: (_) => setState(() {}),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.md),
                         Padding(
-                          padding: const EdgeInsets.only(top: 18),
+                          // Clears the field's label so the button lines up
+                          // with the input box itself.
+                          padding: const EdgeInsets.only(top: 24),
                           child: GestureDetector(
                             onTap: _addMember,
                             child: Container(

@@ -22,10 +22,10 @@ class SavingsCalculatorScreen extends StatefulWidget {
 
 class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
   final _amount = TextEditingController(text: '100,000');
-  int _months = 12;
+  int _days = 365;
 
   double get _principal => parseAmount(_amount.text);
-  double get _interest => Finance.savingsInterest(_principal, _months);
+  double get _interest => Finance.savingsInterest(_principal, _days);
   double get _total => _principal + _interest;
 
   @override
@@ -34,14 +34,18 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
     super.dispose();
   }
 
-  /// Value at every month of the term, for the growth line.
-  List<FlSpot> get _spots => List.generate(
-    _months + 1,
-    (m) => FlSpot(
-      m.toDouble(),
-      _principal + Finance.savingsInterest(_principal, m),
-    ),
-  );
+  /// Value across the term, for the growth line. The return accrues evenly
+  /// by the day, so a straight line through 40 sample points is exact.
+  List<FlSpot> get _spots {
+    const samples = 40;
+    return List.generate(samples + 1, (i) {
+      final day = (_days * i / samples).round();
+      return FlSpot(
+        day.toDouble(),
+        _principal + Finance.savingsInterest(_principal, day),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,12 +122,13 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                       ],
                     ),
                     Slider(
-                      value: _months.toDouble(),
-                      min: settings.minLockMonths.toDouble(),
-                      max: settings.maxLockMonths.toDouble(),
-                      divisions:
-                          settings.maxLockMonths - settings.minLockMonths,
-                      onChanged: (v) => setState(() => _months = v.round()),
+                      value: _days.toDouble().clamp(
+                        settings.minLockDays.toDouble(),
+                        settings.maxLockDays.toDouble(),
+                      ),
+                      min: settings.minLockDays.toDouble(),
+                      max: settings.maxLockDays.toDouble(),
+                      onChanged: (v) => setState(() => _days = v.round()),
                     ),
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -145,9 +150,9 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xxl),
-                    _Payout(interest: _interest, total: _total, months: _months),
+                    _Payout(interest: _interest, total: _total, days: _days),
                     const SizedBox(height: AppSpacing.xl),
-                    _GrowthChart(spots: _spots, months: _months),
+                    _GrowthChart(spots: _spots, days: _days),
                     const SizedBox(height: AppSpacing.xl),
                     _Comparison(principal: _principal),
                   ],
@@ -179,25 +184,19 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
     );
   }
 
-  String get _termLabel {
-    if (_months % 12 == 0 && _months >= 12) {
-      final y = _months ~/ 12;
-      return '$y ${y == 1 ? 'year' : 'years'}';
-    }
-    return '$_months ${_months == 1 ? 'month' : 'months'}';
-  }
+  String get _termLabel => lockPeriodLabel(_days);
 }
 
 class _Payout extends StatelessWidget {
   const _Payout({
     required this.interest,
     required this.total,
-    required this.months,
+    required this.days,
   });
 
   final double interest;
   final double total;
-  final int months;
+  final int days;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -226,7 +225,7 @@ class _Payout extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         StatusPill(
-          label: '${Finance.effectiveYieldPct(months).toStringAsFixed(1)}% OVER THE TERM',
+          label: '${Finance.effectiveYieldPct(days).toStringAsFixed(1)}% OVER THE TERM',
           color: AppColors.success,
           dense: true,
         ),
@@ -292,9 +291,9 @@ class _Payout extends StatelessWidget {
 }
 
 class _GrowthChart extends StatelessWidget {
-  const _GrowthChart({required this.spots, required this.months});
+  const _GrowthChart({required this.spots, required this.days});
   final List<FlSpot> spots;
-  final int months;
+  final int days;
 
   @override
   Widget build(BuildContext context) {
@@ -318,7 +317,7 @@ class _GrowthChart extends StatelessWidget {
                 minY: 0,
                 maxY: maxY <= 0 ? 1 : maxY * 1.12,
                 minX: 0,
-                maxX: months.toDouble(),
+                maxX: days.toDouble(),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
@@ -361,7 +360,7 @@ class _GrowthChart extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
               ),
               Text(
-                'Month $months',
+                lockPeriodShort(days),
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.textTertiary,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kudi9ja/core/constants/app_config.dart';
 import 'package:kudi9ja/data/models/deposit.dart';
@@ -21,7 +23,8 @@ AppUser _user() => AppUser(
   nin: '70112233445',
   address: '1 Test Road',
   state: 'Lagos',
-  accountNumber: '8031234567',
+  payoutBank: 'GTBank',
+      payoutAccountNumber: '0123456789',
   createdAt: DateTime.now(),
 );
 
@@ -66,9 +69,108 @@ void main() {
       expect(settings.companyAccountName, 'Quadrilateral Technologies Ltd');
     });
 
-    test('the payment reference is tied to the customer account', () async {
+    test('every pay-in gets its own reference, carrying the customer code', () async {
       final app = await _account();
-      expect(app.paymentReference, 'K9-8031234567');
+
+      final refs = <String>{
+        for (var i = 0; i < 200; i++) app.newPaymentReference(),
+      };
+
+      // K9-A1B2C3-7F4K — the customer, then this one payment.
+      for (final ref in refs) {
+        expect(ref, matches(RegExp(r'^K9-[0-9A-F]{6}-[A-Z2-9]{4}$')));
+        expect(
+          ref.startsWith(app.user!.customerRef),
+          isTrue,
+          reason: 'an admin must be able to find the customer from the '
+              'narration alone',
+        );
+        // The reference is never the customer's own bank account.
+        expect(ref, isNot(contains(app.user!.payoutAccountNumber)));
+      }
+
+      // Two payments of the same amount on the same day must be tellable
+      // apart on a bank statement, so references may not repeat.
+      expect(refs.length, greaterThan(190), reason: 'references collided');
+    });
+
+    test('the reference on a claim is the one the customer was shown', () async {
+      final app = await _account();
+      final shown = app.newPaymentReference();
+
+      final claim = await app.submitDepositClaim(
+        amount: 25000,
+        purpose: DepositPurpose.wallet,
+        reference: shown,
+        receiptPath: '/tmp/receipt.png',
+      );
+
+      expect(claim.reference, shown);
+      expect(app.deposits.first.reference, shown);
+    });
+  });
+
+  group('The only way money gets in', () {
+    test('bank transfer is the only route, and it always needs approval', () {
+      // The method chooser offered Card and USSD, and Card credited the
+      // wallet on the spot with no claim and no admin. Both are gone.
+      expect(
+        File('lib/features/wallet/fund_wallet_screen.dart').existsSync(),
+        isFalse,
+      );
+
+      for (final path in const [
+        'lib/features/dashboard/dashboard_screen.dart',
+        'lib/features/wallet/wallet_screen.dart',
+      ]) {
+        final source = File(path).readAsStringSync();
+        expect(
+          source.contains('FundWalletScreen'),
+          isFalse,
+          reason: '$path still routes to the old chooser',
+        );
+        expect(source.contains('PayInScreen'), isTrue, reason: path);
+      }
+
+      final payIn = File('lib/features/wallet/pay_in_screen.dart')
+          .readAsStringSync();
+      // The payment methods themselves, not any word containing "card"
+      // (CompanyAccountCard and KCard are widgets).
+      for (final gone in const ["'Card'", 'USSD', 'credit_card', 'qr_code']) {
+        expect(payIn.contains(gone), isFalse, reason: 'found $gone');
+      }
+      // A receipt is required before the claim can be submitted.
+      expect(payIn.contains('_receipt.isNotEmpty'), isTrue);
+    });
+
+    test('a receipt is carried on the claim, for the admin to check', () async {
+      final app = await _account();
+      final claim = await app.submitDepositClaim(
+        amount: 40000,
+        purpose: DepositPurpose.wallet,
+        reference: app.newPaymentReference(),
+        receiptPath: '/tmp/receipt.png',
+      );
+
+      expect(claim.hasReceipt, isTrue);
+      expect(claim.receiptPath, '/tmp/receipt.png');
+      expect(app.deposits.first.receiptPath, '/tmp/receipt.png');
+    });
+
+    test("a customer's pay-ins are reachable from their admin record", () async {
+      final app = await _account();
+      await app.submitDepositClaim(
+        amount: 40000,
+        purpose: DepositPurpose.wallet,
+        reference: app.newPaymentReference(),
+        receiptPath: '/tmp/receipt.png',
+      );
+
+      final me = app.customers.firstWhere((c) => c.isThisDevice);
+      final claims = app.depositsFor(me);
+      expect(claims, hasLength(1));
+      expect(claims.first.amount, 40000);
+      expect(claims.first.status, DepositStatus.pending);
     });
   });
 
@@ -78,6 +180,7 @@ void main() {
       final before = app.balance;
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 50000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/receipt.png',
@@ -96,6 +199,7 @@ void main() {
       final before = app.balance;
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 50000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/receipt.png',
@@ -115,6 +219,7 @@ void main() {
       final before = app.balance;
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 50000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/receipt.png',
@@ -132,6 +237,7 @@ void main() {
     test('a decision cannot be applied twice', () async {
       final app = await _account();
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 20000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/r.png',
@@ -167,6 +273,7 @@ void main() {
       final owedBefore = loan.outstanding;
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 40000,
         purpose: DepositPurpose.loanRepayment,
         receiptPath: '/tmp/receipt.png',
@@ -187,6 +294,7 @@ void main() {
       final owedBefore = loan.outstanding;
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 40000,
         purpose: DepositPurpose.loanRepayment,
         receiptPath: '/tmp/receipt.png',
@@ -207,6 +315,7 @@ void main() {
       final (app, loan) = await withLoan();
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: loan.outstanding,
         purpose: DepositPurpose.loanRepayment,
         receiptPath: '/tmp/receipt.png',
@@ -226,6 +335,7 @@ void main() {
       final walletBefore = app.balance;
 
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 40000,
         purpose: DepositPurpose.loanRepayment,
         receiptPath: '/tmp/receipt.png',
@@ -246,11 +356,13 @@ void main() {
     test('both decisions are logged with a reason', () async {
       final app = await _account();
       final a = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 10000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/a.png',
       );
       final b = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 20000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/b.png',
@@ -271,6 +383,7 @@ void main() {
     test('the customer is told at submission and at decision', () async {
       final app = await _account();
       final claim = await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 10000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/a.png',
@@ -288,6 +401,7 @@ void main() {
       final app = await _account(funding: 100000);
 
       await app.submitDepositClaim(
+        reference: app.newPaymentReference(),
         amount: 10000,
         purpose: DepositPurpose.wallet,
         receiptPath: '/tmp/a.png',

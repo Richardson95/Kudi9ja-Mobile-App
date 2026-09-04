@@ -42,7 +42,9 @@ class _ReviewStepState extends State<ReviewStep> {
               _Line('Gender', d.gender),
               _Line('State', d.stateOfResidence),
               _Line('BVN', maskTail(d.bvn)),
-              _Line('NIN', maskTail(d.nin), last: true),
+              _Line('NIN', maskTail(d.nin)),
+              _Line('Payout bank', d.payoutBank),
+              _Line('Payout account', d.payoutAccountNumber, last: true),
             ],
           ),
         ),
@@ -108,8 +110,8 @@ class _SecurityChecklist extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = [
       (Icons.mark_email_read_outlined, 'Email verified'),
-      (Icons.sms_outlined, 'Phone verified'),
       (Icons.verified_user_outlined, 'BVN & NIN confirmed'),
+      (Icons.account_balance_outlined, 'Payout account set'),
       (Icons.password_rounded, 'Sign-in passcode set'),
       (Icons.pin_outlined, 'Transaction PIN set'),
     ];

@@ -137,8 +137,10 @@ class ProfileScreen extends StatelessWidget {
               ),
               _Row(
                 icon: Icons.account_balance_outlined,
-                label: 'Account number',
-                sublabel: user.accountNumber,
+                label: 'Payout account',
+                sublabel: user.hasPayoutAccount
+                    ? '${user.payoutBank} • ${user.payoutAccountNumber}'
+                    : 'Not set — add one to withdraw',
                 onTap: () => _showDetails(context, user),
               ),
             ],
@@ -278,7 +280,16 @@ class ProfileScreen extends StatelessWidget {
                     _Detail('State', user.state),
                     _Detail('BVN', maskTail(user.bvn)),
                     _Detail('NIN', maskTail(user.nin)),
-                    _Detail('Account number', user.accountNumber),
+                    _Detail(
+                      'Payout bank',
+                      user.payoutBank.isEmpty ? '-' : user.payoutBank,
+                    ),
+                    _Detail(
+                      'Payout account',
+                      user.payoutAccountNumber.isEmpty
+                          ? '-'
+                          : user.payoutAccountNumber,
+                    ),
                     _Detail('Member since', user.createdAt.asDay, last: true),
                   ],
                 ),
@@ -311,7 +322,8 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               const Text(
-                'Funding your wallet, opening savings or repaying a loan — it all goes to this account.',
+                'Funding your wallet, opening savings or repaying a loan — it '
+                'all goes to this account, always by bank transfer.',
                 style: TextStyle(
                   fontSize: 12.5,
                   height: 1.45,
@@ -319,7 +331,18 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              CompanyAccountCard(reference: app.paymentReference),
+              const CompanyAccountCard(),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'Start from Add money each time. Every payment gets its own '
+                'K9 reference to quote on the transfer, and your money lands '
+                'once our team has matched it against the statement.',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: AppColors.textTertiary,
+                ),
+              ),
             ],
           ),
         ),

@@ -64,7 +64,7 @@ class PlanDetailScreen extends StatelessWidget {
                     ],
                     _Row('Rate', '17% per annum'),
                     const _Sep(),
-                    _Row('Lock period', _period(p.lockMonths)),
+                    _Row('Lock period', lockPeriodLabel(p.lockDays)),
                     const _Sep(),
                     _Row('Started', p.startDate.asDay),
                     const _Sep(),
@@ -150,14 +150,6 @@ class PlanDetailScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static String _period(int m) {
-    if (m % 12 == 0 && m >= 12) {
-      final y = m ~/ 12;
-      return '$y ${y == 1 ? 'year' : 'years'}';
-    }
-    return '$m ${m == 1 ? 'month' : 'months'}';
   }
 
   Future<void> _withdraw(BuildContext context, SavingsPlan p) async {

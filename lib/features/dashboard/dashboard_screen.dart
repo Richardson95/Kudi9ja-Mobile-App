@@ -17,7 +17,7 @@ import '../notifications/notifications_screen.dart';
 import '../savings/create_plan_screen.dart';
 import '../savings/new_plan_sheet.dart';
 import '../savings/plan_detail_screen.dart';
-import '../wallet/fund_wallet_screen.dart';
+import '../wallet/pay_in_screen.dart';
 import '../wallet/transaction_list.dart';
 import '../wallet/transfer_screen.dart';
 import '../wallet/withdraw_screen.dart';
@@ -207,7 +207,7 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = <(IconData, String, Widget)>[
-      (Icons.add_rounded, 'Add money', const FundWalletScreen()),
+      (Icons.add_rounded, 'Add money', const PayInScreen()),
       (Icons.savings_outlined, 'Save', const CreatePlanScreen()),
       (Icons.bolt_rounded, 'Borrow', const LoanRequestScreen()),
       (Icons.send_rounded, 'Send', const TransferScreen()),

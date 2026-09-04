@@ -6,26 +6,21 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../data/models/platform_settings.dart';
 import '../../../../data/services/security_service.dart';
 import '../../../../widgets/passcode.dart';
 import '../../../../widgets/primitives.dart';
 import '../signup_draft.dart';
 import 'step_scaffold.dart';
 
-enum OtpChannel { email, sms }
-
-/// A one-time-code screen used for both the email and the phone check.
+/// The email one-time-code screen.
+///
+/// Email is the only channel we verify at sign-up. The phone number is
+/// collected so support can reach a customer, not as a second factor, so
+/// there is no SMS code to wait for.
 class OtpStep extends StatefulWidget {
-  const OtpStep({
-    super.key,
-    required this.channel,
-    required this.destination,
-    required this.onNext,
-    required this.draft,
-  });
+  const OtpStep({super.key, required this.onNext, required this.draft});
 
-  final OtpChannel channel;
-  final String destination;
   final VoidCallback onNext;
   final SignupDraft draft;
 
@@ -39,15 +34,12 @@ class _OtpStepState extends State<OtpStep> {
   String _entered = '';
   bool _error = false;
   bool _verifying = false;
-  int _secondsLeft = 45;
+  int _secondsLeft = settings.otpResendSeconds;
   Timer? _timer;
 
-  bool get _isEmail => widget.channel == OtpChannel.email;
-
-  /// The live destination, read at build time — the draft may have been
-  /// edited after this step was first constructed.
-  String get _destination =>
-      _isEmail ? widget.draft.email : widget.draft.phone;
+  /// Read at build time — the draft may have been edited after this step
+  /// was first constructed.
+  String get _destination => widget.draft.email;
 
   @override
   void initState() {
@@ -57,7 +49,7 @@ class _OtpStepState extends State<OtpStep> {
 
   void _startCountdown() {
     _timer?.cancel();
-    setState(() => _secondsLeft = 45);
+    setState(() => _secondsLeft = settings.otpResendSeconds);
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return t.cancel();
       setState(() => _secondsLeft--);
@@ -104,10 +96,10 @@ class _OtpStepState extends State<OtpStep> {
 
   @override
   Widget build(BuildContext context) {
-    final masked = _isEmail ? _maskEmail(_destination) : _maskPhone(_destination);
+    final masked = _maskEmail(_destination);
 
     return StepScaffold(
-      headline: _isEmail ? 'Check your inbox' : 'Check your messages',
+      headline: 'Check your inbox',
       subhead:
           'We sent a 6-digit code to $masked. It expires in 10 minutes.',
       actionLabel: 'Verify and continue',
@@ -167,8 +159,6 @@ class _OtpStepState extends State<OtpStep> {
     return '$shown${'*' * (name.length - shown.length)}${email.substring(at)}';
   }
 
-  static String _maskPhone(String phone) =>
-      phone.length < 8 ? phone : '${phone.substring(0, 4)}****${phone.substring(phone.length - 3)}';
 }
 
 class _DemoCode extends StatelessWidget {

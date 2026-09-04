@@ -84,6 +84,50 @@ class ThousandsFormatter extends TextInputFormatter {
   }
 }
 
+/// A lock period in the unit customers actually choose it in — days — with
+/// the human equivalent in brackets, so "171 days" also reads as
+/// "(5 months, 3 weeks)" and "1,825 days" as "(5 years)".
+///
+/// At most the two largest units are shown: a period is easier to picture as
+/// "1 year, 1 month" than as "1 year, 1 month, 5 days".
+String lockPeriodLabel(int days) {
+  if (days <= 0) return '0 days';
+  final plural = days == 1 ? 'day' : 'days';
+  final human = humanPeriod(days);
+  return human.isEmpty
+      ? '${days.asPlain} $plural'
+      : '${days.asPlain} $plural ($human)';
+}
+
+/// Just the bracketed part: "5 months, 3 weeks". Empty under a week, where
+/// days are already the clearest way to say it.
+String humanPeriod(int days) {
+  if (days < 7) return '';
+
+  var left = days;
+  final years = left ~/ 365;
+  left %= 365;
+  final months = left ~/ 30;
+  left %= 30;
+  final weeks = left ~/ 7;
+
+  String unit(int n, String name) => '$n $name${n == 1 ? '' : 's'}';
+
+  final parts = <String>[
+    if (years > 0) unit(years, 'year'),
+    if (months > 0) unit(months, 'month'),
+    if (weeks > 0) unit(weeks, 'week'),
+  ];
+
+  return parts.take(2).join(', ');
+}
+
+/// The same period, short enough for a chip or a table cell.
+String lockPeriodShort(int days) {
+  final human = humanPeriod(days);
+  return human.isEmpty ? '$days ${days == 1 ? 'day' : 'days'}' : human;
+}
+
 double parseAmount(String raw) =>
     double.tryParse(raw.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
 

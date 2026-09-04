@@ -7,8 +7,16 @@ abstract final class AppConfig {
   /// Annual return on locked savings, paid to the wallet the moment the
   /// plan is created.
   static const savingsAnnualRate = 0.17;
-  static const minLockMonths = 1;
-  static const maxLockMonths = 60; // 5 years
+
+  /// The year the annual rate is spread over. A lock of any length earns
+  /// [savingsAnnualRate] x days / [daysPerYear], so 365 days pays the full
+  /// 17% and 171 days pays 7.96%.
+  static const daysPerYear = 365;
+
+  /// Fixed Savings locks in **days**, from 30 days to five years. A customer
+  /// who wants 171 days gets 171 days, priced exactly.
+  static const minLockDays = 30;
+  static const maxLockDays = 1825; // 5 years
   static const minSavingsAmount = 5000.0;
   static const maxSavingsAmount = 50000000.0;
 
@@ -140,6 +148,21 @@ abstract final class AppConfig {
   static const creditScoreFloor = 300;
   static const creditScoreCeiling = 850;
 
+  // Pay-in, payout and thrift ----------------------------------------------
+  /// The smallest pay-in we will match against the bank statement, and the
+  /// smallest payout worth a bank transfer.
+  static const minDepositAmount = 100.0;
+  static const minWithdrawalAmount = 500.0;
+
+  /// Thrift circles: what a round must be worth, and how many people a
+  /// circle can carry before it stops being a group anyone can keep track of.
+  static const minCircleContribution = 1000.0;
+  static const minCircleMembers = 2;
+  static const maxCircleMembers = 12;
+
+  /// Seconds before a one-time code can be sent again.
+  static const otpResendSeconds = 45;
+
   // Limits -----------------------------------------------------------------
   static const dailyTransferLimit = 1000000.0;
   // Collection account ------------------------------------------------------
@@ -171,20 +194,22 @@ abstract final class AppConfig {
   };
 }
 
-/// A curated lock-period preset surfaced in the savings flow.
+/// A curated lock-period preset surfaced in the savings flow. Presets are a
+/// shortcut, not a constraint — any number of days between the platform
+/// minimum and maximum can be typed in.
 class LockPreset {
-  const LockPreset(this.months, this.label, this.note);
-  final int months;
+  const LockPreset(this.days, this.label, this.note);
+  final int days;
   final String label;
   final String note;
 }
 
 const kLockPresets = <LockPreset>[
-  LockPreset(1, '1 month', 'Short & flexible'),
-  LockPreset(3, '3 months', 'Quarterly goal'),
-  LockPreset(6, '6 months', 'Half-year builder'),
-  LockPreset(12, '1 year', 'Most popular'),
-  LockPreset(24, '2 years', 'Serious growth'),
-  LockPreset(36, '3 years', 'Long horizon'),
-  LockPreset(60, '5 years', 'Maximum yield'),
+  LockPreset(30, '30 days', 'Short & flexible'),
+  LockPreset(90, '90 days', 'Quarterly goal'),
+  LockPreset(180, '180 days', 'Half-year builder'),
+  LockPreset(365, '1 year', 'Most popular'),
+  LockPreset(730, '2 years', 'Serious growth'),
+  LockPreset(1095, '3 years', 'Long horizon'),
+  LockPreset(1825, '5 years', 'Maximum yield'),
 ];

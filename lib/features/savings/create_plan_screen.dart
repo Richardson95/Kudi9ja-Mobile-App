@@ -26,11 +26,11 @@ class CreatePlanScreen extends StatefulWidget {
 class _CreatePlanScreenState extends State<CreatePlanScreen> {
   final _amount = TextEditingController();
   final _title = TextEditingController(text: 'My savings goal');
-  int _months = 12;
+  int _days = 365;
   bool _busy = false;
 
   double get _principal => parseAmount(_amount.text);
-  double get _interest => Finance.savingsInterest(_principal, _months);
+  double get _interest => Finance.savingsInterest(_principal, _days);
   double get _total => _principal + _interest;
 
   String? get _amountError {
@@ -66,9 +66,9 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       amountLabel: 'You are locking',
       amount: _principal,
       details: [
-        ('Lock period', _labelFor(_months)),
+        ('Lock period', lockPeriodLabel(_days)),
         ('Interest paid now', _interest.asNaira),
-        ('Matures', Finance.addMonths(DateTime.now(), _months).asDay),
+        ('Matures', DateTime.now().add(Duration(days: _days)).asDay),
       ],
     );
     if (!confirmed || !mounted) return;
@@ -78,7 +78,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
     final plan = await app.createFixedPlan(
       title: _title.text.trim(),
       principal: _principal,
-      months: _months,
+      days: _days,
     );
     if (!mounted) return;
 
@@ -92,21 +92,13 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
             ('Plan', plan.title),
             ('Principal locked', plan.principal.asNaira),
             ('Interest paid upfront', plan.interestPaid.asNaira),
-            ('Lock period', _labelFor(plan.lockMonths)),
+            ('Lock period', lockPeriodLabel(plan.lockDays)),
             ('Matures on', plan.maturityDate.asDay),
           ],
           primaryLabel: 'Back to dashboard',
         ),
       ),
     );
-  }
-
-  static String _labelFor(int months) {
-    if (months % 12 == 0 && months >= 12) {
-      final y = months ~/ 12;
-      return '$y ${y == 1 ? 'year' : 'years'}';
-    }
-    return '$months ${months == 1 ? 'month' : 'months'}';
   }
 
   @override
@@ -202,15 +194,15 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                         for (final p in kLockPresets)
                           _PeriodChip(
                             label: p.label,
-                            selected: _months == p.months,
-                            onTap: () => setState(() => _months = p.months),
+                            selected: _days == p.days,
+                            onTap: () => setState(() => _days = p.days),
                           ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    _MonthSlider(
-                      months: _months,
-                      onChanged: (m) => setState(() => _months = m),
+                    _DayPicker(
+                      days: _days,
+                      onChanged: (d) => setState(() => _days = d),
                     ),
 
                     const SizedBox(height: AppSpacing.xxl),
@@ -218,7 +210,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                       principal: _principal,
                       interest: _interest,
                       total: _total,
-                      months: _months,
+                      days: _days,
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     KField(
@@ -301,11 +293,45 @@ class _PeriodChip extends StatelessWidget {
   );
 }
 
-class _MonthSlider extends StatelessWidget {
-  const _MonthSlider({required this.months, required this.onChanged});
+/// Picks the lock period in days: a slider for browsing, and a field for
+/// typing the exact number. A customer who wants 171 days gets 171 days —
+/// the return is pro-rated to it either way.
+class _DayPicker extends StatefulWidget {
+  const _DayPicker({required this.days, required this.onChanged});
 
-  final int months;
+  final int days;
   final ValueChanged<int> onChanged;
+
+  @override
+  State<_DayPicker> createState() => _DayPickerState();
+}
+
+class _DayPickerState extends State<_DayPicker> {
+  late final _field = TextEditingController(text: '${widget.days}');
+
+  @override
+  void didUpdateWidget(_DayPicker old) {
+    super.didUpdateWidget(old);
+    // Keep the field in step when a preset or the slider moves the value,
+    // but never fight the customer while they are mid-keystroke.
+    if (widget.days != old.days && _field.text != '${widget.days}') {
+      _field.text = '${widget.days}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  void _commit(String raw) {
+    final typed = int.tryParse(raw.trim());
+    if (typed == null) return;
+    widget.onChanged(
+      typed.clamp(settings.minLockDays, settings.maxLockDays),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -318,7 +344,7 @@ class _MonthSlider extends StatelessWidget {
             style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
           ),
           Text(
-            '$months ${months == 1 ? 'month' : 'months'}',
+            lockPeriodLabel(widget.days),
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -328,22 +354,70 @@ class _MonthSlider extends StatelessWidget {
         ],
       ),
       Slider(
-        value: months.toDouble(),
-        min: settings.minLockMonths.toDouble(),
-        max: settings.maxLockMonths.toDouble(),
-        divisions: settings.maxLockMonths - settings.minLockMonths,
-        onChanged: (v) => onChanged(v.round()),
+        value: widget.days.toDouble().clamp(
+          settings.minLockDays.toDouble(),
+          settings.maxLockDays.toDouble(),
+        ),
+        min: settings.minLockDays.toDouble(),
+        max: settings.maxLockDays.toDouble(),
+        onChanged: (v) => widget.onChanged(v.round()),
       ),
-      const Row(
+      Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '1 month',
-            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+            '${settings.minLockDays} days',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textTertiary,
+            ),
           ),
           Text(
-            '5 years',
-            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+            lockPeriodShort(settings.maxLockDays),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.md),
+      Row(
+        children: [
+          const Text(
+            'Or type the exact number of days',
+            style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: 92,
+            child: TextField(
+              controller: _field,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                suffixText: 'd',
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 10,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  borderSide: const BorderSide(color: AppColors.stroke),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  borderSide: const BorderSide(color: AppColors.gold),
+                ),
+              ),
+              onChanged: _commit,
+              onSubmitted: _commit,
+            ),
           ),
         ],
       ),
@@ -356,17 +430,17 @@ class _ReturnPreview extends StatelessWidget {
     required this.principal,
     required this.interest,
     required this.total,
-    required this.months,
+    required this.days,
   });
 
   final double principal;
   final double interest;
   final double total;
-  final int months;
+  final int days;
 
   @override
   Widget build(BuildContext context) {
-    final yieldPct = Finance.effectiveYieldPct(months);
+    final yieldPct = Finance.effectiveYieldPct(days);
 
     return KCard(
       gradient: AppColors.cardGradient,

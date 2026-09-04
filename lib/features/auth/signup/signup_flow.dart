@@ -13,12 +13,17 @@ import 'signup_draft.dart';
 import 'steps/identity_step.dart';
 import 'steps/otp_step.dart';
 import 'steps/passcode_step.dart';
+import 'steps/payout_step.dart';
 import 'steps/password_step.dart';
 import 'steps/personal_step.dart';
 import 'steps/review_step.dart';
 
-/// The full account-opening journey. Nine screens, each of which must pass
-/// before the next unlocks.
+/// The full account-opening journey. Each screen must pass before the next
+/// unlocks.
+///
+/// Only the email address is verified with a one-time code — there is no SMS
+/// step. The phone number is collected so we can reach a customer, not as a
+/// second factor.
 class SignupFlow extends StatefulWidget {
   const SignupFlow({super.key});
 
@@ -35,8 +40,8 @@ class _SignupFlowState extends State<SignupFlow> {
   static const _titles = [
     'Your details',
     'Verify email',
-    'Verify phone',
     'Identity check',
+    'Payout account',
     'Secure your account',
     'Sign-in passcode',
     'Transaction PIN',
@@ -88,8 +93,11 @@ class _SignupFlowState extends State<SignupFlow> {
       nin: _draft.nin,
       address: _draft.address,
       state: _draft.stateOfResidence,
-      accountNumber: SecurityService.accountNumberFrom(_draft.phone),
+      payoutBank: _draft.payoutBank,
+      payoutAccountNumber: _draft.payoutAccountNumber,
       createdAt: DateTime.now(),
+      // Only the email is verified at sign-up; there is no SMS check.
+      phoneVerified: false,
       securityQuestion: _draft.securityQuestion,
       securityAnswer: SecurityService.hash(
         _draft.securityAnswer.trim().toLowerCase(),
@@ -141,25 +149,14 @@ class _SignupFlowState extends State<SignupFlow> {
                       PersonalStep(draft: _draft, onNext: _next),
                       OtpStep(
                         key: const ValueKey('email-otp'),
-                        channel: OtpChannel.email,
-                        destination: _draft.email,
                         onNext: () {
                           _draft.emailVerified = true;
                           _next();
                         },
                         draft: _draft,
                       ),
-                      OtpStep(
-                        key: const ValueKey('phone-otp'),
-                        channel: OtpChannel.sms,
-                        destination: _draft.phone,
-                        onNext: () {
-                          _draft.phoneVerified = true;
-                          _next();
-                        },
-                        draft: _draft,
-                      ),
                       IdentityStep(draft: _draft, onNext: _next),
+                      PayoutStep(draft: _draft, onNext: _next),
                       PasswordStep(draft: _draft, onNext: _next),
                       PasscodeStep(
                         key: const ValueKey('signin-passcode'),

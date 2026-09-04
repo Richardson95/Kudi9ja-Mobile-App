@@ -291,7 +291,7 @@ class _RatesCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         _Line(
           'Lock range',
-          '${settings.minLockMonths} - ${settings.maxLockMonths} months',
+          '${settings.minLockDays} - ${settings.maxLockDays} days',
         ),
         _Line(
           'Loan range',

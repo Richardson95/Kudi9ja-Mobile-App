@@ -6,10 +6,14 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
+import 'dart:io';
+
 import '../../data/models/admin.dart';
+import '../../data/models/deposit.dart';
 import '../../data/models/models.dart';
 import '../wallet/transaction_list.dart';
 import '../../state/app_state.dart';
+import '../../widgets/company_account.dart';
 import '../../widgets/primitives.dart';
 import 'admin_shell.dart';
 
@@ -332,7 +336,7 @@ class _AdminCustomerDetailScreenState
                     _Detail('Full name', c.fullName),
                     _Detail('Email', c.email),
                     _Detail('Phone', c.phone),
-                    _Detail('Account number', c.accountNumber),
+                    _Detail('Customer reference', c.accountNumber),
                     _Detail(
                       'Date of birth',
                       c.dateOfBirth?.asDay ?? 'Not on file',
@@ -369,6 +373,9 @@ class _AdminCustomerDetailScreenState
               ),
 
               if (c.isThisDevice) ...[
+                const SizedBox(height: AppSpacing.xl),
+                const AdminSectionLabel('PAY-INS'),
+                _PayIns(claims: app.depositsFor(c)),
                 const SizedBox(height: AppSpacing.xl),
                 const AdminSectionLabel('PLANS AND LOANS'),
                 _LiveRecords(app: app),
@@ -575,6 +582,156 @@ class _Header extends StatelessWidget {
   );
 }
 
+/// This customer's pay-ins, newest first.
+///
+/// Every deposit carries its own K9 reference, so an admin reading a
+/// narration off the bank statement can match it to exactly one claim — and
+/// see straight away whether it is still waiting on them.
+class _PayIns extends StatelessWidget {
+  const _PayIns({required this.claims});
+
+  final List<DepositClaim> claims;
+
+  @override
+  Widget build(BuildContext context) {
+    if (claims.isEmpty) {
+      return const KCard(
+        child: Text(
+          'No pay-ins yet.',
+          style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
+        ),
+      );
+    }
+
+    return KCard(
+      child: Column(
+        children: [
+          for (var i = 0; i < claims.length; i++) ...[
+            _PayInRow(claim: claims[i]),
+            if (i != claims.length - 1)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: HairLine(),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PayInRow extends StatelessWidget {
+  const _PayInRow({required this.claim});
+
+  final DepositClaim claim;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, colour) = switch (claim.status) {
+      DepositStatus.pending => ('AWAITING YOU', AppColors.warning),
+      DepositStatus.confirmed => ('CONFIRMED', AppColors.success),
+      DepositStatus.rejected => ('REJECTED', AppColors.danger),
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                claim.amount.asNaira,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            StatusPill(label: label, color: colour, dense: true),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // The narration the customer was told to quote.
+        Text(
+          claim.reference,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: AppColors.gold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          [
+            claim.purpose == DepositPurpose.loanRepayment
+                ? 'Loan repayment${claim.loanPurpose.isEmpty ? '' : ' — ${claim.loanPurpose}'}'
+                : 'Wallet top-up',
+            claim.claimedAt.asDayTime,
+            if (claim.senderName.isNotEmpty) 'from ${claim.senderName}',
+          ].join(' • '),
+          style: const TextStyle(
+            fontSize: 11.5,
+            height: 1.4,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // The receipt the customer attached. It is the evidence the whole
+        // approval rests on, so it is reachable from their record too, not
+        // only from the payments queue.
+        if (claim.hasReceipt)
+          GestureDetector(
+            onTap: () => showReceipt(context, claim.receiptPath),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
+                  child: Image.file(
+                    File(claim.receiptPath),
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.receipt_long_rounded,
+                      size: 20,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const Text(
+                  'View receipt',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gold,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          const Text(
+            'No receipt attached',
+            style: TextStyle(fontSize: 11.5, color: AppColors.danger),
+          ),
+        if (claim.note.isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Text(
+            claim.note,
+            style: const TextStyle(
+              fontSize: 11.5,
+              height: 1.4,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _LiveRecords extends StatelessWidget {
   const _LiveRecords({required this.app});
   final AppState app;
@@ -672,7 +829,7 @@ class _Actions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.read<AppState>();
-    final canAct = app.adminRole.canActOnLoans;
+    final canAct = app.adminRole.canManageCustomers;
 
     return Column(
       children: [

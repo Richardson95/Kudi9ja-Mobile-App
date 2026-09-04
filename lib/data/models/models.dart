@@ -1,3 +1,4 @@
+import '../../core/constants/app_config.dart';
 import '../../core/utils/formatters.dart';
 import 'platform_settings.dart';
 
@@ -25,7 +26,8 @@ class AppUser {
     required this.nin,
     required this.address,
     required this.state,
-    required this.accountNumber,
+    required this.payoutBank,
+    required this.payoutAccountNumber,
     required this.createdAt,
     this.kycTier = KycTier.tier2,
     this.emailVerified = true,
@@ -45,7 +47,15 @@ class AppUser {
   final String nin;
   final String address;
   final String state;
-  final String accountNumber;
+  /// Kudi9ja does not issue account numbers. Money leaves the wallet to the
+  /// customer's own bank account, which is what these two hold. The name on
+  /// it must match [fullName] — we only pay out to the customer.
+  final String payoutBank;
+  final String payoutAccountNumber;
+
+  /// Whether a payout destination has been set at all.
+  bool get hasPayoutAccount =>
+      payoutBank.isNotEmpty && payoutAccountNumber.isNotEmpty;
   final DateTime createdAt;
   final KycTier kycTier;
   final bool emailVerified;
@@ -56,12 +66,20 @@ class AppUser {
 
   String get firstName => fullName.trim().split(RegExp(r'\s+')).first;
 
+  /// A short, stable code identifying this customer on a bank transfer and
+  /// in the admin queues. It replaces the account number Kudi9ja used to
+  /// issue — it is a reference, not an account anyone can pay into directly.
+  String get customerRef =>
+      'K9-${id.replaceAll('-', '').substring(0, 6).toUpperCase()}';
+
   AppUser copyWith({
     String? fullName,
     String? email,
     String? phone,
     String? address,
     String? state,
+    String? payoutBank,
+    String? payoutAccountNumber,
     bool? biometricsEnabled,
     KycTier? kycTier,
   }) => AppUser(
@@ -75,7 +93,8 @@ class AppUser {
     nin: nin,
     address: address ?? this.address,
     state: state ?? this.state,
-    accountNumber: accountNumber,
+    payoutBank: payoutBank ?? this.payoutBank,
+    payoutAccountNumber: payoutAccountNumber ?? this.payoutAccountNumber,
     createdAt: createdAt,
     kycTier: kycTier ?? this.kycTier,
     emailVerified: emailVerified,
@@ -96,7 +115,8 @@ class AppUser {
     'nin': nin,
     'address': address,
     'state': state,
-    'accountNumber': accountNumber,
+    'payoutBank': payoutBank,
+    'payoutAccountNumber': payoutAccountNumber,
     'createdAt': createdAt.toIso8601String(),
     'kycTier': kycTier.index,
     'emailVerified': emailVerified,
@@ -117,7 +137,11 @@ class AppUser {
     nin: j['nin'] as String? ?? '',
     address: j['address'] as String? ?? '',
     state: j['state'] as String? ?? '',
-    accountNumber: j['accountNumber'] as String,
+    payoutBank: j['payoutBank'] as String? ?? '',
+    // Accounts opened before Kudi9ja stopped issuing its own numbers carry
+    // 'accountNumber'. It was never a real bank account, so it is dropped
+    // rather than migrated — the customer sets a payout account instead.
+    payoutAccountNumber: j['payoutAccountNumber'] as String? ?? '',
     createdAt: DateTime.parse(j['createdAt'] as String),
     kycTier: KycTier.values[j['kycTier'] as int? ?? 2],
     emailVerified: j['emailVerified'] as bool? ?? true,
@@ -204,7 +228,7 @@ class SavingsPlan {
     required this.id,
     required this.title,
     required this.principal,
-    required this.lockMonths,
+    required this.lockDays,
     required this.interestPaid,
     required this.startDate,
     required this.maturityDate,
@@ -224,7 +248,9 @@ class SavingsPlan {
   final String id;
   final String title;
   final double principal;
-  final int lockMonths;
+
+  /// How long the principal is locked for, in days.
+  final int lockDays;
 
   /// The 17% return, credited to the wallet the instant the plan was created.
   final double interestPaid;
@@ -336,7 +362,7 @@ class SavingsPlan {
     id: id,
     title: title ?? this.title,
     principal: principal ?? this.principal,
-    lockMonths: lockMonths,
+    lockDays: lockDays,
     interestPaid: interestPaid ?? this.interestPaid,
     startDate: startDate,
     maturityDate: maturityDate ?? this.maturityDate,
@@ -357,7 +383,7 @@ class SavingsPlan {
     'id': id,
     'title': title,
     'principal': principal,
-    'lockMonths': lockMonths,
+    'lockDays': lockDays,
     'interestPaid': interestPaid,
     'startDate': startDate.toIso8601String(),
     'maturityDate': maturityDate.toIso8601String(),
@@ -378,7 +404,10 @@ class SavingsPlan {
     id: j['id'] as String,
     title: j['title'] as String,
     principal: (j['principal'] as num).toDouble(),
-    lockMonths: j['lockMonths'] as int,
+    // Plans written before locks were counted in days carry 'lockMonths'.
+    lockDays:
+        j['lockDays'] as int? ??
+        ((j['lockMonths'] as num) * AppConfig.daysPerYear / 12).round(),
     interestPaid: (j['interestPaid'] as num).toDouble(),
     startDate: DateTime.parse(j['startDate'] as String),
     maturityDate: DateTime.parse(j['maturityDate'] as String),
@@ -716,10 +745,14 @@ extension TxFilterX on TxFilter {
 
 /// Every money rule in one place, so the UI never invents its own maths.
 abstract final class Finance {
-  /// The 17% p.a. return on a Fixed Savings principal locked over [months],
+  /// The 17% p.a. return on a Fixed Savings principal locked for [days],
   /// paid into the wallet upfront.
-  static double savingsInterest(double principal, int months) =>
-      principal * settings.savingsAnnualRate * (months / 12);
+  ///
+  /// The annual rate is spread evenly across the year, so a lock of any
+  /// length is priced exactly: 365 days pays the full 17%, 30 days pays
+  /// 1.397%, and 171 days pays 7.964%. No rounding to whole months.
+  static double savingsInterest(double principal, int days) =>
+      principal * settings.savingsAnnualRate * (days / settings.daysPerYear);
 
   /// Days in a Target Savings term. A month counts as
   /// [PlatformSettings.daysPerSavingsMonth] days, so six months is 180 days
@@ -754,12 +787,12 @@ abstract final class Finance {
   static double targetBonus(double totalSaved, int months) =>
       totalSaved * targetRateFor(months);
 
-  static double savingsTotal(double principal, int months) =>
-      principal + savingsInterest(principal, months);
+  static double savingsTotal(double principal, int days) =>
+      principal + savingsInterest(principal, days);
 
   /// Effective yield over the whole lock period, as a percentage.
-  static double effectiveYieldPct(int months) =>
-      settings.savingsAnnualRate * (months / 12) * 100;
+  static double effectiveYieldPct(int days) =>
+      settings.savingsAnnualRate * (days / settings.daysPerYear) * 100;
 
   /// Flat interest on the amount borrowed, at the rate published for a
   /// tenure of [months] — 10% over one month, 15% over two, 25% over three.

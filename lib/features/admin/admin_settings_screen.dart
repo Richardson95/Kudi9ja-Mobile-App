@@ -46,8 +46,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
   bool get _dirty =>
       _draft.savingsAnnualRate != settings.savingsAnnualRate ||
-      _draft.minLockMonths != settings.minLockMonths ||
-      _draft.maxLockMonths != settings.maxLockMonths ||
+      _draft.minLockDays != settings.minLockDays ||
+      _draft.maxLockDays != settings.maxLockDays ||
+      _draft.daysPerYear != settings.daysPerYear ||
       _draft.minSavingsAmount != settings.minSavingsAmount ||
       _draft.targetRateShort != settings.targetRateShort ||
       _draft.targetRateMedium != settings.targetRateMedium ||
@@ -92,7 +93,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _draft.creditScoreFloor != settings.creditScoreFloor ||
       _draft.creditScoreCeiling != settings.creditScoreCeiling ||
       _draft.maxPasscodeAttempts != settings.maxPasscodeAttempts ||
-      _draft.lockTimeoutMinutes != settings.lockTimeoutMinutes;
+      _draft.lockTimeoutMinutes != settings.lockTimeoutMinutes ||
+      _draft.minDepositAmount != settings.minDepositAmount ||
+      _draft.minWithdrawalAmount != settings.minWithdrawalAmount ||
+      _draft.minCircleContribution != settings.minCircleContribution ||
+      _draft.minCircleMembers != settings.minCircleMembers ||
+      _draft.maxCircleMembers != settings.maxCircleMembers ||
+      _draft.otpResendSeconds != settings.otpResendSeconds;
 
   /// A rate for a slider label: no decimal point unless there is one.
   static String _ratePct(double pct) =>
@@ -110,8 +117,21 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       '${settings.savingsRatePct.toStringAsFixed(2)}%',
       '${_draft.savingsRatePct.toStringAsFixed(2)}%',
     );
-    cmp('Min lock', '${settings.minLockMonths}m', '${_draft.minLockMonths}m');
-    cmp('Max lock', '${settings.maxLockMonths}m', '${_draft.maxLockMonths}m');
+    cmp(
+      'Min lock',
+      '${settings.minLockDays}d',
+      '${_draft.minLockDays}d',
+    );
+    cmp(
+      'Max lock',
+      '${settings.maxLockDays}d',
+      '${_draft.maxLockDays}d',
+    );
+    cmp(
+      'Days per year',
+      '${settings.daysPerYear}',
+      '${_draft.daysPerYear}',
+    );
     cmp(
       'Min savings',
       settings.minSavingsAmount.asNairaFlat,
@@ -313,11 +333,42 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       '${_draft.loanSavingsMultiple.toStringAsFixed(2)}x',
     );
 
+    cmp(
+      'Minimum pay-in',
+      settings.minDepositAmount.asNairaFlat,
+      _draft.minDepositAmount.asNairaFlat,
+    );
+    cmp(
+      'Minimum withdrawal',
+      settings.minWithdrawalAmount.asNairaFlat,
+      _draft.minWithdrawalAmount.asNairaFlat,
+    );
+    cmp(
+      'Minimum circle contribution',
+      settings.minCircleContribution.asNairaFlat,
+      _draft.minCircleContribution.asNairaFlat,
+    );
+    cmp(
+      'Smallest circle',
+      '${settings.minCircleMembers}',
+      '${_draft.minCircleMembers}',
+    );
+    cmp(
+      'Largest circle',
+      '${settings.maxCircleMembers}',
+      '${_draft.maxCircleMembers}',
+    );
+    cmp(
+      'OTP resend delay',
+      '${settings.otpResendSeconds}s',
+      '${_draft.otpResendSeconds}s',
+    );
+
     return out;
   }
 
   String? get _validationError {
-    if (_draft.minLockMonths >= _draft.maxLockMonths) {
+    if (_draft.minLockDays >= _draft.maxLockDays) {
       return 'The minimum lock must be shorter than the maximum.';
     }
     if (_draft.minLoanAmount >= _draft.maxLoanAmount) {
@@ -506,40 +557,83 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   minTargetMonths: _draft.minTargetMonths + 1,
                 ),
               ),
+              typedValue: _draft.minTargetMonths,
+              unit: ' months',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(minTargetMonths: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
               label: 'Minimum lock',
-              value: '${_draft.minLockMonths} months',
+              value: lockPeriodLabel(_draft.minLockDays),
               enabled: canEdit,
-              onMinus: _draft.minLockMonths > 1
+              onMinus: _draft.minLockDays > 1
                   ? () => setState(
                       () => _draft = _draft.copyWith(
-                        minLockMonths: _draft.minLockMonths - 1,
+                        minLockDays: _draft.minLockDays - 1,
                       ),
                     )
                   : null,
               onPlus: () => setState(
                 () => _draft = _draft.copyWith(
-                  minLockMonths: _draft.minLockMonths + 1,
+                  minLockDays: _draft.minLockDays + 1,
                 ),
+              ),
+              typedValue: _draft.minLockDays,
+              unit: ' days',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(minLockDays: v.toInt()),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
               label: 'Maximum lock',
-              value:
-                  '${_draft.maxLockMonths} months (${(_draft.maxLockMonths / 12).toStringAsFixed(_draft.maxLockMonths % 12 == 0 ? 0 : 1)} yr)',
+              value: lockPeriodLabel(_draft.maxLockDays),
               enabled: canEdit,
-              onMinus: () => setState(
-                () => _draft = _draft.copyWith(
-                  maxLockMonths: _draft.maxLockMonths - 6,
-                ),
-              ),
+              onMinus: _draft.maxLockDays > _draft.minLockDays + 30
+                  ? () => setState(
+                      () => _draft = _draft.copyWith(
+                        maxLockDays: _draft.maxLockDays - 30,
+                      ),
+                    )
+                  : null,
               onPlus: () => setState(
                 () => _draft = _draft.copyWith(
-                  maxLockMonths: _draft.maxLockMonths + 6,
+                  maxLockDays: _draft.maxLockDays + 30,
                 ),
+              ),
+              typedValue: _draft.maxLockDays,
+              unit: ' days',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(maxLockDays: v.toInt()),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _StepperCard(
+              label: 'Days the annual rate spreads over',
+              value: '${_draft.daysPerYear} days',
+              enabled: canEdit,
+              onMinus: _draft.daysPerYear > 1
+                  ? () => setState(
+                      () => _draft = _draft.copyWith(
+                        daysPerYear: _draft.daysPerYear - 1,
+                      ),
+                    )
+                  : null,
+              onPlus: () => setState(
+                () => _draft = _draft.copyWith(
+                  daysPerYear: _draft.daysPerYear + 1,
+                ),
+              ),
+              typedValue: _draft.daysPerYear,
+              unit: ' days',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(daysPerYear: v.toInt()),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -579,6 +673,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                       ),
                     )
                   : null,
+              typedValue: _draft.targetTierMedium,
+              unit: ' months',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(targetTierMedium: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -597,6 +697,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   targetTierLong: _draft.targetTierLong + 1,
                 ),
               ),
+              typedValue: _draft.targetTierLong,
+              unit: ' months',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(targetTierLong: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -614,6 +720,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(
                   daysPerSavingsMonth: _draft.daysPerSavingsMonth + 1,
                 ),
+              ),
+              typedValue: _draft.daysPerSavingsMonth,
+              unit: ' days',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(daysPerSavingsMonth: v.toInt()),
               ),
             ),
 
@@ -664,6 +776,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(
                   maxLoanTenureMonths: _draft.maxLoanTenureMonths + 1,
                 ),
+              ),
+              typedValue: _draft.maxLoanTenureMonths,
+              unit: ' months',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(maxLoanTenureMonths: v.toInt()),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -793,6 +911,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   loanScoreBaseline: _draft.loanScoreBaseline + 10,
                 ),
               ),
+              typedValue: _draft.loanScoreBaseline,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(loanScoreBaseline: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _AmountCard(
@@ -847,6 +971,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   creditBaseScore: _draft.creditBaseScore + 10,
                 ),
               ),
+              typedValue: _draft.creditBaseScore,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditBaseScore: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -865,6 +995,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   creditPointsPerPlan: _draft.creditPointsPerPlan + 1,
                 ),
               ),
+              typedValue: _draft.creditPointsPerPlan,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditPointsPerPlan: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -882,6 +1018,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(
                   creditPlanPointsCap: _draft.creditPlanPointsCap + 10,
                 ),
+              ),
+              typedValue: _draft.creditPlanPointsCap,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditPlanPointsCap: v.toInt()),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -911,6 +1053,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   creditSavingsPointsCap: _draft.creditSavingsPointsCap + 10,
                 ),
               ),
+              typedValue: _draft.creditSavingsPointsCap,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditSavingsPointsCap: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -928,6 +1076,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(
                   creditPointsPerRepaidLoan: _draft.creditPointsPerRepaidLoan + 5,
                 ),
+              ),
+              typedValue: _draft.creditPointsPerRepaidLoan,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditPointsPerRepaidLoan: v.toInt()),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -947,6 +1101,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   creditRepaidPointsCap: _draft.creditRepaidPointsCap + 10,
                 ),
               ),
+              typedValue: _draft.creditRepaidPointsCap,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditRepaidPointsCap: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -964,6 +1124,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(
                   creditOverduePenalty: _draft.creditOverduePenalty + 10,
                 ),
+              ),
+              typedValue: _draft.creditOverduePenalty,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditOverduePenalty: v.toInt()),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -983,6 +1149,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   creditVerifiedBonus: _draft.creditVerifiedBonus + 5,
                 ),
               ),
+              typedValue: _draft.creditVerifiedBonus,
+              unit: ' points',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditVerifiedBonus: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -1001,6 +1173,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   creditScoreFloor: _draft.creditScoreFloor + 10,
                 ),
               ),
+              typedValue: _draft.creditScoreFloor,
+              unit: ' points',
+              min: 0,
+              max: _draft.creditScoreCeiling - 1,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditScoreFloor: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -1018,6 +1197,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(
                   creditScoreCeiling: _draft.creditScoreCeiling + 10,
                 ),
+              ),
+              typedValue: _draft.creditScoreCeiling,
+              unit: ' points',
+              min: _draft.creditScoreFloor + 1,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(creditScoreCeiling: v.toInt()),
               ),
             ),
 
@@ -1040,6 +1225,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   maxPasscodeAttempts: _draft.maxPasscodeAttempts + 1,
                 ),
               ),
+              typedValue: _draft.maxPasscodeAttempts,
+              unit: ' tries',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(maxPasscodeAttempts: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -1058,6 +1249,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   lockTimeoutMinutes: _draft.lockTimeoutMinutes + 1,
                 ),
               ),
+              typedValue: _draft.lockTimeoutMinutes,
+              unit: ' min',
+              min: 0,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(lockTimeoutMinutes: v.toInt()),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             const KCard(
@@ -1069,6 +1266,111 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   fontSize: 11.5,
                   height: 1.5,
                   color: AppColors.textTertiary,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xxl),
+            const AdminSectionLabel('PAY-IN AND PAYOUT'),
+            _AmountCard(
+              label: 'Smallest pay-in we will match',
+              value: _draft.minDepositAmount,
+              step: 100,
+              enabled: canEdit,
+              onChanged: (v) =>
+                  setState(() => _draft = _draft.copyWith(minDepositAmount: v)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _AmountCard(
+              label: 'Smallest withdrawal',
+              value: _draft.minWithdrawalAmount,
+              step: 100,
+              enabled: canEdit,
+              onChanged: (v) => setState(
+                () => _draft = _draft.copyWith(minWithdrawalAmount: v),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xxl),
+            const AdminSectionLabel('THRIFT CIRCLES'),
+            _AmountCard(
+              label: 'Minimum contribution per cycle',
+              value: _draft.minCircleContribution,
+              step: 500,
+              enabled: canEdit,
+              onChanged: (v) => setState(
+                () => _draft = _draft.copyWith(minCircleContribution: v),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _StepperCard(
+              label: 'Smallest circle',
+              value: '${_draft.minCircleMembers} members',
+              enabled: canEdit,
+              typedValue: _draft.minCircleMembers,
+              unit: ' members',
+              min: 2,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(minCircleMembers: v.toInt()),
+              ),
+              onMinus: _draft.minCircleMembers > 2
+                  ? () => setState(
+                      () => _draft = _draft.copyWith(
+                        minCircleMembers: _draft.minCircleMembers - 1,
+                      ),
+                    )
+                  : null,
+              onPlus: () => setState(
+                () => _draft = _draft.copyWith(
+                  minCircleMembers: _draft.minCircleMembers + 1,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _StepperCard(
+              label: 'Largest circle',
+              value: '${_draft.maxCircleMembers} members',
+              enabled: canEdit,
+              typedValue: _draft.maxCircleMembers,
+              unit: ' members',
+              min: 2,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(maxCircleMembers: v.toInt()),
+              ),
+              onMinus: _draft.maxCircleMembers > _draft.minCircleMembers
+                  ? () => setState(
+                      () => _draft = _draft.copyWith(
+                        maxCircleMembers: _draft.maxCircleMembers - 1,
+                      ),
+                    )
+                  : null,
+              onPlus: () => setState(
+                () => _draft = _draft.copyWith(
+                  maxCircleMembers: _draft.maxCircleMembers + 1,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _StepperCard(
+              label: 'One-time code resend delay',
+              value: '${_draft.otpResendSeconds} seconds',
+              enabled: canEdit,
+              typedValue: _draft.otpResendSeconds,
+              unit: ' seconds',
+              min: 5,
+              onTyped: (v) => setState(
+                () => _draft = _draft.copyWith(otpResendSeconds: v.toInt()),
+              ),
+              onMinus: _draft.otpResendSeconds > 5
+                  ? () => setState(
+                      () => _draft = _draft.copyWith(
+                        otpResendSeconds: _draft.otpResendSeconds - 5,
+                      ),
+                    )
+                  : null,
+              onPlus: () => setState(
+                () => _draft = _draft.copyWith(
+                  otpResendSeconds: _draft.otpResendSeconds + 5,
                 ),
               ),
             ),
@@ -1338,6 +1640,173 @@ class _TenureRatePicker extends StatelessWidget {
   );
 }
 
+/// Types a value in, for admins who would rather not nudge a slider two
+/// hundred times to get from 17 to 85.
+///
+/// Every control on this screen routes here when its value is tapped, so
+/// there is no setting that can only be reached by dragging.
+Future<double?> editNumber(
+  BuildContext context, {
+  required String label,
+  required double value,
+  String unit = '',
+  String? helper,
+  double? min,
+  double? max,
+  bool integer = false,
+}) async {
+  final controller = TextEditingController(
+    text: integer
+        ? value.round().toString()
+        : _trimZeros(value.toStringAsFixed(4)),
+  );
+
+  final result = await showModalBottomSheet<double>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      String? error;
+
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          void save() {
+            final typed = double.tryParse(controller.text.trim());
+            if (typed == null) {
+              setSheetState(() => error = 'Type a number.');
+              return;
+            }
+            if (min != null && typed < min) {
+              setSheetState(() => error = 'Cannot go below ${_trimZeros(min.toString())}$unit.');
+              return;
+            }
+            if (max != null && typed > max) {
+              setSheetState(() => error = 'Cannot go above ${_trimZeros(max.toString())}$unit.');
+              return;
+            }
+            Navigator.pop(sheetContext, integer ? typed.roundToDouble() : typed);
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: AppSpacing.xl,
+              right: AppSpacing.xl,
+              top: AppSpacing.lg,
+              bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: Theme.of(context).textTheme.titleLarge),
+                if (helper != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    helper,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.45,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: TextInputType.numberWithOptions(
+                    decimal: !integer,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]'),
+                    ),
+                  ],
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6,
+                  ),
+                  onSubmitted: (_) => save(),
+                  decoration: InputDecoration(
+                    suffixText: unit.isEmpty ? null : unit,
+                    errorText: error,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.lg,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: const BorderSide(color: AppColors.stroke),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: const BorderSide(color: AppColors.gold),
+                    ),
+                  ),
+                ),
+                if (min != null || max != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Allowed: '
+                    '${min == null ? 'any' : _trimZeros(min.toString())}'
+                    ' to '
+                    '${max == null ? 'any' : _trimZeros(max.toString())}$unit',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                GoldButton(label: 'Save', onPressed: save),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+
+  controller.dispose();
+  return result;
+}
+
+String _trimZeros(String v) => v.contains('.')
+    ? v.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '')
+    : v;
+
+/// Makes a figure tappable, and says so — a dotted underline, so an admin
+/// can see which numbers can be typed rather than having to guess.
+class _TypeTarget extends StatelessWidget {
+  const _TypeTarget({
+    required this.child,
+    required this.onTap,
+    required this.enabled,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: enabled ? onTap : null,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+        border: Border.all(
+          color: enabled
+              ? AppColors.gold.withValues(alpha: 0.35)
+              : Colors.transparent,
+        ),
+      ),
+      child: child,
+    ),
+  );
+}
+
 class _RateCard extends StatelessWidget {
   const _RateCard({
     required this.label,
@@ -1379,13 +1848,30 @@ class _RateCard extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
-              valueLabel,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.4,
-                color: AppColors.gold,
+            // Tap the figure to type it. Dragging from 17 to 85 is not a
+            // reasonable thing to ask of anyone.
+            _TypeTarget(
+              enabled: enabled,
+              onTap: () async {
+                final typed = await editNumber(
+                  context,
+                  label: label,
+                  value: value,
+                  unit: '%',
+                  helper: helper,
+                  min: min,
+                  max: max,
+                );
+                if (typed != null) onChanged(typed);
+              },
+              child: Text(
+                valueLabel,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  color: AppColors.gold,
+                ),
               ),
             ),
           ],
@@ -1453,13 +1939,27 @@ class _AmountCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value.asNairaFlat,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
-                  color: AppColors.gold,
+              _TypeTarget(
+                enabled: enabled,
+                onTap: () async {
+                  final typed = await editNumber(
+                    context,
+                    label: label,
+                    value: value,
+                    unit: ' naira',
+                    integer: true,
+                    min: 0,
+                  );
+                  if (typed != null) onChanged(typed);
+                },
+                child: Text(
+                  value.asNairaFlat,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    color: AppColors.gold,
+                  ),
                 ),
               ),
             ],
@@ -1488,10 +1988,25 @@ class _StepperCard extends StatelessWidget {
     required this.enabled,
     this.onMinus,
     this.onPlus,
+    this.typedValue,
+    this.onTyped,
+    this.unit = '',
+    this.min,
+    this.max,
   });
 
   final String label;
+
+  /// The value as it is shown — '30 days', '5 tries'.
   final String value;
+
+  /// The same value as a number, so it can be typed instead of stepped.
+  final num? typedValue;
+  final ValueChanged<num>? onTyped;
+  final String unit;
+  final num? min;
+  final num? max;
+
   final bool enabled;
   final VoidCallback? onMinus;
   final VoidCallback? onPlus;
@@ -1513,12 +2028,27 @@ class _StepperCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.gold,
+              _TypeTarget(
+                enabled: enabled && onTyped != null,
+                onTap: () async {
+                  final typed = await editNumber(
+                    context,
+                    label: label,
+                    value: (typedValue ?? 0).toDouble(),
+                    unit: unit,
+                    integer: true,
+                    min: min?.toDouble(),
+                    max: max?.toDouble(),
+                  );
+                  if (typed != null) onTyped!(typed.round());
+                },
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.gold,
+                  ),
                 ),
               ),
             ],

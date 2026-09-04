@@ -39,11 +39,20 @@ class _PayInScreenState extends State<PayInScreen> {
   String _receipt = '';
   bool _busy = false;
 
+  /// Minted once, when this screen opens, and quoted on the transfer. Every
+  /// pay-in carries its own, so two payments of the same amount on the same
+  /// day are still tellable apart on the bank statement.
+  late final String _reference = context
+      .read<AppState>()
+      .newPaymentReference();
+
   bool get _isLoan => widget.loan != null;
   double get _value => parseAmount(_amount.text);
 
   bool get _canSubmit =>
-      _value >= 100 && _receipt.isNotEmpty && !_busy;
+      _value >= settings.minDepositAmount &&
+      _receipt.isNotEmpty &&
+      !_busy;
 
   @override
   void dispose() {
@@ -60,6 +69,7 @@ class _PayInScreenState extends State<PayInScreen> {
     final claim = await app.submitDepositClaim(
       amount: _value,
       purpose: _isLoan ? DepositPurpose.loanRepayment : DepositPurpose.wallet,
+      reference: _reference,
       receiptPath: _receipt,
       senderName: _sender.text.trim(),
       loanId: widget.loan?.id,
@@ -90,7 +100,6 @@ class _PayInScreenState extends State<PayInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
 
     return Scaffold(
       appBar: AppBar(
@@ -115,7 +124,7 @@ class _PayInScreenState extends State<PayInScreen> {
                     const SizedBox(height: AppSpacing.xl),
 
                     CompanyAccountCard(
-                      reference: app.paymentReference,
+                      reference: _reference,
                       amount: _value > 0 ? _value.asNairaFlat : null,
                     ),
                     const SizedBox(height: AppSpacing.xl),

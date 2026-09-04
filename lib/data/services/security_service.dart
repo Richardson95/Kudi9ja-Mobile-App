@@ -28,16 +28,6 @@ class SecurityService {
     return '$prefix-${ts.toUpperCase()}${noise.toUpperCase()}';
   }
 
-  /// A deterministic 10-digit NUBAN-style account number from the phone.
-  static String accountNumberFrom(String phone) {
-    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    final tail = digits.length >= 10
-        ? digits.substring(digits.length - 10)
-        : digits.padLeft(10, '9');
-    return tail;
-  }
-
-  // ── Biometrics ──────────────────────────────────────────────────────────
   static final _auth = LocalAuthentication();
 
   static Future<bool> get isBiometricAvailable async {

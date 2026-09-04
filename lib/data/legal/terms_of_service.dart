@@ -130,9 +130,10 @@ LegalDocument termsOfService() {
         const LegalNote(
           '${AppConfig.legalEntity} is not a bank. Your wallet is not a bank '
           'account, and money held in it is not insured by the Nigeria Deposit '
-          'Insurance Corporation. The account number shown in the app '
-          'identifies your Kudi9ja profile; it is not a bank account that can '
-          'be paid into from outside Kudi9ja.',
+          'Insurance Corporation. **We do not issue account numbers** — the '
+          'code shown in the app is a reference for matching your payments to '
+          'you, and nobody can pay into it. Money leaves Kudi9ja to a bank '
+          'account you already hold in your own name.',
           title: 'Read this twice',
           tone: LegalTone.caution,
         ),
@@ -187,10 +188,15 @@ LegalDocument termsOfService() {
 
       LegalSection('Taking money out', [
         const LegalText(
-          'You can ask to withdraw available wallet funds to a Nigerian bank '
-          'account in your own name. When you make the request the amount '
-          'leaves your wallet immediately, so it cannot be spent twice while '
-          'we check it.',
+          'Everything you earn or receive through Kudi9ja — a savings return, '
+          'a loan we disburse, a thrift payout — lands in your wallet. You '
+          'move it out by asking us to pay it to **a Nigerian bank account in '
+          'your own name**, which you nominate when you open your account and '
+          'can change whenever you like.',
+        ),
+        const LegalText(
+          'When you make the request the amount leaves your wallet '
+          'immediately, so it cannot be spent twice while we check it.',
         ),
         const LegalList([
           'Requests are reviewed and, where approved, paid out within **one '
@@ -213,16 +219,34 @@ LegalDocument termsOfService() {
 
       LegalSection('Fixed Savings', [
         LegalText(
-          'A Fixed Savings plan locks a sum of money for a period you choose, '
-          'from ${s.minLockMonths} month to ${s.maxLockMonths ~/ 12} years, '
-          'and pays **${s.savingsRatePct.toStringAsFixed(0)}% per annum**, '
-          'pro-rated for the term.',
+          'A Fixed Savings plan locks a sum of money for a period you choose '
+          'in **days** — anything from ${s.minLockDays} days to '
+          '${s.maxLockDays.asPlain} days (${humanPeriod(s.maxLockDays)}) — and '
+          'pays **${s.savingsRatePct.toStringAsFixed(0)}% per annum**, '
+          'pro-rated to the exact number of days you lock for.',
         ),
+        LegalText(
+          'The return is worked out as **the amount locked, times '
+          '${s.savingsRatePct.toStringAsFixed(0)}%, times the number of days '
+          'divided by ${s.daysPerYear}**. Nothing is rounded to whole months: '
+          'a ${s.daysPerYear}-day lock earns the full '
+          '${s.savingsRatePct.toStringAsFixed(0)}%, and a 171-day lock earns '
+          '${(s.savingsAnnualRate * 171 / s.daysPerYear * 100).toStringAsFixed(3)}%.',
+        ),
+        LegalExample('What ${(100000).asNairaFlat} earns, by lock period', [
+          for (final days in const [30, 90, 171, 365, 730, 1825])
+            (
+              lockPeriodLabel(days),
+              '${(100000 * s.savingsAnnualRate * days / s.daysPerYear).asNaira} '
+                  '(${(s.savingsAnnualRate * days / s.daysPerYear * 100).toStringAsFixed(2)}%)',
+            ),
+        ]),
         LegalList([
           'The minimum amount is ${s.minSavingsAmount.asNairaFlat}.',
-          'The return is calculated on the amount locked, for the number of '
-              'months locked, and **paid into your wallet at the moment the '
-              'plan is created** rather than at maturity.',
+          'The return is **paid into your wallet at the moment the plan is '
+              'created**, not at maturity.',
+          'The exact figure is shown to you before you confirm, and it is the '
+              'figure you are paid.',
           'The rate that applies to your plan is the rate displayed when you '
               'create it. Later rate changes do not touch a running plan.',
           'On maturity, the principal is returned to your wallet in full.',

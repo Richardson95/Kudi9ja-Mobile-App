@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/banks.dart';
+import '../../data/models/platform_settings.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
@@ -11,7 +13,6 @@ import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
-import 'transfer_screen.dart';
 
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
@@ -26,10 +27,25 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   String? _bank;
   bool _busy = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Most withdrawals go to the account the customer named at sign-up, so
+    // start there. They can still send this one somewhere else.
+    final user = context.read<AppState>().user;
+    if (user != null && user.hasPayoutAccount) {
+      _bank = user.payoutBank;
+      _account.text = user.payoutAccountNumber;
+    }
+  }
+
   double get _value => parseAmount(_amount.text);
 
   bool get _canSubmit =>
-      _value >= 500 && _bank != null && _account.text.length == 10 && !_busy;
+      _value >= settings.minWithdrawalAmount &&
+      _bank != null &&
+      _account.text.length == 10 &&
+      !_busy;
 
   @override
   void dispose() {

@@ -134,7 +134,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'School fees',
         principal: 100000,
-        months: 12,
+        days: 365,
       );
 
       expect(plan.isFixed, isTrue);
@@ -148,7 +148,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'Locked',
         principal: 50000,
-        months: 12,
+        days: 365,
       );
       expect(plan.canBreak, isFalse);
       expect(plan.type.canBreak, isFalse);
@@ -167,7 +167,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'Topped up',
         principal: 50000,
-        months: 6,
+        days: 180,
       );
 
       final ok = await app.topUpPlan(plan.id, 10000);
@@ -183,7 +183,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'Done',
         principal: 50000,
-        months: 1,
+        days: 30,
       );
       await app.withdrawPlan(plan.id);
 
@@ -195,7 +195,7 @@ void main() {
       final plan = await app.createFixedPlan(
         title: 'Matured',
         principal: 80000,
-        months: 1,
+        days: 30,
       );
       final result = await app.withdrawPlan(plan.id);
       expect(result.principal, 80000);
@@ -439,7 +439,7 @@ void main() {
       await app.createFixedPlan(
         title: 'Goal',
         principal: 50000,
-        months: 12,
+        days: 365,
       );
       expect(app.unreadCount, greaterThan(0));
 
@@ -454,7 +454,7 @@ void main() {
       await app.createFixedPlan(
         title: 'Lock',
         principal: 100000,
-        months: 12,
+        days: 365,
       );
       final sum = app.creditFactors.fold(0, (s, f) => s + f.points);
       expect(app.creditScore, (560 + sum).clamp(300, 850));

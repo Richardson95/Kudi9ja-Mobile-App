@@ -5,17 +5,43 @@ import 'package:kudi9ja/data/models/platform_settings.dart';
 
 void main() {
   group('Savings — 17% paid upfront', () {
-    test('one year on 100k pays exactly 17,000', () {
-      expect(Finance.savingsInterest(100000, 12), 17000);
+    test('a full year on 100k pays exactly 17,000', () {
+      expect(Finance.savingsInterest(100000, 365), closeTo(17000, 0.001));
+      expect(Finance.effectiveYieldPct(365), closeTo(17, 0.001));
     });
 
-    test('the one-month minimum still pays a pro-rated return', () {
-      expect(Finance.savingsInterest(120000, 1), closeTo(1700, 0.001));
+    test('the 30-day minimum pays the rate pro-rated by day', () {
+      // 17% x 30/365
+      expect(Finance.savingsInterest(120000, 30), closeTo(1676.712, 0.001));
+      expect(Finance.effectiveYieldPct(30), closeTo(1.397, 0.001));
+    });
+
+    test('an odd number of days is priced exactly, not rounded to a month', () {
+      // The case that made this a day-based product: 171 days.
+      expect(Finance.savingsInterest(100000, 171), closeTo(7964.384, 0.001));
+      expect(Finance.effectiveYieldPct(171), closeTo(7.964, 0.001));
+
+      // And a day either side really does differ.
+      expect(
+        Finance.savingsInterest(100000, 172),
+        greaterThan(Finance.savingsInterest(100000, 171)),
+      );
+    });
+
+    test('the return grows evenly with every extra day', () {
+      final perDay = Finance.savingsInterest(100000, 1);
+      for (final days in [30, 171, 365, 1000, 1825]) {
+        expect(
+          Finance.savingsInterest(100000, days),
+          closeTo(perDay * days, 0.001),
+          reason: 'day $days should be exactly $days times one day',
+        );
+      }
     });
 
     test('the five-year maximum pays 85% of principal', () {
-      expect(Finance.savingsInterest(100000, 60), closeTo(85000, 0.001));
-      expect(Finance.effectiveYieldPct(60), closeTo(85, 0.001));
+      expect(Finance.savingsInterest(100000, 1825), closeTo(85000, 0.001));
+      expect(Finance.effectiveYieldPct(1825), closeTo(85, 0.001));
     });
 
     test('a savings month is 30 days, so 6 months is 180', () {
@@ -79,8 +105,8 @@ void main() {
     });
 
     test('lock bounds match the product rules', () {
-      expect(AppConfig.minLockMonths, 1);
-      expect(AppConfig.maxLockMonths, 60);
+      expect(AppConfig.minLockDays, 30);
+      expect(AppConfig.maxLockDays, 1825);
       expect(AppConfig.savingsAnnualRate, 0.17);
     });
   });
@@ -408,8 +434,8 @@ void main() {
         id: 'p1',
         title: 'Rent',
         principal: 300000,
-        lockMonths: 12,
-        interestPaid: Finance.savingsInterest(300000, 12),
+        lockDays: 365,
+        interestPaid: Finance.savingsInterest(300000, 365),
         startDate: now,
         maturityDate: Finance.addMonths(now, 12),
       );

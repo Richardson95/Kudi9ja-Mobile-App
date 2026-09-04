@@ -28,11 +28,54 @@ extension AdminRoleX on AdminRole {
   /// Can approve, decline or write off a loan.
   bool get canActOnLoans => this != AdminRole.viewer;
 
+  /// Can confirm or reject a pay-in, and approve or decline a withdrawal.
+  /// Money only moves on this permission.
+  bool get canApprovePayments => this != AdminRole.viewer;
+
+  /// Can flag or freeze a customer.
+  bool get canManageCustomers => this != AdminRole.viewer;
+
   /// Can open a customer's full record.
   bool get canViewCustomers => true;
+
+  /// Can read the audit log. Everyone can — being watched is the point, and
+  /// hiding the record from some of the team would defeat it.
+  bool get canViewAudit => true;
 }
 
-/// Someone with access to the admin panel. Membership is by email — whoever
+/// One row of the permission matrix: what a capability is called, and which
+/// roles hold it.
+///
+/// The table the panel renders is built from these, and each [held] reads the
+/// same getter that gates the real screen — so the table cannot drift away
+/// from what the panel actually allows.
+class AdminCapability {
+  const AdminCapability(this.label, this.held);
+
+  final String label;
+  final bool Function(AdminRole) held;
+}
+
+const kAdminCapabilities = <AdminCapability>[
+  AdminCapability('See customers and their full records', _viewCustomers),
+  AdminCapability('Read the audit log', _viewAudit),
+  AdminCapability('Confirm pay-ins and approve withdrawals', _approvePayments),
+  AdminCapability('Act on loans — remind, write off', _actOnLoans),
+  AdminCapability('Flag or freeze a customer', _manageCustomers),
+  AdminCapability('Change rates, limits and switches', _editSettings),
+  AdminCapability('Add, promote, suspend or remove admins', _manageTeam),
+];
+
+bool _viewCustomers(AdminRole r) => r.canViewCustomers;
+bool _viewAudit(AdminRole r) => r.canViewAudit;
+bool _approvePayments(AdminRole r) => r.canApprovePayments;
+bool _actOnLoans(AdminRole r) => r.canActOnLoans;
+bool _manageCustomers(AdminRole r) => r.canManageCustomers;
+bool _editSettings(AdminRole r) => r.canEditSettings;
+bool _manageTeam(AdminRole r) => r.canManageTeam;
+
+/// Someone with access to the admin panel. Membership is keyed on the email
+/// address and nothing else — whoever
 /// signs in with a listed address gets the panel.
 class AdminUser {
   AdminUser({

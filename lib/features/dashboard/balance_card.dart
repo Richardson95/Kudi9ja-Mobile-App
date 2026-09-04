@@ -117,11 +117,19 @@ class BalanceCard extends StatelessWidget {
                       height: 30,
                       color: AppColors.strokeSoft,
                     ),
+                    // What the money has actually made. A credit score sat
+                    // here before, but it says nothing about the wallet this
+                    // card is for — it belongs with borrowing, and lives on
+                    // the Loans tab and in Profile.
                     Expanded(
                       child: _Sub(
-                        label: 'Credit score',
-                        value: '${app.creditScore}',
-                        accent: app.creditBand,
+                        label: 'Earned so far',
+                        value: hidden
+                            ? '••••'
+                            : app.totalInterestEarned.asShortNaira,
+                        valueColor: app.totalInterestEarned > 0
+                            ? AppColors.success
+                            : null,
                       ),
                     ),
                   ],
@@ -129,6 +137,8 @@ class BalanceCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 const HairLine(),
                 const SizedBox(height: AppSpacing.md),
+                // Kudi9ja issues no account number. What matters here is
+                // where money leaves to, so that is what we show.
                 Row(
                   children: [
                     const Icon(
@@ -137,42 +147,22 @@ class BalanceCard extends StatelessWidget {
                       color: AppColors.textTertiary,
                     ),
                     const SizedBox(width: 7),
-                    Text(
-                      'Kudi9ja • ${user.accountNumber}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.6,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () {
-                        Clipboard.setData(
-                          ClipboardData(text: user.accountNumber),
-                        );
-                        HapticFeedback.selectionClick();
-                        showToast(context, 'Account number copied');
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.copy_rounded,
-                            size: 13,
-                            color: AppColors.gold,
-                          ),
-                          SizedBox(width: 5),
-                          Text(
-                            'Copy',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.gold,
-                            ),
-                          ),
-                        ],
+                    Expanded(
+                      child: Text(
+                        user.hasPayoutAccount
+                            ? 'Pays out to ${user.payoutBank} • '
+                                  '${user.payoutAccountNumber}'
+                            : 'No payout account set',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                          color: user.hasPayoutAccount
+                              ? AppColors.textSecondary
+                              : AppColors.gold,
+                        ),
                       ),
                     ),
                   ],
@@ -187,11 +177,13 @@ class BalanceCard extends StatelessWidget {
 }
 
 class _Sub extends StatelessWidget {
-  const _Sub({required this.label, required this.value, this.accent});
+  const _Sub({required this.label, required this.value, this.valueColor});
 
   final String label;
   final String value;
-  final String? accent;
+
+  /// Tints the figure — used to mark money gained.
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -202,31 +194,14 @@ class _Sub extends StatelessWidget {
         style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 3),
-      Row(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
-            ),
-          ),
-          if (accent != null) ...[
-            const SizedBox(width: 6),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 1),
-              child: Text(
-                accent!,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.success,
-                ),
-              ),
-            ),
-          ],
-        ],
+      Text(
+        value,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.4,
+          color: valueColor ?? AppColors.textPrimary,
+        ),
       ),
     ],
   );

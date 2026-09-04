@@ -21,7 +21,8 @@ AppUser _user({String email = 'owner@example.com', String name = 'Ada Owner'}) =
       nin: '70112233445',
       address: '1 Test Road',
       state: 'Lagos',
-      accountNumber: '8031234567',
+      payoutBank: 'GTBank',
+      payoutAccountNumber: '0123456789',
       createdAt: DateTime.now(),
     );
 
@@ -38,6 +39,23 @@ Future<AppState> _account({String email = 'owner@example.com'}) async {
   return app;
 }
 
+/// A signed-up account for the owner to pick from when granting access.
+CustomerRecord _candidate(String fullName, String email) => CustomerRecord(
+  id: email,
+  fullName: fullName,
+  email: email,
+  phone: '',
+  accountNumber: 'K9-TEST01',
+  joinedAt: DateTime(2026, 1, 1),
+  balance: 0,
+  totalSaved: 0,
+  totalOwed: 0,
+  interestPaid: 0,
+  creditScore: 600,
+  plansCount: 0,
+  loansCount: 0,
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -53,9 +71,7 @@ void main() {
     test('a suspended admin loses the panel and can be reinstated', () async {
       final app = await _account();
       await app.addAdmin(
-        name: 'Bola Support',
-        email: 'bola@example.com',
-        phone: '',
+        customer: _candidate('Bola Support', 'bola@example.com'),
         role: AdminRole.support,
       );
       final bola = app.admins.firstWhere((a) => a.email == 'bola@example.com');
@@ -74,9 +90,7 @@ void main() {
       final app = await _account();
       // A second owner exists, so the last-owner guard is not what blocks it.
       await app.addAdmin(
-        name: 'Chidi Second',
-        email: 'chidi@example.com',
-        phone: '',
+        customer: _candidate('Chidi Second', 'chidi@example.com'),
         role: AdminRole.owner,
       );
       final me = app.currentAdmin!;
@@ -93,9 +107,7 @@ void main() {
       final app = await _account(email: 'owner@example.com');
       // Someone else on the team does not make this account them.
       await app.addAdmin(
-        name: 'Bola Support',
-        email: 'bola@example.com',
-        phone: '',
+        customer: _candidate('Bola Support', 'bola@example.com'),
         role: AdminRole.support,
       );
       expect(app.currentAdmin?.email, 'owner@example.com');
@@ -105,9 +117,7 @@ void main() {
     test('adding an admin grants access to that email', () async {
       final app = await _account();
       final result = await app.addAdmin(
-        name: 'Bola Support',
-        email: 'Bola@Example.com',
-        phone: '08099887766',
+        customer: _candidate('Bola Support', 'Bola@Example.com'),
         role: AdminRole.support,
       );
       expect(result.ok, isTrue);
@@ -122,15 +132,11 @@ void main() {
     test('the same email cannot be added twice', () async {
       final app = await _account();
       await app.addAdmin(
-        name: 'Bola Support',
-        email: 'bola@example.com',
-        phone: '',
+        customer: _candidate('Bola Support', 'bola@example.com'),
         role: AdminRole.support,
       );
       final again = await app.addAdmin(
-        name: 'Bola Again',
-        email: 'BOLA@example.com',
-        phone: '',
+        customer: _candidate('Bola Again', 'BOLA@example.com'),
         role: AdminRole.admin,
       );
       expect(again.ok, isFalse);
@@ -147,9 +153,7 @@ void main() {
     test('an owner can remove another owner', () async {
       final app = await _account();
       await app.addAdmin(
-        name: 'Chidi Second',
-        email: 'chidi@example.com',
-        phone: '',
+        customer: _candidate('Chidi Second', 'chidi@example.com'),
         role: AdminRole.owner,
       );
       final target = app.admins.firstWhere(
@@ -209,14 +213,116 @@ void main() {
       expect(settings.loanTenures.last, 24);
     });
 
+    test('the role table says exactly what the panel enforces', () {
+      // Each capability reads the same getter that gates the screen, so the
+      // matrix cannot drift from behaviour. This pins the intended shape.
+      const expected = <AdminRole, List<bool>>{
+        //                 see  audit  pay  loans  cust  rates  team
+        AdminRole.owner:   [true, true, true, true, true, true, true],
+        AdminRole.admin:   [true, true, true, true, true, true, false],
+        AdminRole.support: [true, true, true, true, true, false, false],
+        AdminRole.viewer:  [true, true, false, false, false, false, false],
+      };
+
+      expect(kAdminCapabilities, hasLength(7));
+      for (final entry in expected.entries) {
+        final actual = [
+          for (final c in kAdminCapabilities) c.held(entry.key),
+        ];
+        expect(actual, entry.value, reason: entry.key.label);
+      }
+    });
+
+    test('access is granted to an account, never to a typed address', () async {
+      final app = await _account();
+
+      // The owner picks somebody who has signed up; the email is what
+      // membership is keyed on, and the name comes off their account.
+      final result = await app.addAdmin(
+        customer: _candidate('Bola Support', 'BOLA@Example.com '),
+        role: AdminRole.support,
+      );
+
+      expect(result.ok, isTrue);
+      final added = app.admins.firstWhere((a) => a.role == AdminRole.support);
+      expect(added.email, 'bola@example.com', reason: 'normalised');
+      expect(added.name, 'Bola Support');
+
+      // The same address cannot be granted access twice.
+      final again = await app.addAdmin(
+        customer: _candidate('Bola Again', 'bola@example.com'),
+        role: AdminRole.admin,
+      );
+      expect(again.ok, isFalse);
+      expect(again.message, contains('already has panel access'));
+    });
+
+    test('an account with no email cannot be granted the panel', () async {
+      final app = await _account();
+      final result = await app.addAdmin(
+        customer: _candidate('No Email', ''),
+        role: AdminRole.support,
+      );
+      expect(result.ok, isFalse);
+      expect(app.admins.any((a) => a.name == 'No Email'), isFalse);
+    });
+
+    test('the savings rate is spread evenly across the year, by day', () {
+      // 17% a year, pro-rated by day: 1 year is the full rate, 2 years is
+      // double it, 30 days is a twelfth of a year's worth.
+      const p = 100000.0;
+      expect(Finance.effectiveYieldPct(365), closeTo(17.0, 0.001));
+      expect(Finance.effectiveYieldPct(730), closeTo(34.0, 0.001));
+      expect(Finance.effectiveYieldPct(1825), closeTo(85.0, 0.001));
+
+      // The short end, to one decimal as a customer would read it.
+      expect(Finance.effectiveYieldPct(30), closeTo(1.4, 0.05));
+      expect(Finance.effectiveYieldPct(60), closeTo(2.8, 0.05));
+      expect(Finance.effectiveYieldPct(90), closeTo(4.2, 0.05));
+
+      // Every extra day is worth exactly one day's interest, at any length.
+      final perDay = Finance.savingsInterest(p, 1);
+      for (final days in [31, 173, 400, 1000]) {
+        expect(
+          Finance.savingsInterest(p, days) - Finance.savingsInterest(p, days - 1),
+          closeTo(perDay, 0.0001),
+          reason: 'day $days should add exactly one day of interest',
+        );
+      }
+    });
+
+    test('only an owner may touch the team', () {
+      for (final role in AdminRole.values) {
+        expect(role.canManageTeam, role == AdminRole.owner, reason: role.label);
+      }
+    });
+
+    test('a viewer can look, and change nothing', () {
+      const viewer = AdminRole.viewer;
+      expect(viewer.canViewCustomers, isTrue);
+      expect(viewer.canViewAudit, isTrue);
+      expect(viewer.canApprovePayments, isFalse);
+      expect(viewer.canActOnLoans, isFalse);
+      expect(viewer.canManageCustomers, isFalse);
+      expect(viewer.canEditSettings, isFalse);
+      expect(viewer.canManageTeam, isFalse);
+    });
+
+    test('support moves money but cannot reprice the product', () {
+      const support = AdminRole.support;
+      expect(support.canApprovePayments, isTrue);
+      expect(support.canEditSettings, isFalse);
+    });
+
     test('every setting survives storage — none is dropped in transit', () {
       // Change every field away from its default, round trip it, and compare
       // the encoded forms. A setting added without a toJson or fromJson entry
       // fails here rather than silently reverting on the next app start.
       const tuned = PlatformSettings(
         savingsAnnualRate: 0.19,
-        minLockMonths: 2,
-        maxLockMonths: 48,
+        minLockDays: 45,
+        maxLockDays: 1500,
+        daysPerYear: 360,
         minSavingsAmount: 7500,
         maxSavingsAmount: 90000000,
         targetRateShort: 0.03,
@@ -252,6 +358,12 @@ void main() {
         creditScoreCeiling: 860,
         maxPasscodeAttempts: 4,
         lockTimeoutMinutes: 5,
+        minDepositAmount: 250,
+        minWithdrawalAmount: 750,
+        minCircleContribution: 2500,
+        minCircleMembers: 3,
+        maxCircleMembers: 20,
+        otpResendSeconds: 60,
         dailyTransferLimit: 2000000,
         welcomeBonus: 3000,
         savingsEnabled: false,
@@ -279,14 +391,14 @@ void main() {
 
     test('a rate change flows straight into the finance engine', () async {
       final app = await _account();
-      expect(Finance.savingsInterest(100000, 12), 17000);
+      expect(Finance.savingsInterest(100000, 365), closeTo(17000, 0.001));
 
       await app.updatePlatformSettings(
         settings.copyWith(savingsAnnualRate: 0.20),
         ['Savings rate: 17% → 20%'],
       );
 
-      expect(Finance.savingsInterest(100000, 12), 20000);
+      expect(Finance.savingsInterest(100000, 365), closeTo(20000, 0.001));
       expect(settings.savingsRatePct, 20);
     });
 
@@ -353,9 +465,7 @@ void main() {
       final before = app.auditLog.length;
 
       await app.addAdmin(
-        name: 'Bola Support',
-        email: 'bola@example.com',
-        phone: '',
+        customer: _candidate('Bola Support', 'bola@example.com'),
         role: AdminRole.support,
       );
       await app.updatePlatformSettings(

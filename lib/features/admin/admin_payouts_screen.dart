@@ -385,7 +385,7 @@ class _RequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.read<AppState>();
-    final canAct = app.adminRole.canActOnLoans;
+    final canAct = app.adminRole.canApprovePayments;
 
     final tint = switch (request.status) {
       WithdrawalStatus.pending => AppColors.gold,

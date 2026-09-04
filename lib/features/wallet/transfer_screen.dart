@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/banks.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
@@ -12,22 +13,6 @@ import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
 import '../../data/models/platform_settings.dart';
 
-const kBanks = <String>[
-  'Access Bank',
-  'Fidelity Bank',
-  'First Bank of Nigeria',
-  'GTBank',
-  'Kuda Microfinance Bank',
-  'Moniepoint MFB',
-  'OPay',
-  'PalmPay',
-  'Stanbic IBTC',
-  'Sterling Bank',
-  'UBA',
-  'Union Bank',
-  'Wema Bank',
-  'Zenith Bank',
-];
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});

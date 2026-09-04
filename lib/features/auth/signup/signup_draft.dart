@@ -12,6 +12,11 @@ class SignupDraft {
   String address = '';
   String stateOfResidence = '';
 
+  /// The customer's own bank account — where Kudi9ja pays money out to.
+  /// Kudi9ja issues no account numbers of its own.
+  String payoutBank = '';
+  String payoutAccountNumber = '';
+
   String password = '';
   String securityQuestion = '';
   String securityAnswer = '';
@@ -20,7 +25,6 @@ class SignupDraft {
   String transactionPin = '';
 
   bool emailVerified = false;
-  bool phoneVerified = false;
   bool identityVerified = false;
   bool termsAccepted = false;
 }

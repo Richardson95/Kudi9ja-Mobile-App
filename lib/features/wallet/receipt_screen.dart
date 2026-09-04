@@ -101,7 +101,12 @@ class ReceiptScreen extends StatelessWidget {
                           const _Sep(),
                           _Row('Account holder', user?.fullName ?? '-'),
                           const _Sep(),
-                          _Row('Account number', user?.accountNumber ?? '-'),
+                          _Row(
+                            'Payout account',
+                            user == null || !user.hasPayoutAccount
+                                ? '-'
+                                : '${user.payoutBank} • ${user.payoutAccountNumber}',
+                          ),
                           const _Sep(),
                           _Row('Balance after', tx.balanceAfter.asNaira),
                           const _Sep(),
