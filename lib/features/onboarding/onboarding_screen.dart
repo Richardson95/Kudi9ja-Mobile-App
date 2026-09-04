@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/formatters.dart';
+import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 
@@ -17,21 +19,31 @@ class _Slide {
   final String statLabel;
 }
 
-const _slides = <_Slide>[
+/// Built from the live settings rather than written out.
+///
+/// These were literals, and the loan ceiling went on advertising ₦500,000
+/// for a while after it became ₦5,000,000. A headline figure that a customer
+/// reads before signing up should come from the same place the product
+/// reads it.
+List<_Slide> get _slides => [
   _Slide(
     Icons.savings_outlined,
     'SAVE',
-    'Earn 17%.\nPaid upfront.',
-    'Lock any amount from one month to five years and we credit your full return the same second the plan starts. No waiting for maturity.',
-    '17%',
+    'Earn ${settings.savingsRatePct.toStringAsFixed(0)}%.\nPaid upfront.',
+    'Lock any amount from ${settings.minLockDays} days to '
+        '${lockPeriodShort(settings.maxLockDays)} and we credit your full '
+        'return the same second the plan starts. No waiting for maturity.',
+    '${settings.savingsRatePct.toStringAsFixed(0)}%',
     'per annum, paid instantly',
   ),
   _Slide(
     Icons.account_balance_wallet_outlined,
     'BORROW',
     'Credit that moves\nat your speed.',
-    'Access up to ₦500,000 with a transparent flat rate, a clear repayment plan and money in your wallet in minutes — not days.',
-    '₦500k',
+    'Access up to ${settings.maxLoanAmount.asNairaFlat} with a transparent '
+        'flat rate, a clear repayment plan and money in your wallet in '
+        'minutes — not days.',
+    settings.maxLoanAmount.asShortNaira,
     'maximum credit line',
   ),
   _Slide(

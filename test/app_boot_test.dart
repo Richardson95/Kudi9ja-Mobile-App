@@ -123,6 +123,44 @@ void main() {
     });
   });
 
+  group('Marketing copy', () {
+    test('headline figures are read from settings, never written out', () {
+      // The onboarding and sign-in screens advertised "up to ₦500,000" for a
+      // while after the ceiling became ₦5,000,000. Nothing customer-facing
+      // may hard-code a product figure again.
+      for (final path in const [
+        'lib/features/onboarding/onboarding_screen.dart',
+        'lib/features/auth/sign_in_screen.dart',
+      ]) {
+        // Comments may discuss the old figures; only code counts.
+        final source = File(path)
+            .readAsLinesSync()
+            .where((l) => !l.trimLeft().startsWith('//'))
+            .join(String.fromCharCode(10));
+        expect(
+          source.contains('₦500,000'),
+          isFalse,
+          reason: '$path hard-codes a stale loan ceiling',
+        );
+        expect(
+          source.contains('₦500k'),
+          isFalse,
+          reason: '$path hard-codes a stale loan ceiling',
+        );
+        expect(
+          source.contains('17%'),
+          isFalse,
+          reason: '$path hard-codes the savings rate',
+        );
+        expect(
+          source.contains('settings.maxLoanAmount'),
+          isTrue,
+          reason: '$path should read the ceiling from settings',
+        );
+      }
+    });
+  });
+
   group('Dashboard balance card', () {
     test('the credit score is not a wallet figure and is off the card', () {
       final card = File('lib/features/dashboard/balance_card.dart')

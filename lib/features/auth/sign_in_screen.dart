@@ -6,6 +6,8 @@ import '../../app.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/validators.dart';
+import '../../core/utils/formatters.dart';
+import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
@@ -84,7 +86,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 Text(
                   hasAccount
                       ? 'Sign in to continue to your dashboard'
-                      : 'Save at 17% paid upfront. Borrow up to ₦500,000.',
+                      : 'Save at ${settings.savingsRatePct.toStringAsFixed(0)}% paid upfront. Borrow up to ${settings.maxLoanAmount.asNairaFlat}.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
