@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
@@ -157,7 +158,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Licensed lender • Funds secured • CBN compliant',
+                      // Says who is behind the app, which is checkable, in
+                      // place of three regulatory claims that were not.
+                      '${AppConfig.legalEntity} • ${AppConfig.rcNumber}',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textTertiary,

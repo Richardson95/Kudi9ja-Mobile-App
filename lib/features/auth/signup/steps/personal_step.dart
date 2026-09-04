@@ -158,7 +158,9 @@ class _PersonalStepState extends State<PersonalStep> {
           ),
           InfoNote(
             text:
-                'Kudi9ja is a licensed lender. Your details are encrypted in transit and at rest, and are never sold or shared.',
+                'We ask for this to confirm who you are, as the law requires. '
+                'Your details are never sold, and never shared for anybody '
+                "else's marketing.",
           ),
         ],
       ),

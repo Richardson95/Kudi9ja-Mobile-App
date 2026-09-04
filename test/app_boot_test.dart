@@ -161,6 +161,45 @@ void main() {
     });
   });
 
+  group('Regulatory claims', () {
+    test('the app claims no licence it does not hold', () {
+      // "Licensed lender", "CBN compliant" and the like are assertions about
+      // the company's regulatory standing. They are not the app's to make,
+      // and a false one on the first screen a customer sees is the most
+      // expensive sentence in the product.
+      const forbidden = [
+        'Licensed lender',
+        'licensed lender',
+        'CBN compliant',
+        'CBN-compliant',
+        'CBN licensed',
+        'NDIC insured',
+        'NDIC-insured',
+        'regulated by',
+      ];
+
+      final dir = Directory('lib');
+      for (final f in dir.listSync(recursive: true).whereType<File>()) {
+        if (!f.path.endsWith('.dart')) continue;
+        // The legal documents may DENY these things, which is the opposite
+        // of claiming them.
+        if (f.path.contains('legal')) continue;
+
+        final source = f.readAsLinesSync()
+            .where((l) => !l.trimLeft().startsWith('//'))
+            .join(String.fromCharCode(10));
+
+        for (final claim in forbidden) {
+          expect(
+            source.contains(claim),
+            isFalse,
+            reason: '${f.path} claims "$claim"',
+          );
+        }
+      }
+    });
+  });
+
   group('Dashboard balance card', () {
     test('the credit score is not a wallet figure and is off the card', () {
       final card = File('lib/features/dashboard/balance_card.dart')
