@@ -64,7 +64,7 @@ class _PasswordStepState extends State<PasswordStep> {
               ListTile(
                 title: Text(q, style: const TextStyle(fontSize: 14.5)),
                 trailing: widget.draft.securityQuestion == q
-                    ? const Icon(
+                    ? Icon(
                         Icons.check_rounded,
                         color: AppColors.gold,
                         size: 20,
@@ -153,7 +153,7 @@ class _StrengthMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
-    const colors = [
+    final colors = [
       AppColors.danger,
       AppColors.danger,
       AppColors.warning,

@@ -273,7 +273,7 @@ class OtpBoxesState extends State<OtpBoxes> {
               keyboardType: TextInputType.number,
               maxLength: i == 0 ? widget.length : 1,
               onChanged: (v) => _onChanged(i, v),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,

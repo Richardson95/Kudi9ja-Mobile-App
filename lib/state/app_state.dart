@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/theme/app_colors.dart';
 import '../data/models/admin.dart';
 import '../data/models/app_notification.dart';
 import '../data/models/deposit.dart';
@@ -68,6 +69,7 @@ class AppState extends ChangeNotifier {
   List<ThriftCircle> _circles = [];
   List<AppNotification> _notifications = [];
   bool _hideBalance = false;
+  AppThemeMode _themeMode = AppThemeMode.dark;
   bool _autoDebit = false;
   List<AdminUser> _admins = [];
   List<AuditEntry> _audit = [];
@@ -209,6 +211,12 @@ class AppState extends ChangeNotifier {
     _circles = _store.circles;
     _notifications = _store.notifications;
     _hideBalance = _store.hideBalance;
+    // Kudi9ja is gold on black. Light mode is a deliberate choice, not
+    // something a phone's setting turns on for a customer who never asked.
+    final saved = _store.themeMode;
+    _themeMode = saved == null
+        ? AppThemeMode.dark
+        : AppThemeMode.values[saved.clamp(0, AppThemeMode.values.length - 1)];
     _autoDebit = _store.autoDebit;
     _admins = _store.admins;
     _audit = _store.audit;
@@ -260,6 +268,15 @@ class AppState extends ChangeNotifier {
   Future<void> completeOnboarding() async {
     await _store.setSeenOnboarding();
     _stage = hasAccount ? AuthStage.locked : AuthStage.signedOut;
+    notifyListeners();
+  }
+
+  /// Which palette the customer has chosen.
+  AppThemeMode get themeMode => _themeMode;
+
+  Future<void> setThemeMode(AppThemeMode mode) async {
+    _themeMode = mode;
+    await _store.setThemeMode(mode.index);
     notifyListeners();
   }
 

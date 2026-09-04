@@ -36,7 +36,7 @@ class InsightsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Insights')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: txns.isEmpty
@@ -88,7 +88,7 @@ class _NetWorthCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Everything you hold',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
@@ -121,7 +121,7 @@ class _NetWorthCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Owed on loans',
                   style: TextStyle(
@@ -132,7 +132,7 @@ class _NetWorthCard extends StatelessWidget {
               ),
               Text(
                 '-${app.totalOwed.asNaira}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w800,
                   color: AppColors.danger,
@@ -167,7 +167,7 @@ class _Bar extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
               ),
@@ -210,13 +210,13 @@ class _Split extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.south_west_rounded,
                 size: 18,
                 color: AppColors.success,
               ),
               const SizedBox(height: AppSpacing.sm),
-              const Text(
+              Text(
                 'Money in',
                 style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
               ),
@@ -226,7 +226,7 @@ class _Split extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   moneyIn.asNaira,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.4,
@@ -244,13 +244,13 @@ class _Split extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.north_east_rounded,
                 size: 18,
                 color: AppColors.textSecondary,
               ),
               const SizedBox(height: AppSpacing.sm),
-              const Text(
+              Text(
                 'Money out',
                 style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
               ),
@@ -291,7 +291,7 @@ class _EarningsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'What Kudi9ja has paid you, net of fees',
             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
           ),
@@ -311,7 +311,7 @@ class _EarningsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Interest received',
                 style: TextStyle(
                   fontSize: 12.5,
@@ -320,7 +320,7 @@ class _EarningsCard extends StatelessWidget {
               ),
               Text(
                 '+${interest.asNaira}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.success,
@@ -332,7 +332,7 @@ class _EarningsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Fees and penalties',
                 style: TextStyle(
                   fontSize: 12.5,
@@ -341,7 +341,7 @@ class _EarningsCard extends StatelessWidget {
               ),
               Text(
                 '-${fees.asNaira}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.danger,
@@ -373,7 +373,7 @@ class _Breakdown extends StatelessWidget {
       ..sort((a, b) => b.value.compareTo(a.value));
     final grand = entries.fold(0.0, (s, e) => s + e.value);
 
-    const palette = [
+    final palette = [
       AppColors.gold,
       AppColors.info,
       AppColors.success,
@@ -427,7 +427,7 @@ class _Breakdown extends StatelessWidget {
                   Expanded(
                     child: Text(
                       entries[i].key.label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -435,7 +435,7 @@ class _Breakdown extends StatelessWidget {
                   ),
                   Text(
                     '${(entries[i].value / grand * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textTertiary,
                     ),

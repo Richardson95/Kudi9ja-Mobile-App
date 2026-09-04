@@ -89,7 +89,7 @@ class _KFieldState extends State<KField> {
           textCapitalization: widget.textCapitalization,
           autofillHints: widget.autofillHints,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15.5,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -125,7 +125,7 @@ class _KFieldState extends State<KField> {
             padding: const EdgeInsets.only(top: 6, left: 2),
             child: Text(
               widget.helper!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 color: AppColors.textTertiary,
               ),
@@ -161,7 +161,7 @@ class KPickerField extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppColors.textSecondary,
@@ -201,7 +201,7 @@ class KPickerField extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: AppColors.textTertiary,
               ),
@@ -214,7 +214,7 @@ class KPickerField extends StatelessWidget {
           padding: const EdgeInsets.only(top: 6, left: 2),
           child: Text(
             error!,
-            style: const TextStyle(fontSize: 11.5, color: AppColors.danger),
+            style: TextStyle(fontSize: 11.5, color: AppColors.danger),
           ),
         ),
     ],
@@ -241,7 +241,7 @@ class AmountField extends StatelessWidget {
     mainAxisAlignment: MainAxisAlignment.center,
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
-      const Padding(
+      Padding(
         padding: EdgeInsets.only(bottom: 6, right: 4),
         child: Text(
           naira,
@@ -260,7 +260,7 @@ class AmountField extends StatelessWidget {
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
           inputFormatters: [ThousandsFormatter()],
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 42,
             fontWeight: FontWeight.w800,
             letterSpacing: -1.5,
@@ -274,7 +274,7 @@ class AmountField extends StatelessWidget {
             isDense: true,
             contentPadding: EdgeInsets.zero,
             hintText: hint,
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontSize: 42,
               fontWeight: FontWeight.w800,
               letterSpacing: -1.5,
@@ -319,7 +319,7 @@ class QuickAmounts extends StatelessWidget {
             ),
             child: Text(
               a.asShortNaira,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textSecondary,
@@ -395,7 +395,7 @@ class KOptionTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textTertiary,
                     ),
@@ -420,7 +420,7 @@ class KOptionTile extends StatelessWidget {
                 ),
               ),
               child: selected
-                  ? const Icon(
+                  ? Icon(
                       Icons.check_rounded,
                       size: 14,
                       color: AppColors.textOnGold,

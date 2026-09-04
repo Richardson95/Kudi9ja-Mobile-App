@@ -95,7 +95,7 @@ class _TargetSaveScreenState extends State<TargetSaveScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Target Savings')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -112,7 +112,7 @@ class _TargetSaveScreenState extends State<TargetSaveScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'How much do you want to save?',
                             style: TextStyle(
                               fontSize: 13,
@@ -148,7 +148,7 @@ class _TargetSaveScreenState extends State<TargetSaveScreen> {
                         const _Label('OVER HOW LONG'),
                         Text(
                           '$_months months • $_days days',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.gold,
@@ -171,12 +171,12 @@ class _TargetSaveScreenState extends State<TargetSaveScreen> {
                       children: [
                         Text(
                           '${settings.minTargetMonths} months minimum',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             color: AppColors.textTertiary,
                           ),
                         ),
-                        const Text(
+                        Text(
                           '5 years',
                           style: TextStyle(
                             fontSize: 11,
@@ -249,7 +249,7 @@ class _TargetSaveScreenState extends State<TargetSaveScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -379,7 +379,7 @@ class _Breakdown extends StatelessWidget {
       children: [
         Text(
           'That means saving',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.5,
             color: AppColors.textSecondary,
           ),
@@ -397,7 +397,7 @@ class _Breakdown extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     perDeposit.asNaira,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1.4,
@@ -410,7 +410,7 @@ class _Breakdown extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 5, left: 6),
                 child: Text(
                   frequency == AutoFrequency.daily ? 'a day' : 'a week',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
@@ -452,7 +452,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 10.5,
       fontWeight: FontWeight.w800,
       letterSpacing: 1.6,
@@ -514,7 +514,7 @@ class _Row extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         Flexible(
           child: Text(
@@ -546,7 +546,7 @@ class _Rules extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'HOW TARGET SAVINGS WORKS',
           style: TextStyle(
             fontSize: 10.5,
@@ -569,7 +569,7 @@ class _Rules extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 5, right: 9),
                   child: SizedBox(
                     width: 4,
@@ -585,7 +585,7 @@ class _Rules extends StatelessWidget {
                 Expanded(
                   child: Text(
                     line,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       height: 1.5,
                       color: AppColors.textSecondary,

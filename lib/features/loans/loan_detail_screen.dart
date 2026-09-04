@@ -35,7 +35,7 @@ class LoanDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('${loan.purpose} loan')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -210,7 +210,7 @@ class LoanDetailScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Outstanding: ${loan.outstanding.asNaira}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.textTertiary,
               ),
@@ -306,7 +306,7 @@ class _Hero extends StatelessWidget {
               Expanded(
                 child: Text(
                   settled ? 'Fully repaid' : 'Still to pay',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: AppColors.textSecondary,
                   ),
@@ -348,14 +348,14 @@ class _Hero extends StatelessWidget {
             children: [
               Text(
                 '${loan.installmentsPaid} of ${loan.tenureMonths} instalments paid',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
                 ),
               ),
               Text(
                 '${(loan.repaymentProgress * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textSecondary,
@@ -414,7 +414,7 @@ class _RebateBanner extends StatelessWidget {
     borderColor: AppColors.success.withValues(alpha: 0.32),
     child: Row(
       children: [
-        const IconBadge(
+        IconBadge(
           icon: Icons.savings_rounded,
           color: AppColors.success,
           size: 44,
@@ -426,7 +426,7 @@ class _RebateBanner extends StatelessWidget {
             children: [
               Text(
                 'Settle early, save ${rebate.asNaira}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.success,
@@ -435,7 +435,7 @@ class _RebateBanner extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 'Clear the whole loan today for ${payoff.asNaira}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary,
                 ),
@@ -443,7 +443,7 @@ class _RebateBanner extends StatelessWidget {
             ],
           ),
         ),
-        const Icon(
+        Icon(
           Icons.chevron_right_rounded,
           color: AppColors.success,
           size: 20,
@@ -463,13 +463,13 @@ class _AutoDebitRow extends StatelessWidget {
     return KCard(
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.event_repeat_rounded,
             size: 21,
             color: AppColors.gold,
           ),
           const SizedBox(width: AppSpacing.lg),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -559,7 +559,7 @@ class _InstallmentRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   item.dueDate.asDay,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,
                   ),
@@ -608,7 +608,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 10.5,
       fontWeight: FontWeight.w800,
       letterSpacing: 1.6,
@@ -628,7 +628,7 @@ class _Line extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
       ),
       Flexible(
         child: Text(
@@ -664,7 +664,7 @@ class _TransferNote extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.sm),
       border: Border.all(color: AppColors.info.withValues(alpha: 0.22)),
     ),
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(Icons.info_outline_rounded, size: 15, color: AppColors.info),
@@ -688,7 +688,7 @@ class _OrDivider extends StatelessWidget {
   const _OrDivider();
 
   @override
-  Widget build(BuildContext context) => const Row(
+  Widget build(BuildContext context) => Row(
     children: [
       Expanded(child: HairLine()),
       Padding(

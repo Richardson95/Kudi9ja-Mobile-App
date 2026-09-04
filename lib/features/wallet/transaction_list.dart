@@ -70,7 +70,7 @@ class TransactionRow extends StatelessWidget {
                     children: [
                       Text(
                         tx.date.relative,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           color: AppColors.textTertiary,
                         ),
@@ -151,7 +151,7 @@ void showTransactionDetail(BuildContext context, Transaction tx) {
             Text(
               tx.description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 color: AppColors.textSecondary,
               ),
@@ -217,7 +217,7 @@ class _Row extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
       ),
       Flexible(
         child: Text(

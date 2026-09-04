@@ -24,13 +24,20 @@ abstract final class AppSpacing {
 }
 
 abstract final class AppTheme {
-  static TextTheme _textTheme() {
-    final base = GoogleFonts.figtreeTextTheme(ThemeData.dark().textTheme);
+  /// Gold on black.
+  static ThemeData get dark => forPalette(kDarkPalette);
+
+  /// Gold on warm white.
+  static ThemeData get light => forPalette(kLightPalette);
+
+  static TextTheme _textTheme(AppPalette p) {
+    final base = GoogleFonts.figtreeTextTheme(
+      p.brightness == Brightness.dark
+          ? ThemeData.dark().textTheme
+          : ThemeData.light().textTheme,
+    );
     return base
-        .apply(
-          bodyColor: AppColors.textPrimary,
-          displayColor: AppColors.textPrimary,
-        )
+        .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary)
         .copyWith(
           displayLarge: base.displayLarge?.copyWith(
             fontSize: 40,
@@ -84,16 +91,24 @@ abstract final class AppTheme {
         );
   }
 
-  static ThemeData get dark {
-    final text = _textTheme();
+  /// Builds the whole theme against a palette.
+  ///
+  /// The palette is applied globally first, so every [AppColors] token read
+  /// while this theme is being built — and every widget painted under it —
+  /// resolves to the same set of colours.
+  static ThemeData forPalette(AppPalette p) {
+    applyPalette(p);
+    final text = _textTheme(p);
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: p.brightness,
       scaffoldBackgroundColor: AppColors.canvas,
       canvasColor: AppColors.canvas,
       textTheme: text,
       splashFactory: InkSparkle.splashFactory,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.gold,
+        brightness: p.brightness,
         primary: AppColors.gold,
         onPrimary: AppColors.textOnGold,
         secondary: AppColors.goldSoft,
@@ -102,7 +117,9 @@ abstract final class AppTheme {
         onSurface: AppColors.textPrimary,
         surfaceContainerHighest: AppColors.surfaceHigh,
         error: AppColors.danger,
-        onError: Colors.white,
+        onError: p.brightness == Brightness.dark
+            ? Colors.white
+            : Colors.white,
         outline: AppColors.stroke,
       ),
       appBarTheme: AppBarTheme(
@@ -111,10 +128,12 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: true,
         titleTextStyle: text.titleLarge,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary, size: 22),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        iconTheme: IconThemeData(color: AppColors.textPrimary, size: 22),
+        systemOverlayStyle: p.brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
-      dividerTheme: const DividerThemeData(
+      dividerTheme: DividerThemeData(
         color: AppColors.stroke,
         thickness: 1,
         space: 1,
@@ -128,7 +147,7 @@ abstract final class AppTheme {
         ),
         insetPadding: const EdgeInsets.all(AppSpacing.lg),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
+      bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
@@ -162,12 +181,12 @@ abstract final class AppTheme {
         focusedErrorBorder: _inputBorder(AppColors.danger, width: 1.4),
         errorStyle: text.bodySmall?.copyWith(color: AppColors.danger),
       ),
-      textSelectionTheme: const TextSelectionThemeData(
+      textSelectionTheme: TextSelectionThemeData(
         cursorColor: AppColors.gold,
         selectionColor: AppColors.goldWash,
         selectionHandleColor: AppColors.gold,
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.gold,
         linearTrackColor: AppColors.surfaceHigh,
         circularTrackColor: AppColors.surfaceHigh,
@@ -185,7 +204,7 @@ abstract final class AppTheme {
         ),
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         activeTrackColor: AppColors.gold,
         inactiveTrackColor: AppColors.surfaceHigh,
         thumbColor: AppColors.gold,

@@ -53,7 +53,7 @@ class TenureSlider extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '${perMonth.toStringAsFixed(2)}% a month',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               color: AppColors.textTertiary,
             ),
@@ -77,7 +77,7 @@ class TenureSlider extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 '1 month',
                 style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
               ),
@@ -85,7 +85,7 @@ class TenureSlider extends StatelessWidget {
                 max % 12 == 0
                     ? '${max ~/ 12} ${max == 12 ? 'year' : 'years'}'
                     : '$max months',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textTertiary,
                 ),

@@ -69,7 +69,7 @@ class StepScaffold extends StatelessWidget {
             AppSpacing.xl,
             AppSpacing.xl,
           ),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppColors.stroke)),
             color: AppColors.black,
           ),
@@ -98,30 +98,35 @@ class InfoNote extends StatelessWidget {
     super.key,
     required this.text,
     this.icon = Icons.lock_outline_rounded,
-    this.color = AppColors.info,
+    this.color,
   });
 
   final String text;
   final IconData icon;
-  final Color color;
+  final Color? color;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    // Resolved here rather than as a default, because the palette is only
+    // known once a theme is in force.
+    final tint = color ?? AppColors.info;
+
+    return Container(
     padding: const EdgeInsets.all(AppSpacing.md),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.08),
+      color: tint.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(AppRadius.sm),
-      border: Border.all(color: color.withValues(alpha: 0.2)),
+      border: Border.all(color: tint.withValues(alpha: 0.2)),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 16, color: tint),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               height: 1.45,
               color: AppColors.textSecondary,
@@ -131,4 +136,5 @@ class InfoNote extends StatelessWidget {
       ],
     ),
   );
+  }
 }

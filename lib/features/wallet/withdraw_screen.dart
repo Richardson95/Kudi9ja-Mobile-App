@@ -151,7 +151,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Withdraw')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -175,7 +175,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             'Available: ${balance.asNaira}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
                             ),
@@ -219,7 +219,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                           color: AppColors.info.withValues(alpha: 0.2),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
@@ -251,7 +251,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),

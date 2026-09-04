@@ -35,7 +35,7 @@ void showNewPlanSheet(BuildContext context) {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Two savings plans. One pays you today, the other pays you at the end.',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 height: 1.45,
                 color: AppColors.textTertiary,
@@ -82,7 +82,7 @@ void showNewPlanSheet(BuildContext context) {
             ),
 
             const SizedBox(height: AppSpacing.xl),
-            const Text(
+            Text(
               'SAVE AS A GROUP',
               style: TextStyle(
                 fontSize: 10.5,
@@ -102,13 +102,13 @@ void showNewPlanSheet(BuildContext context) {
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 children: [
-                  const IconBadge(
+                  IconBadge(
                     icon: Icons.groups_rounded,
                     color: AppColors.goldSoft,
                     size: 40,
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -131,7 +131,7 @@ void showNewPlanSheet(BuildContext context) {
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     size: 19,
                     color: AppColors.textTertiary,
@@ -208,7 +208,7 @@ class _ProductCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     blurb,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       height: 1.5,
                       color: AppColors.textSecondary,
@@ -269,7 +269,7 @@ class _Paused extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(
+        Icon(
           Icons.pause_circle_outline_rounded,
           size: 17,
           color: AppColors.danger,
@@ -278,7 +278,7 @@ class _Paused extends StatelessWidget {
         Expanded(
           child: Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               height: 1.45,
               color: AppColors.textSecondary,
@@ -311,7 +311,7 @@ class EmojiPicker extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      Text(
         'Pick an icon',
         style: TextStyle(
           fontSize: 13,

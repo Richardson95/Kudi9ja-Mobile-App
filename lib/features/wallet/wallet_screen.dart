@@ -108,7 +108,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
@@ -176,7 +176,7 @@ class _BalanceStrip extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Available balance',
             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
           ),
@@ -256,7 +256,7 @@ class _Action extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,

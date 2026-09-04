@@ -62,7 +62,7 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -120,7 +120,7 @@ class _Masthead extends StatelessWidget {
             Expanded(
               child: Text(
                 AppConfig.legalEntity.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
@@ -135,7 +135,7 @@ class _Masthead extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Text(
           doc.summary,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             height: 1.55,
             color: AppColors.textSecondary,
@@ -195,7 +195,7 @@ class _Contents extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.menu_book_outlined,
                   size: 18,
                   color: AppColors.gold,
@@ -213,7 +213,7 @@ class _Contents extends StatelessWidget {
                 AnimatedRotation(
                   turns: open ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
-                  child: const Icon(
+                  child: Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: AppColors.textTertiary,
                   ),
@@ -245,7 +245,7 @@ class _Contents extends StatelessWidget {
                           width: 26,
                           child: Text(
                             '${i + 1}.',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w700,
                               color: AppColors.gold,
@@ -255,7 +255,7 @@ class _Contents extends StatelessWidget {
                         Expanded(
                           child: Text(
                             doc.sections[i].title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               height: 1.4,
                               color: AppColors.textSecondary,
@@ -309,7 +309,7 @@ class _SectionView extends StatelessWidget {
               ),
               child: Text(
                 '$number',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                   color: AppColors.gold,
@@ -357,7 +357,7 @@ class _BlockView extends StatelessWidget {
                   child: ordered
                       ? Text(
                           '${i + 1}.',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppColors.gold,
@@ -383,7 +383,7 @@ class _BlockView extends StatelessWidget {
               children: [
                 Text(
                   entries[i].$1,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.gold,
@@ -431,7 +431,7 @@ class _BlockView extends StatelessWidget {
                     flex: 5,
                     child: Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         height: 1.35,
                         color: AppColors.textTertiary,
@@ -467,7 +467,7 @@ class _Dot extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 4,
     height: 4,
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       color: AppColors.gold,
       shape: BoxShape.circle,
     ),
@@ -535,7 +535,7 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const base = TextStyle(
+    final base = TextStyle(
       fontSize: 13.5,
       height: 1.62,
       color: AppColors.textSecondary,
@@ -550,7 +550,7 @@ class _Body extends StatelessWidget {
       spans.add(
         TextSpan(
           text: m.group(1),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),
@@ -576,7 +576,7 @@ class _ContactFooter extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'QUESTIONS ABOUT THIS DOCUMENT',
           style: TextStyle(
             fontSize: 10.5,
@@ -619,7 +619,7 @@ class _ContactFooter extends StatelessWidget {
           '${AppConfig.legalEntity} (${AppConfig.rcNumber})\n'
           '${AppConfig.registeredAddress}\n'
           'Kudi9ja is a product of ${AppConfig.legalEntity}.',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11.5,
             height: 1.6,
             color: AppColors.textTertiary,
@@ -660,7 +660,7 @@ class _CopyRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     color: AppColors.textTertiary,
                   ),
@@ -675,7 +675,7 @@ class _CopyRow extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.copy_rounded,
             size: 15,
             color: AppColors.textTertiary,

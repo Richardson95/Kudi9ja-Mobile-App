@@ -74,7 +74,7 @@ class _PayoutStepState extends State<PayoutStep> {
                         ),
                       ),
                       trailing: on
-                          ? const Icon(
+                          ? Icon(
                               Icons.check_rounded,
                               color: AppColors.gold,
                               size: 20,
@@ -131,7 +131,7 @@ class _PayoutStepState extends State<PayoutStep> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
+            Icon(
               Icons.person_outline_rounded,
               size: 17,
               color: AppColors.gold,
@@ -154,7 +154,7 @@ class _PayoutStepState extends State<PayoutStep> {
                     '${widget.draft.fullName.trim().isEmpty ? 'the name on your Kudi9ja account' : widget.draft.fullName.trim()}. '
                     'A payout to somebody else is refused, and the money stays '
                     'in your wallet.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       height: 1.5,
                       color: AppColors.textSecondary,
@@ -167,7 +167,7 @@ class _PayoutStepState extends State<PayoutStep> {
         ),
       ),
       const SizedBox(height: AppSpacing.md),
-      const Text(
+      Text(
         'You can change this later, and you can send a withdrawal to a '
         'different account of yours at the time you make it.',
         style: TextStyle(

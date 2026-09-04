@@ -38,7 +38,7 @@ class CircleDetailScreen extends StatelessWidget {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -173,7 +173,7 @@ class CircleDetailScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.share_rounded, color: AppColors.gold),
+              leading: Icon(Icons.share_rounded, color: AppColors.gold),
               title: const Text('Share invite code'),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -182,11 +182,11 @@ class CircleDetailScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.exit_to_app_rounded,
                 color: AppColors.danger,
               ),
-              title: const Text(
+              title: Text(
                 'Leave circle',
                 style: TextStyle(color: AppColors.danger),
               ),
@@ -240,7 +240,7 @@ class _Hero extends StatelessWidget {
           ),
           Text(
             'pot this round',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               color: AppColors.textTertiary,
             ),
@@ -261,7 +261,7 @@ class _Hero extends StatelessWidget {
             children: [
               Text(
                 '${circle.paidThisRound} of ${circle.size} paid this round',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
                 ),
@@ -270,7 +270,7 @@ class _Hero extends StatelessWidget {
                 circle.isComplete
                     ? 'Complete'
                     : 'Next: ${circle.nextCollectionDate.asDay}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
                 ),
@@ -346,7 +346,7 @@ class _RotationRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Round $round • ${circle.dateForRound(round).asDay}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,
                   ),
@@ -373,13 +373,13 @@ class _InviteCard extends StatelessWidget {
   Widget build(BuildContext context) => KCard(
     child: Row(
       children: [
-        const IconBadge(icon: Icons.qr_code_rounded, size: 42),
+        IconBadge(icon: Icons.qr_code_rounded, size: 42),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Invite code',
                 style: TextStyle(
                   fontSize: 11.5,
@@ -389,7 +389,7 @@ class _InviteCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 code,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
@@ -405,7 +405,7 @@ class _InviteCard extends StatelessWidget {
             HapticFeedback.selectionClick();
             showToast(context, 'Invite code copied');
           },
-          child: const Icon(
+          child: Icon(
             Icons.copy_rounded,
             size: 18,
             color: AppColors.gold,
@@ -423,7 +423,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 10.5,
       fontWeight: FontWeight.w800,
       letterSpacing: 1.6,
@@ -443,7 +443,7 @@ class _Line extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
       ),
       Flexible(
         child: Text(

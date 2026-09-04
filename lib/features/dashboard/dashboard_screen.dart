@@ -114,7 +114,7 @@ class _Greeting extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               initialsOf(user.fullName),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textOnGold,
@@ -128,7 +128,7 @@ class _Greeting extends StatelessWidget {
               children: [
                 Text(
                   _timeOfDay,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiary,
                   ),
@@ -242,7 +242,7 @@ class _QuickActions extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
@@ -341,7 +341,7 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
         ),
       ],
     ),
@@ -397,7 +397,7 @@ class _SavingsPitch extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const StatusPill(
+              StatusPill(
                 label: '17% PAID UPFRONT',
                 color: AppColors.gold,
                 icon: Icons.bolt_rounded,
@@ -409,7 +409,7 @@ class _SavingsPitch extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Lock from 1 month to 5 years. We pay your full return the moment it starts.',
                 style: TextStyle(
                   fontSize: 12.5,
@@ -421,7 +421,7 @@ class _SavingsPitch extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.md),
-        const Icon(
+        Icon(
           Icons.arrow_forward_rounded,
           color: AppColors.gold,
           size: 20,
@@ -512,7 +512,7 @@ class PlanTile extends StatelessWidget {
                   ),
                   Text(
                     '+${plan.interestPaid.asShortNaira} paid',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: AppColors.success,
@@ -563,7 +563,7 @@ class _CreditSection extends StatelessWidget {
               ).push(slideRoute(const LoanRequestScreen())),
               child: Row(
                 children: [
-                  const IconBadge(icon: Icons.bolt_rounded, size: 42),
+                  IconBadge(icon: Icons.bolt_rounded, size: 42),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -579,7 +579,7 @@ class _CreditSection extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           'Up to ${app.eligibleLoanAmount.asShortNaira} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiary,
                           ),
@@ -587,7 +587,7 @@ class _CreditSection extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     color: AppColors.textTertiary,
                   ),
@@ -648,7 +648,7 @@ class LoanTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       'Due ${loan.dueDate.asDay}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
                       ),
@@ -667,7 +667,7 @@ class LoanTile extends StatelessWidget {
                       letterSpacing: -0.4,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'outstanding',
                     style: TextStyle(
                       fontSize: 10.5,
@@ -713,7 +713,7 @@ class _RecentActivity extends StatelessWidget {
         children: [
           const SectionHeader(title: 'Recent activity'),
           if (txns.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
               child: Center(
                 child: Text(
@@ -792,7 +792,7 @@ class _DueBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${next.installment.amount.asNaira} • ${next.installment.dueDate.asDay}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -800,7 +800,7 @@ class _DueBanner extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 20,
               color: AppColors.textTertiary,
@@ -837,7 +837,7 @@ class _AdminEntry extends StatelessWidget {
                 gradient: AppColors.goldGradient,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.admin_panel_settings_rounded,
                 size: 23,
                 color: AppColors.textOnGold,
@@ -858,7 +858,7 @@ class _AdminEntry extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Signed in as $role',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -866,7 +866,7 @@ class _AdminEntry extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_rounded,
               size: 19,
               color: AppColors.gold,

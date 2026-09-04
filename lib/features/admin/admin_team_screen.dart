@@ -29,7 +29,7 @@ class AdminTeamScreen extends StatelessWidget {
           borderColor: AppColors.gold.withValues(alpha: 0.24),
           child: Row(
             children: [
-              const IconBadge(
+              IconBadge(
                 icon: Icons.admin_panel_settings_rounded,
                 size: 46,
               ),
@@ -46,7 +46,7 @@ class AdminTeamScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Access is by email. Whoever signs in with a listed address sees the "Go to admin" button on their dashboard.',
                       style: TextStyle(
                         fontSize: 11.5,
@@ -72,7 +72,7 @@ class AdminTeamScreen extends StatelessWidget {
         ] else ...[
           KCard(
             borderColor: AppColors.info.withValues(alpha: 0.3),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.info_outline_rounded, size: 18, color: AppColors.info),
                 SizedBox(width: AppSpacing.md),
@@ -170,7 +170,7 @@ class _RoleMatrix extends StatelessWidget {
               Expanded(
                 child: Text(
                   kAdminCapabilities[i].label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     height: 1.35,
                     color: AppColors.textSecondary,
@@ -196,7 +196,7 @@ class _RoleMatrix extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         const HairLine(),
         const SizedBox(height: AppSpacing.sm),
-        const Text(
+        Text(
           'Nobody can change their own role, suspend themselves or remove '
           'their own access — each of those would revoke the permission '
           'needed to undo it.',
@@ -288,7 +288,7 @@ class _AdminTile extends StatelessWidget {
                     ),
                     if (isMe) ...[
                       const SizedBox(width: 6),
-                      const StatusPill(
+                      StatusPill(
                         label: 'YOU',
                         color: AppColors.success,
                         dense: true,
@@ -301,7 +301,7 @@ class _AdminTile extends StatelessWidget {
                   admin.email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,
                   ),
@@ -311,7 +311,7 @@ class _AdminTile extends StatelessWidget {
                   'Added ${admin.addedAt.asDay}${admin.addedBy.isEmpty ? '' : ' by ${admin.addedBy}'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10.5,
                     color: AppColors.textTertiary,
                   ),
@@ -330,7 +330,7 @@ class _AdminTile extends StatelessWidget {
               ),
               if (!admin.active) ...[
                 const SizedBox(height: 4),
-                const StatusPill(
+                StatusPill(
                   label: 'SUSPENDED',
                   color: AppColors.danger,
                   dense: true,
@@ -362,7 +362,7 @@ class _AdminTile extends StatelessWidget {
                   ),
                   Text(
                     admin.email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textTertiary,
                     ),
@@ -394,7 +394,7 @@ class _AdminTile extends StatelessWidget {
                   ),
                 ),
                 trailing: admin.role == role
-                    ? const Icon(
+                    ? Icon(
                         Icons.check_rounded,
                         size: 18,
                         color: AppColors.gold,
@@ -438,12 +438,12 @@ class _AdminTile extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.person_remove_alt_1_rounded,
                 size: 19,
                 color: AppColors.danger,
               ),
-              title: const Text(
+              title: Text(
                 'Remove from panel',
                 style: TextStyle(fontSize: 14, color: AppColors.danger),
               ),
@@ -535,7 +535,7 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: AppSpacing.xs),
-            const Text(
+            Text(
               'Search someone who has already signed up and pick them. Access '
               'is granted to their email address, and starts the next time '
               'they sign in.',
@@ -564,7 +564,7 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
                       : 'No account matches that. They have to sign up first '
                             '— access cannot be granted to an address that '
                             'belongs to nobody.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     height: 1.5,
                     color: AppColors.textTertiary,
@@ -592,7 +592,7 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
               ),
 
             const SizedBox(height: AppSpacing.xl),
-            const Text(
+            Text(
               'ROLE',
               style: TextStyle(
                 fontSize: 10.5,
@@ -673,7 +673,7 @@ class _CandidateTile extends StatelessWidget {
                       customer.fullName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
                       ),
@@ -681,7 +681,7 @@ class _CandidateTile extends StatelessWidget {
                   ),
                   if (customer.isSample) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    const StatusPill(
+                    StatusPill(
                       label: 'SAMPLE',
                       color: AppColors.textTertiary,
                       dense: true,
@@ -693,7 +693,7 @@ class _CandidateTile extends StatelessWidget {
           ),
         ),
         if (selected)
-          const Icon(
+          Icon(
             Icons.check_circle_rounded,
             size: 19,
             color: AppColors.gold,

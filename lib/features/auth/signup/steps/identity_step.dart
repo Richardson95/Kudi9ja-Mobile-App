@@ -104,7 +104,7 @@ class _IdentityStepState extends State<IdentityStep> {
                       ),
                     ),
                     trailing: on
-                        ? const Icon(
+                        ? Icon(
                             Icons.check_rounded,
                             color: AppColors.gold,
                             size: 20,
@@ -180,7 +180,7 @@ class _IdentityStepState extends State<IdentityStep> {
             onTap: _pickState,
             error: _stateError,
           ),
-          const InfoNote(
+          InfoNote(
             icon: Icons.verified_user_outlined,
             text:
                 'We only read your name, date of birth and phone from your BVN record. Kudi9ja can never move money in your bank accounts.',
@@ -211,7 +211,7 @@ class _VerifiedView extends StatelessWidget {
               Container(
                     width: 88,
                     height: 88,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: AppColors.successGradient,
                     ),
@@ -256,13 +256,13 @@ class _VerifiedView extends StatelessWidget {
         ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.15),
         Row(
           children: [
-            const StatusPill(
+            StatusPill(
               label: 'TIER 2 VERIFIED',
               color: AppColors.success,
               icon: Icons.shield_rounded,
             ),
             const SizedBox(width: AppSpacing.sm),
-            const StatusPill(
+            StatusPill(
               label: 'LENDING UNLOCKED',
               color: AppColors.gold,
               icon: Icons.lock_open_rounded,
@@ -290,7 +290,7 @@ class _Row extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
       ),
       Flexible(
         child: Text(

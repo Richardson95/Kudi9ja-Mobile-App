@@ -32,6 +32,7 @@ class StorageService {
   static const _kOnboarded = 'k9.onboarded';
   static const _kSignedIn = 'k9.signedIn';
   static const _kHideBalance = 'k9.hideBalance';
+  static const _kThemeMode = 'k9.themeMode';
   static const _kCircles = 'k9.circles';
   static const _kNotifications = 'k9.notifications';
   static const _kAutoDebit = 'k9.autoDebit';
@@ -51,6 +52,12 @@ class StorageService {
 
   bool get hideBalance => _prefs.getBool(_kHideBalance) ?? false;
   Future<void> setHideBalance(bool v) => _prefs.setBool(_kHideBalance, v);
+
+  /// Light, dark, or follow the phone. Stored on the device today; it
+  /// belongs on the account once there is a backend, so the choice follows
+  /// the customer between devices.
+  int? get themeMode => _prefs.getInt(_kThemeMode);
+  Future<void> setThemeMode(int v) => _prefs.setInt(_kThemeMode, v);
 
   // ── User ────────────────────────────────────────────────────────────────
   AppUser? get user {

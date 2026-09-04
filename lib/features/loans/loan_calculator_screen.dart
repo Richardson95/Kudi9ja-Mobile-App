@@ -45,7 +45,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Loan calculator')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -62,7 +62,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'If I borrow...',
                             style: TextStyle(
                               fontSize: 13,
@@ -81,7 +81,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                               over
                                   ? 'The ceiling is ${settings.maxLoanAmount.asNairaFlat}'
                                   : 'The minimum loan is ${settings.minLoanAmount.asNairaFlat}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.danger,
@@ -99,7 +99,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
-                    const Text(
+                    Text(
                       'OVER',
                       style: TextStyle(
                         fontSize: 10.5,
@@ -140,7 +140,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -180,7 +180,7 @@ class _Headline extends StatelessWidget {
     padding: const EdgeInsets.all(AppSpacing.xl),
     child: Column(
       children: [
-        const Text(
+        Text(
           'You repay each month',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
@@ -190,7 +190,7 @@ class _Headline extends StatelessWidget {
           child: Text(
             monthly.asNaira,
             key: ValueKey(monthly),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w800,
               letterSpacing: -1.5,
@@ -200,20 +200,20 @@ class _Headline extends StatelessWidget {
         ),
         Text(
           'for $tenure ${tenure == 1 ? 'month' : 'months'}',
-          style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
         ),
         const SizedBox(height: AppSpacing.lg),
         const HairLine(),
         const SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.account_balance_wallet_outlined,
               size: 15,
               color: AppColors.success,
             ),
             const SizedBox(width: 7),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Lands in your wallet (after fee)',
                 style: TextStyle(
@@ -224,7 +224,7 @@ class _Headline extends StatelessWidget {
             ),
             Text(
               net.asNaira,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: AppColors.success,
@@ -259,7 +259,7 @@ class _Breakdown extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'THE NUMBERS',
           style: TextStyle(
             fontSize: 10.5,
@@ -314,7 +314,7 @@ class _SchedulePreview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'YOUR REPAYMENT DATES',
             style: TextStyle(
               fontSize: 10.5,
@@ -340,7 +340,7 @@ class _SchedulePreview extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Text(
                       '${i + 1}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary,
@@ -351,7 +351,7 @@ class _SchedulePreview extends StatelessWidget {
                   Expanded(
                     child: Text(
                       Finance.addMonths(now, i + 1).asDay,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
@@ -383,7 +383,7 @@ class _SchedulePreview extends StatelessWidget {
                 ),
                 Text(
                   total.asNaira,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,
                     color: AppColors.gold,
@@ -413,7 +413,7 @@ class _Row extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         Text(
           value,

@@ -42,7 +42,7 @@ class _HomeShellState extends State<HomeShell> {
         ],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Color(0xFF0B0A0A),
           border: Border(top: BorderSide(color: AppColors.stroke)),
         ),
@@ -161,7 +161,7 @@ class TabHeader extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   subtitle!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textTertiary,
                   ),

@@ -27,7 +27,7 @@ class BrandMark extends StatelessWidget {
     return Container(
       width: size * 1.9,
       height: size * 1.9,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [AppColors.goldWash, Colors.transparent],
@@ -119,7 +119,7 @@ class _GoldButtonState extends State<GoldButton> {
             ),
             alignment: Alignment.center,
             child: widget.loading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
@@ -364,13 +364,13 @@ class SectionHeader extends StatelessWidget {
               children: [
                 Text(
                   actionLabel!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.gold,
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
                   color: AppColors.gold,
@@ -388,25 +388,31 @@ class IconBadge extends StatelessWidget {
   const IconBadge({
     super.key,
     required this.icon,
-    this.color = AppColors.gold,
+    this.color,
     this.size = 44,
   });
 
   final IconData icon;
-  final Color color;
+  final Color? color;
   final double size;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
-      shape: BoxShape.circle,
-      border: Border.all(color: color.withValues(alpha: 0.2)),
-    ),
-    child: Icon(icon, size: size * 0.45, color: color),
-  );
+  Widget build(BuildContext context) {
+    // Defaults to gold, resolved at build time: the palette is not known
+    // until a theme is in force, so it cannot be a constant default.
+    final tint = color ?? AppColors.gold;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+        border: Border.all(color: tint.withValues(alpha: 0.2)),
+      ),
+      child: Icon(icon, size: size * 0.45, color: tint),
+    );
+  }
 }
 
 class EmptyState extends StatelessWidget {
@@ -434,7 +440,7 @@ class EmptyState extends StatelessWidget {
         Container(
           width: 84,
           height: 84,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
               colors: [AppColors.goldWash, Colors.transparent],

@@ -170,7 +170,7 @@ class _TransferScreenState extends State<TransferScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Send money')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -194,7 +194,7 @@ class _TransferScreenState extends State<TransferScreen> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             'Available: ${balance.asNaira}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
                             ),
@@ -225,7 +225,7 @@ class _TransferScreenState extends State<TransferScreen> {
                       },
                     ),
                     if (_resolving)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: AppSpacing.md),
                         child: Row(
                           children: [
@@ -259,7 +259,7 @@ class _TransferScreenState extends State<TransferScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.check_circle_rounded,
                                 size: 17,
                                 color: AppColors.success,
@@ -291,7 +291,7 @@ class _TransferScreenState extends State<TransferScreen> {
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'Daily transfer limit: ${settings.dailyTransferLimit.asShortNaira}. Transfers to any Nigerian bank are free on Kudi9ja.',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         height: 1.45,
                         color: AppColors.textTertiary,
@@ -307,7 +307,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),

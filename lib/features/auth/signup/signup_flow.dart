@@ -131,7 +131,7 @@ class _SignupFlowState extends State<SignupFlow> {
       },
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+          decoration: BoxDecoration(gradient: AppColors.nightGradient),
           child: SafeArea(
             child: Column(
               children: [
@@ -218,7 +218,7 @@ class _Header extends StatelessWidget {
                 icon: const Icon(Icons.arrow_back_rounded, size: 22),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.surface,
-                  shape: const CircleBorder(
+                  shape: CircleBorder(
                     side: BorderSide(color: AppColors.stroke),
                   ),
                 ),
@@ -230,7 +230,7 @@ class _Header extends StatelessWidget {
                   children: [
                     Text(
                       'Step ${index + 1} of $total',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.4,
@@ -287,7 +287,7 @@ class _CreatingAccount extends StatelessWidget {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -314,7 +314,7 @@ class _CreatingAccount extends StatelessWidget {
                     child:
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.check_circle_rounded,
                               size: 18,
                               color: AppColors.success,
@@ -322,7 +322,7 @@ class _CreatingAccount extends StatelessWidget {
                             const SizedBox(width: AppSpacing.md),
                             Text(
                               steps[i],
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textSecondary,
                               ),

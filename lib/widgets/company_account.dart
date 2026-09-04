@@ -29,13 +29,13 @@ class CompanyAccountCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.account_balance_rounded,
               size: 17,
               color: AppColors.gold,
             ),
             const SizedBox(width: 7),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Transfer to this account',
                 style: TextStyle(
@@ -60,7 +60,7 @@ class CompanyAccountCard extends StatelessWidget {
             Expanded(
               child: Text(
                 settings.companyAccountNumber,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 27,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2.5,
@@ -77,7 +77,7 @@ class CompanyAccountCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           settings.companyAccountName,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -86,7 +86,7 @@ class CompanyAccountCard extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           settings.companyBank,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.5,
             color: AppColors.textSecondary,
           ),
@@ -102,7 +102,7 @@ class CompanyAccountCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Use this as the narration',
                       style: TextStyle(
                         fontSize: 11,
@@ -112,7 +112,7 @@ class CompanyAccountCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       reference!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1,
@@ -135,7 +135,7 @@ class CompanyAccountCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(color: AppColors.info.withValues(alpha: 0.22)),
           ),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.info_outline_rounded, size: 15, color: AppColors.info),
@@ -177,7 +177,7 @@ class _CopyButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.copy_rounded, size: 13, color: AppColors.gold),
@@ -234,7 +234,7 @@ class ReceiptPicker extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.photo_library_outlined,
                 color: AppColors.gold,
               ),
@@ -245,7 +245,7 @@ class ReceiptPicker extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.photo_camera_outlined,
                 color: AppColors.gold,
               ),
@@ -281,7 +281,7 @@ class ReceiptPicker extends StatelessWidget {
             ),
             if (required && !has) ...[
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'required',
                 style: TextStyle(fontSize: 11, color: AppColors.danger),
               ),
@@ -310,7 +310,7 @@ class ReceiptPicker extends StatelessWidget {
                       Image.file(
                         File(path),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Center(
+                        errorBuilder: (_, _, _) => Center(
                           child: Text(
                             'Preview unavailable',
                             style: TextStyle(
@@ -334,7 +334,7 @@ class ReceiptPicker extends StatelessWidget {
                               AppRadius.pill,
                             ),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
@@ -357,7 +357,7 @@ class ReceiptPicker extends StatelessWidget {
                       ),
                     ],
                   )
-                : const Column(
+                : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
@@ -427,7 +427,7 @@ void showReceipt(BuildContext context, String path) {
               child: Image.file(
                 File(path),
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Padding(
+                errorBuilder: (_, _, _) => Padding(
                   padding: EdgeInsets.all(AppSpacing.huge),
                   child: Text(
                     'This receipt image is no longer available on the device.',

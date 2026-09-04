@@ -108,7 +108,7 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('New circle')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -237,7 +237,7 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
                                   AppRadius.md,
                                 ),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add_rounded,
                                 color: AppColors.textOnGold,
                               ),
@@ -276,7 +276,7 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -301,7 +301,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 10.5,
       fontWeight: FontWeight.w800,
       letterSpacing: 1.6,
@@ -369,12 +369,12 @@ class _MemberRow extends StatelessWidget {
         ),
         Text(
           'Round $round',
-          style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
         ),
         if (onRemove != null)
           IconButton(
             onPressed: onRemove,
-            icon: const Icon(
+            icon: Icon(
               Icons.close_rounded,
               size: 17,
               color: AppColors.textTertiary,
@@ -406,14 +406,14 @@ class _Summary extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'You collect',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         Text(
           pot.asNaira,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
             letterSpacing: -1.2,
@@ -445,7 +445,7 @@ class _Row extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         Text(
           value,

@@ -106,7 +106,7 @@ class _PayInScreenState extends State<PayInScreen> {
         title: Text(_isLoan ? 'Repay by transfer' : 'Pay in by transfer'),
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -134,7 +134,7 @@ class _PayInScreenState extends State<PayInScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'PAYING TOWARDS',
                               style: TextStyle(
                                 fontSize: 10.5,
@@ -146,7 +146,7 @@ class _PayInScreenState extends State<PayInScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             Row(
                               children: [
-                                const IconBadge(
+                                IconBadge(
                                   icon: Icons.bolt_rounded,
                                   size: 40,
                                 ),
@@ -165,7 +165,7 @@ class _PayInScreenState extends State<PayInScreen> {
                                       ),
                                       Text(
                                         '${widget.loan!.outstanding.asNaira} outstanding',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12,
                                           color: AppColors.textTertiary,
                                         ),
@@ -220,7 +220,7 @@ class _PayInScreenState extends State<PayInScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -272,7 +272,7 @@ class _Steps extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     n,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       color: AppColors.gold,
@@ -283,7 +283,7 @@ class _Steps extends StatelessWidget {
                 Expanded(
                   child: Text(
                     text,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -308,7 +308,7 @@ class _Note extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.sm),
       border: Border.all(color: AppColors.stroke),
     ),
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(

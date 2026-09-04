@@ -45,7 +45,7 @@ class SavingsScreen extends StatelessWidget {
                     gradient: AppColors.goldGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.add_rounded,
                     color: AppColors.textOnGold,
                     size: 22,
@@ -151,7 +151,7 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Total locked away',
             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
           ),
@@ -203,7 +203,7 @@ class _Stat extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 3),
       FittedBox(
@@ -260,7 +260,7 @@ class _GrowthChart extends StatelessWidget {
                 ),
                 Text(
                   running.asShortNaira,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.success,
@@ -279,7 +279,7 @@ class _GrowthChart extends StatelessWidget {
                     show: true,
                     drawVerticalLine: false,
                     horizontalInterval: maxY / 3,
-                    getDrawingHorizontalLine: (_) => const FlLine(
+                    getDrawingHorizontalLine: (_) => FlLine(
                       color: AppColors.stroke,
                       strokeWidth: 1,
                     ),
@@ -359,7 +359,7 @@ class _ClosedTile extends StatelessWidget {
                 ),
                 Text(
                   '${plan.status.label} • ${plan.startDate.asDay}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,
                   ),
@@ -369,7 +369,7 @@ class _ClosedTile extends StatelessWidget {
           ),
           Text(
             plan.principal.asShortNaira,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
@@ -396,9 +396,9 @@ class _CalculatorStrip extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
-          const IconBadge(icon: Icons.calculate_rounded, size: 40),
+          IconBadge(icon: Icons.calculate_rounded, size: 40),
           const SizedBox(width: AppSpacing.md),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -417,7 +417,7 @@ class _CalculatorStrip extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.chevron_right_rounded,
             size: 20,
             color: AppColors.textTertiary,
@@ -469,7 +469,7 @@ class _AutoSaveSection extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             '${(p.autoAmount ?? 0).asShortNaira} ${p.autoFrequency?.adverb ?? ''} • next ${p.nextAutoRun?.asDay ?? '-'}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
                               color: AppColors.textTertiary,
                             ),

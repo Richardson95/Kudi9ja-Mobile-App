@@ -35,7 +35,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Security')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -46,7 +46,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 borderColor: AppColors.success.withValues(alpha: 0.25),
                 child: Row(
                   children: [
-                    const IconBadge(
+                    IconBadge(
                       icon: Icons.shield_rounded,
                       color: AppColors.success,
                       size: 46,
@@ -61,7 +61,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 3),
-                          const Text(
+                          Text(
                             'Two independent codes guard your money — one to get in, one to move funds.',
                             style: TextStyle(
                               fontSize: 12,
@@ -121,7 +121,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                             _biometricAvailable
                                 ? 'Use your fingerprint or face instead of typing'
                                 : 'Not available on this device',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
                               color: AppColors.textTertiary,
                             ),
@@ -156,7 +156,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ),
 
               const SizedBox(height: AppSpacing.xxl),
-              const Text(
+              Text(
                 'HOW WE PROTECT YOU',
                 style: TextStyle(
                   fontSize: 10.5,
@@ -197,7 +197,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                             Expanded(
                               child: Text(
                                 text,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   height: 1.5,
                                   color: AppColors.textSecondary,
@@ -238,7 +238,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             ),
           ),
           body: Container(
-            decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+            decoration: BoxDecoration(gradient: AppColors.nightGradient),
             child: SafeArea(
               top: false,
               child: PasscodeStep(
@@ -322,7 +322,7 @@ class _VerifyCurrentScreenState extends State<_VerifyCurrentScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Confirm it is you')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Padding(
@@ -347,7 +347,7 @@ class _VerifyCurrentScreenState extends State<_VerifyCurrentScreen> {
                 SizedBox(
                   height: 20,
                   child: _error
-                      ? const Text(
+                      ? Text(
                           'That is not correct',
                           style: TextStyle(
                             fontSize: 12.5,
@@ -412,7 +412,7 @@ class _Tile extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   height: 1.4,
                   color: AppColors.textTertiary,
@@ -421,7 +421,7 @@ class _Tile extends StatelessWidget {
             ],
           ),
         ),
-        const Icon(
+        Icon(
           Icons.chevron_right_rounded,
           size: 20,
           color: AppColors.textTertiary,

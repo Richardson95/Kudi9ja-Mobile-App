@@ -59,7 +59,7 @@ class BalanceCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'Wallet balance',
                       style: TextStyle(
                         fontSize: 12.5,
@@ -95,7 +95,7 @@ class BalanceCard extends StatelessWidget {
                   child: Text(
                     hidden ? '••••••••' : app.balance.asNaira,
                     key: ValueKey(hidden ? 'hidden' : app.balance),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1.5,
@@ -141,7 +141,7 @@ class BalanceCard extends StatelessWidget {
                 // where money leaves to, so that is what we show.
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.account_balance_outlined,
                       size: 15,
                       color: AppColors.textTertiary,
@@ -191,7 +191,7 @@ class _Sub extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 3),
       Text(

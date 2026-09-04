@@ -64,7 +64,7 @@ class SplashScreen extends StatelessWidget {
                   width: 120,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.pill),
-                    child: const LinearProgressIndicator(
+                    child: LinearProgressIndicator(
                       minHeight: 3,
                       backgroundColor: AppColors.surfaceAlt,
                       valueColor: AlwaysStoppedAnimation(AppColors.gold),
@@ -74,7 +74,7 @@ class SplashScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 Text(
                   'Secured by ${AppConfig.appName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     letterSpacing: 1.2,
                     color: AppColors.textTertiary,

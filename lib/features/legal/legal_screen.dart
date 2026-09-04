@@ -26,7 +26,7 @@ class LegalScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Legal')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -50,7 +50,7 @@ class LegalScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    const Text(
+                    Text(
                       'Written to be read. Every rate, fee and limit quoted in '
                       'these documents is the one the app is actually '
                       'applying today.',
@@ -89,7 +89,7 @@ class LegalScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               doc.summary,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
                                 height: 1.5,
                                 color: AppColors.textSecondary,
@@ -99,7 +99,7 @@ class LegalScreen extends StatelessWidget {
                             Text(
                               'v${doc.version} • ${doc.effective.asDay} • '
                               '${doc.readMinutes} min read',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11.5,
                                 color: AppColors.textTertiary,
                               ),
@@ -107,7 +107,7 @@ class LegalScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: 10, left: AppSpacing.sm),
                         child: Icon(
                           Icons.chevron_right_rounded,
@@ -124,7 +124,7 @@ class LegalScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'THE COMPANY BEHIND KUDI9JA',
                       style: TextStyle(
                         fontSize: 10.5,
@@ -137,7 +137,7 @@ class LegalScreen extends StatelessWidget {
                     Text(
                       '${AppConfig.legalEntity}\n${AppConfig.rcNumber}\n'
                       '${AppConfig.registeredAddress}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         height: 1.65,
                         color: AppColors.textSecondary,
@@ -146,7 +146,7 @@ class LegalScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     const HairLine(),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
+                    Text(
                       '${AppConfig.legalEmail}  ·  terms and agreements\n'
                       '${AppConfig.privacyEmail}  ·  privacy and your data\n'
                       '${AppConfig.supportEmail}  ·  general support',

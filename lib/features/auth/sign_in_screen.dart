@@ -62,7 +62,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -123,7 +123,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () => _showRecovery(context),
-                      child: const Text(
+                      child: Text(
                         'Forgot password?',
                         style: TextStyle(
                           color: AppColors.gold,
@@ -163,7 +163,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   Center(
                     child: TextButton(
                       onPressed: () => _confirmReset(context),
-                      child: const Text(
+                      child: Text(
                         'Use a different account',
                         style: TextStyle(
                           color: AppColors.textTertiary,
@@ -195,7 +195,7 @@ class _SignInScreenState extends State<SignInScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const IconBadge(icon: Icons.mark_email_read_outlined, size: 52),
+            IconBadge(icon: Icons.mark_email_read_outlined, size: 52),
             const SizedBox(height: AppSpacing.lg),
             Text(
               'Reset your password',
@@ -227,14 +227,14 @@ class _SignInScreenState extends State<SignInScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Remove this account?'),
-        content: const Text(
+        content: Text(
           'This clears the Kudi9ja account stored on this device, including its savings plans and history. This cannot be undone.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -244,7 +244,7 @@ class _SignInScreenState extends State<SignInScreen> {
               Navigator.pop(dialogContext);
               context.read<AppState>().deleteAccount();
             },
-            child: const Text(
+            child: Text(
               'Remove',
               style: TextStyle(color: AppColors.danger),
             ),
@@ -276,7 +276,7 @@ class _TrustRow extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   height: 1.35,
                   color: AppColors.textTertiary,

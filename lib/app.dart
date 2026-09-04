@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/constants/app_config.dart';
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/platform_settings.dart';
 import 'features/auth/lock_screen.dart';
@@ -63,12 +64,25 @@ class _Kudi9jaAppState extends State<Kudi9jaApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final mode = context.watch<AppState>().themeMode;
+
     return MaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
-      themeMode: ThemeMode.dark,
-      builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: mode.material,
+      // Both themes are built above, and each build applies its palette
+      // globally as a side effect — so the last one built would win. Pin the
+      // palette to whichever theme is actually being painted.
+      builder: (context, child) {
+        applyPalette(
+          Theme.of(context).brightness == Brightness.dark
+              ? kDarkPalette
+              : kLightPalette,
+        );
+        return MediaQuery.withNoTextScaling(child: child!);
+      },
       home: _booting ? const SplashScreen() : const _Gate(),
     );
   }

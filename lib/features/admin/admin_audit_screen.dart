@@ -30,7 +30,7 @@ class _AdminAuditScreenState extends State<AdminAuditScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Audit log')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -197,7 +197,7 @@ class _Entry extends StatelessWidget {
                         ),
                         Text(
                           entry.date.relative,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10.5,
                             color: AppColors.textTertiary,
                           ),
@@ -207,7 +207,7 @@ class _Entry extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       entry.detail,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         height: 1.5,
                         color: AppColors.textSecondary,
@@ -216,7 +216,7 @@ class _Entry extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.person_outline_rounded,
                           size: 12,
                           color: AppColors.textTertiary,
@@ -224,7 +224,7 @@ class _Entry extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           entry.actor,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10.5,
                             color: AppColors.textTertiary,
                           ),
@@ -232,7 +232,7 @@ class _Entry extends StatelessWidget {
                         const Spacer(),
                         Text(
                           entry.date.asDayTime,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10.5,
                             color: AppColors.textTertiary,
                           ),

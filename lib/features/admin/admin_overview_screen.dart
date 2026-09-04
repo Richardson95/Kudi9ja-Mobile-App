@@ -123,7 +123,7 @@ class AdminOverviewScreen extends StatelessWidget {
             children: [
               Text(
                 settings.companyAccountNumber,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2,
@@ -140,7 +140,7 @@ class AdminOverviewScreen extends StatelessWidget {
               ),
               Text(
                 settings.companyBank,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textTertiary,
                 ),
@@ -154,7 +154,7 @@ class AdminOverviewScreen extends StatelessWidget {
         _SwitchSummary().animate(delay: 220.ms).fadeIn(),
 
         const SizedBox(height: AppSpacing.xl),
-        const Text(
+        Text(
           'Figures cover every customer the panel can see. On this build that is the account held on this device plus the labelled sample records; a live deployment reads the whole book from the Kudi9ja API.',
           style: TextStyle(
             fontSize: 11.5,
@@ -174,13 +174,13 @@ class _MaintenanceBanner extends StatelessWidget {
     borderColor: AppColors.danger.withValues(alpha: 0.4),
     child: Row(
       children: [
-        const IconBadge(
+        IconBadge(
           icon: Icons.build_rounded,
           color: AppColors.danger,
           size: 42,
         ),
         const SizedBox(width: AppSpacing.md),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -223,7 +223,7 @@ class _RatesCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Savings rate',
                     style: TextStyle(
                       fontSize: 11.5,
@@ -233,14 +233,14 @@ class _RatesCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     '${settings.savingsRatePct.toStringAsFixed(settings.savingsRatePct % 1 == 0 ? 0 : 1)}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1,
                       color: AppColors.gold,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'per annum, paid upfront',
                     style: TextStyle(
                       fontSize: 10.5,
@@ -257,7 +257,7 @@ class _RatesCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Loan rate',
                       style: TextStyle(
                         fontSize: 11.5,
@@ -273,7 +273,7 @@ class _RatesCard extends StatelessWidget {
                         letterSpacing: -1,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'flat, any tenure',
                       style: TextStyle(
                         fontSize: 10.5,
@@ -327,7 +327,7 @@ class _Line extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         Flexible(
           child: Text(
@@ -361,7 +361,7 @@ class _BalanceChart extends StatelessWidget {
     ];
     final total = rows.fold(0.0, (s, r) => s + r.$2);
     if (total <= 0) {
-      return const KCard(
+      return KCard(
         child: Text(
           'No balances to chart yet.',
           style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
@@ -409,7 +409,7 @@ class _BalanceChart extends StatelessWidget {
                   Expanded(
                     child: Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -417,7 +417,7 @@ class _BalanceChart extends StatelessWidget {
                   ),
                   Text(
                     '${(value / total * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textTertiary,
                     ),
@@ -514,7 +514,7 @@ class _PayoutCallout extends StatelessWidget {
       borderColor: AppColors.gold.withValues(alpha: 0.4),
       child: Row(
         children: [
-          const IconBadge(
+          IconBadge(
             icon: Icons.pending_actions_rounded,
             color: AppColors.gold,
             size: 44,
@@ -526,7 +526,7 @@ class _PayoutCallout extends StatelessWidget {
               children: [
                 Text(
                   parts.join(' and '),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.gold,
@@ -535,7 +535,7 @@ class _PayoutCallout extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${value.asNaira} waiting on you in Payments.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),

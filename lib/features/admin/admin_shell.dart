@@ -97,7 +97,7 @@ class _AdminShellState extends State<AdminShell> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: IndexedStack(
@@ -114,7 +114,7 @@ class _AdminShellState extends State<AdminShell> {
         ),
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Color(0xFF0B0A0A),
           border: Border(top: BorderSide(color: AppColors.stroke)),
         ),
@@ -212,7 +212,7 @@ class AdminSectionLabel extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: AppSpacing.md),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 10.5,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.6,
@@ -229,14 +229,14 @@ class MetricTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
-    this.tint = AppColors.gold,
+    this.tint,
     this.footnote,
   });
 
   final String label;
   final String value;
   final IconData icon;
-  final Color tint;
+  final Color? tint;
   final String? footnote;
 
   @override
@@ -262,7 +262,7 @@ class MetricTile extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
         ),
         if (footnote != null) ...[
           const SizedBox(height: 2),
@@ -289,14 +289,14 @@ class SourcePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isThisDevice) {
-      return const StatusPill(
+      return StatusPill(
         label: 'THIS DEVICE',
         color: AppColors.success,
         dense: true,
       );
     }
     if (isSample) {
-      return const StatusPill(
+      return StatusPill(
         label: 'SAMPLE',
         color: AppColors.textTertiary,
         dense: true,

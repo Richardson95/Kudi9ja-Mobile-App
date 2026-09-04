@@ -12,6 +12,7 @@ import '../../data/models/models.dart';
 import '../../data/services/security_service.dart';
 import '../../state/app_state.dart';
 import '../../widgets/company_account.dart';
+import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
 import '../shell/home_shell.dart';
 import '../admin/admin_shell.dart';
@@ -55,6 +56,21 @@ class ProfileScreen extends StatelessWidget {
                 label: 'Hide balances by default',
                 value: app.hideBalance,
                 onChanged: (_) => app.toggleHideBalance(),
+              ),
+            ],
+          ),
+          _Group(
+            title: 'APPEARANCE',
+            children: [
+              _Row(
+                icon: switch (app.themeMode) {
+                  AppThemeMode.system => Icons.brightness_auto_rounded,
+                  AppThemeMode.light => Icons.light_mode_rounded,
+                  AppThemeMode.dark => Icons.dark_mode_rounded,
+                },
+                label: 'Theme',
+                sublabel: app.themeMode.label,
+                onTap: () => _pickTheme(context, app),
               ),
             ],
           ),
@@ -128,7 +144,7 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.verified_user_outlined,
                 label: 'Verification status',
                 sublabel: user.kycTier.label,
-                trailing: const StatusPill(
+                trailing: StatusPill(
                   label: 'TIER 2',
                   color: AppColors.success,
                   dense: true,
@@ -196,13 +212,13 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   '${AppConfig.appName} • v1.0.0',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
+                Text(
                   AppConfig.tagline,
                   style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
                 ),
@@ -215,19 +231,71 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _pickTheme(BuildContext context, AppState app) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Theme', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Kudi9ja is gold on black by default. Light mode keeps the '
+                'same product, on warm white.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.45,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              for (final mode in AppThemeMode.values)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: KOptionTile(
+                    title: mode.label,
+                    subtitle: switch (mode) {
+                      AppThemeMode.system =>
+                        'Follows your phone from light to dark',
+                      AppThemeMode.light => 'Ink on warm white',
+                      AppThemeMode.dark => 'Gold on black',
+                    },
+                    selected: app.themeMode == mode,
+                    onTap: () {
+                      app.setThemeMode(mode);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _confirmSignOut(BuildContext context) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text(
+        content: Text(
           'Your savings and history stay safe. You will need your email and password to sign back in.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -237,7 +305,7 @@ class ProfileScreen extends StatelessWidget {
               Navigator.pop(dialogContext);
               context.read<AppState>().signOut();
             },
-            child: const Text(
+            child: Text(
               'Sign out',
               style: TextStyle(color: AppColors.danger),
             ),
@@ -321,7 +389,7 @@ class ProfileScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: AppSpacing.xs),
-              const Text(
+              Text(
                 'Funding your wallet, opening savings or repaying a loan — it '
                 'all goes to this account, always by bank transfer.',
                 style: TextStyle(
@@ -333,7 +401,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               const CompanyAccountCard(),
               const SizedBox(height: AppSpacing.md),
-              const Text(
+              Text(
                 'Start from Add money each time. Every payment gets its own '
                 'K9 reference to quote on the transfer, and your money lands '
                 'once our team has matched it against the statement.',
@@ -482,7 +550,7 @@ class _ProfileCard extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               initialsOf(user.fullName),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textOnGold,
@@ -505,13 +573,13 @@ class _ProfileCard extends StatelessWidget {
                   user.email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const StatusPill(
+                StatusPill(
                   label: 'FULLY VERIFIED',
                   color: AppColors.success,
                   icon: Icons.verified_rounded,
@@ -546,7 +614,7 @@ class _Group extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppSpacing.md, left: 2),
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.6,
@@ -611,7 +679,7 @@ class _Row extends StatelessWidget {
                     sublabel!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textTertiary,
                     ),
@@ -623,7 +691,7 @@ class _Row extends StatelessWidget {
           if (trailing != null)
             trailing!
           else
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 20,
               color: AppColors.textTertiary,
@@ -682,7 +750,7 @@ class _Detail extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.textTertiary,
               ),

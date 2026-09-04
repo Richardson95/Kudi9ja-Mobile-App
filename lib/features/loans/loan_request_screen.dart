@@ -142,7 +142,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Request a loan')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -161,7 +161,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'How much do you need?',
                             style: TextStyle(
                               fontSize: 13,
@@ -177,7 +177,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             Text(
                               error,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.danger,
@@ -253,7 +253,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -265,7 +265,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: Text.rich(
-                          const TextSpan(
+                          TextSpan(
                             children: [
                               TextSpan(
                                 text: 'Confirming this loan accepts the ',
@@ -283,7 +283,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                             ],
                           ),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             height: 1.45,
                             color: AppColors.textTertiary,
@@ -325,7 +325,7 @@ class _LimitCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            const StatusPill(
+            StatusPill(
               label: 'PRE-APPROVED',
               color: AppColors.success,
               icon: Icons.verified_rounded,
@@ -334,7 +334,7 @@ class _LimitCard extends StatelessWidget {
             const Spacer(),
             Text(
               '${app.creditScore} • ${app.creditBand}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textSecondary,
@@ -343,14 +343,14 @@ class _LimitCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        const Text(
+        Text(
           'Available to borrow',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         Text(
           app.eligibleLoanAmount.asNaira,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
             letterSpacing: -1.2,
@@ -364,13 +364,13 @@ class _LimitCard extends StatelessWidget {
             value: app.eligibleLoanAmount / settings.maxLoanAmount,
             minHeight: 5,
             backgroundColor: AppColors.surfaceHigh,
-            valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+            valueColor: AlwaysStoppedAnimation(AppColors.gold),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Of a ${settings.maxLoanAmount.asShortNaira} ceiling. Save more to raise your limit.',
-          style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
         ),
       ],
     ),
@@ -384,7 +384,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 10.5,
       fontWeight: FontWeight.w800,
       letterSpacing: 1.6,
@@ -475,7 +475,7 @@ class _Breakdown extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Every month',
                     style: TextStyle(
                       fontSize: 11.5,
@@ -488,7 +488,7 @@ class _Breakdown extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       monthly.asNaira,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.8,
@@ -508,7 +508,7 @@ class _Breakdown extends StatelessWidget {
                   children: [
                     Text(
                       'For $tenure ${tenure == 1 ? 'month' : 'months'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
                       ),
@@ -566,7 +566,7 @@ class _Line extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         Text(
           value,
@@ -611,7 +611,7 @@ class _NetBanner extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.account_balance_wallet_outlined,
               size: 15,
               color: AppColors.success,
@@ -619,7 +619,7 @@ class _NetBanner extends StatelessWidget {
             const SizedBox(width: 7),
             Text(
               'You receive ${net.asNaira}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: AppColors.success,
@@ -631,7 +631,7 @@ class _NetBanner extends StatelessWidget {
         Text(
           '${principal.asNairaFlat} less ${fee.asNairaFlat} processing fee',
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11.5,
             color: AppColors.textSecondary,
           ),

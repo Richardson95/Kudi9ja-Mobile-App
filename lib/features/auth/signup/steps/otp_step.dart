@@ -120,7 +120,7 @@ class _OtpStepState extends State<OtpStep> {
           Center(
             child: Text(
               'That code is not correct. Check and try again.',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.danger,
                 fontWeight: FontWeight.w600,
@@ -132,7 +132,7 @@ class _OtpStepState extends State<OtpStep> {
           child: _secondsLeft > 0
               ? Text(
                   'Resend code in ${_secondsLeft}s',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textTertiary,
                   ),
@@ -178,9 +178,9 @@ class _DemoCode extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Icons.science_outlined, size: 16, color: AppColors.textTertiary),
+        Icon(Icons.science_outlined, size: 16, color: AppColors.textTertiary),
         const SizedBox(width: AppSpacing.md),
-        const Expanded(
+        Expanded(
           child: Text(
             'Demo mode — your code is',
             style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
@@ -188,7 +188,7 @@ class _DemoCode extends StatelessWidget {
         ),
         SelectableText(
           code,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
             letterSpacing: 3,

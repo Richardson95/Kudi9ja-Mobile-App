@@ -76,7 +76,7 @@ class _Line extends StatelessWidget {
               width: 110,
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   color: AppColors.textTertiary,
                 ),
@@ -120,7 +120,7 @@ class _SecurityChecklist extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'SECURITY SET UP',
             style: TextStyle(
               fontSize: 10.5,
@@ -140,13 +140,13 @@ class _SecurityChecklist extends StatelessWidget {
                   Expanded(
                     child: Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.check_circle_rounded,
                     size: 17,
                     color: AppColors.success,
@@ -191,7 +191,7 @@ class _TermsBoxState extends State<_TermsBox> {
   TextSpan _link(String id, String label) => TextSpan(
     text: label,
     recognizer: _links[id],
-    style: const TextStyle(
+    style: TextStyle(
       color: AppColors.gold,
       fontWeight: FontWeight.w700,
       decoration: TextDecoration.underline,
@@ -225,7 +225,7 @@ class _TermsBoxState extends State<_TermsBox> {
                 ),
               ),
               child: widget.accepted
-                  ? const Icon(
+                  ? Icon(
                       Icons.check_rounded,
                       size: 15,
                       color: AppColors.textOnGold,
@@ -236,7 +236,7 @@ class _TermsBoxState extends State<_TermsBox> {
             Expanded(
               child: Text.rich(
                 TextSpan(
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     height: 1.55,
                     color: AppColors.textSecondary,
@@ -260,7 +260,7 @@ class _TermsBoxState extends State<_TermsBox> {
           ],
         ),
       ),
-      const Padding(
+      Padding(
         padding: EdgeInsets.only(left: 34, top: AppSpacing.sm),
         child: Text(
           'Tap any of the three to read it in full before you accept.',

@@ -311,7 +311,7 @@ class _Footnote extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 11.5,
       height: 1.5,
       color: AppColors.textTertiary,
@@ -364,7 +364,7 @@ class _Chip extends StatelessWidget {
               ),
               child: Text(
                 '$count',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textOnGold,
@@ -423,7 +423,7 @@ class _RequestCard extends StatelessWidget {
                       request.customerName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -462,7 +462,7 @@ class _RequestCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.schedule_rounded,
                       size: 14,
                       color: AppColors.danger,
@@ -470,7 +470,7 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Waiting ${request.age.inHours ~/ 24} day(s)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: AppColors.danger,
@@ -503,7 +503,7 @@ class _RequestCard extends StatelessWidget {
               ],
             ),
             if (!canAct)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
                   'Your role is read-only, so you cannot action payouts.',
@@ -530,19 +530,19 @@ class _RequestCard extends StatelessWidget {
         title: const Text('Release this payout?'),
         content: Text(
           '${w.amount.asNaira} will be sent to ${w.customerName} at ${w.bank} ${w.destinationAccount}. This cannot be undone.',
-          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
+            child: Text(
               'Approve',
               style: TextStyle(color: AppColors.success),
             ),
@@ -585,7 +585,7 @@ class _RequestCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               '${w.amount.asNaira} goes straight back to ${w.customerName}. Tell them why.',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 height: 1.45,
                 color: AppColors.textTertiary,
@@ -641,7 +641,7 @@ class _Line extends StatelessWidget {
           width: 92,
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               color: AppColors.textTertiary,
             ),

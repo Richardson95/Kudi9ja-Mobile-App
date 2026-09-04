@@ -44,7 +44,7 @@ class _PersonalStepState extends State<PersonalStep> {
       helpText: 'Select your date of birth',
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          datePickerTheme: const DatePickerThemeData(
+          datePickerTheme: DatePickerThemeData(
             backgroundColor: AppColors.surface,
             headerBackgroundColor: AppColors.surfaceAlt,
             todayForegroundColor: WidgetStatePropertyAll(AppColors.gold),
@@ -130,7 +130,7 @@ class _PersonalStepState extends State<PersonalStep> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Gender',
                 style: TextStyle(
                   fontSize: 13,
@@ -156,7 +156,7 @@ class _PersonalStepState extends State<PersonalStep> {
               ),
             ],
           ),
-          const InfoNote(
+          InfoNote(
             text:
                 'Kudi9ja is a licensed lender. Your details are encrypted in transit and at rest, and are never sold or shared.',
           ),

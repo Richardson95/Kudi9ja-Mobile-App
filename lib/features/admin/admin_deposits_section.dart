@@ -92,7 +92,7 @@ class _ClaimCard extends StatelessWidget {
                       '${claim.customerName} • ${claim.purpose.label}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -128,7 +128,7 @@ class _ClaimCard extends StatelessWidget {
                     Image.file(
                       File(claim.receiptPath),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const ColoredBox(
+                      errorBuilder: (_, _, _) => ColoredBox(
                         color: AppColors.surfaceAlt,
                         child: Center(
                           child: Text(
@@ -153,7 +153,7 @@ class _ClaimCard extends StatelessWidget {
                           color: AppColors.black.withValues(alpha: 0.72),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
@@ -188,7 +188,7 @@ class _ClaimCard extends StatelessWidget {
                   color: AppColors.danger.withValues(alpha: 0.24),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(
                     Icons.image_not_supported_outlined,
@@ -232,7 +232,7 @@ class _ClaimCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.schedule_rounded,
                       size: 14,
                       color: AppColors.danger,
@@ -240,7 +240,7 @@ class _ClaimCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Waiting ${claim.age.inHours} hours',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: AppColors.danger,
@@ -273,7 +273,7 @@ class _ClaimCard extends StatelessWidget {
               ],
             ),
             if (!canAct)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
                   'Your role is read-only, so you cannot confirm payments.',
@@ -302,19 +302,19 @@ class _ClaimCard extends StatelessWidget {
           c.isLoanRepayment
               ? 'Check the receipt against the ${c.reference} entry on the bank statement. Confirming applies ${c.amount.asNaira} to ${c.customerName}’s ${c.loanPurpose} loan.'
               : 'Check the receipt against the ${c.reference} entry on the bank statement. Confirming credits ${c.amount.asNaira} to ${c.customerName}’s wallet.',
-          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
+            child: Text(
               'Confirm',
               style: TextStyle(color: AppColors.success),
             ),
@@ -360,7 +360,7 @@ class _ClaimCard extends StatelessWidget {
               style: Theme.of(sheetContext).textTheme.titleLarge,
             ),
             const SizedBox(height: AppSpacing.xs),
-            const Text(
+            Text(
               'Nothing was credited, so nothing is reversed. Tell them what went wrong.',
               style: TextStyle(
                 fontSize: 12.5,
@@ -413,7 +413,7 @@ class _Line extends StatelessWidget {
           width: 108,
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               color: AppColors.textTertiary,
             ),

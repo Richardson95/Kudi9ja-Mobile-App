@@ -38,7 +38,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           if (items.isNotEmpty)
             TextButton(
               onPressed: () => app.clearNotifications(),
-              child: const Text(
+              child: Text(
                 'Clear',
                 style: TextStyle(color: AppColors.gold, fontSize: 13),
               ),
@@ -46,7 +46,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: items.isEmpty
@@ -118,7 +118,7 @@ class _NotificationCard extends StatelessWidget {
                         width: 7,
                         height: 7,
                         margin: const EdgeInsets.only(left: 6, top: 4),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                         ),
@@ -128,7 +128,7 @@ class _NotificationCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   item.body,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     height: 1.5,
                     color: AppColors.textSecondary,
@@ -139,7 +139,7 @@ class _NotificationCard extends StatelessWidget {
                   children: [
                     Text(
                       item.date.relative,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textTertiary,
                       ),

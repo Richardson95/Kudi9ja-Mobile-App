@@ -51,7 +51,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
         if (!settings.lendingEnabled) ...[
           KCard(
             borderColor: AppColors.danger.withValues(alpha: 0.4),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.block_rounded, size: 18, color: AppColors.danger),
                 SizedBox(width: AppSpacing.md),
@@ -119,7 +119,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
             borderColor: AppColors.danger.withValues(alpha: 0.4),
             child: Row(
               children: [
-                const IconBadge(
+                IconBadge(
                   icon: Icons.warning_amber_rounded,
                   color: AppColors.danger,
                   size: 42,
@@ -128,7 +128,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
                 Expanded(
                   child: Text(
                     '$overdueCount ${overdueCount == 1 ? 'loan is' : 'loans are'} overdue',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.danger,
@@ -196,7 +196,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
             ),
 
         const SizedBox(height: AppSpacing.xl),
-        const Text(
+        Text(
           'This view covers loans on the account held on this device. A live deployment lists the whole lending book from the API.',
           style: TextStyle(
             fontSize: 11.5,
@@ -250,7 +250,7 @@ class _AdminLoanTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${loan.tenureMonths} months • disbursed ${loan.disbursedAt.asDay}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
                       ),
@@ -342,7 +342,7 @@ class _Cell extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 2),
       FittedBox(

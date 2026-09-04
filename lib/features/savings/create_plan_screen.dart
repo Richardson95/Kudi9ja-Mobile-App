@@ -111,7 +111,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
         leading: const BackButton(),
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -128,7 +128,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'How much are you locking?',
                             style: TextStyle(
                               fontSize: 13,
@@ -143,7 +143,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             'Wallet: ${balance.asNaira}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
                             ),
@@ -152,7 +152,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             Text(
                               _amountError!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.danger,
@@ -177,7 +177,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xxl),
 
-                    const Text(
+                    Text(
                       'LOCK PERIOD',
                       style: TextStyle(
                         fontSize: 10.5,
@@ -236,7 +236,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -339,13 +339,13 @@ class _DayPickerState extends State<_DayPicker> {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          Text(
             'Fine-tune',
             style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
           ),
           Text(
             lockPeriodLabel(widget.days),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.gold,
@@ -367,14 +367,14 @@ class _DayPickerState extends State<_DayPicker> {
         children: [
           Text(
             '${settings.minLockDays} days',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: AppColors.textTertiary,
             ),
           ),
           Text(
             lockPeriodShort(settings.maxLockDays),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: AppColors.textTertiary,
             ),
@@ -384,7 +384,7 @@ class _DayPickerState extends State<_DayPicker> {
       const SizedBox(height: AppSpacing.md),
       Row(
         children: [
-          const Text(
+          Text(
             'Or type the exact number of days',
             style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
           ),
@@ -408,11 +408,11 @@ class _DayPickerState extends State<_DayPicker> {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  borderSide: const BorderSide(color: AppColors.stroke),
+                  borderSide: BorderSide(color: AppColors.stroke),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  borderSide: const BorderSide(color: AppColors.gold),
+                  borderSide: BorderSide(color: AppColors.gold),
                 ),
               ),
               onChanged: _commit,
@@ -449,9 +449,9 @@ class _ReturnPreview extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, size: 17, color: AppColors.gold),
+              Icon(Icons.bolt_rounded, size: 17, color: AppColors.gold),
               const SizedBox(width: 6),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Paid into your wallet immediately',
                   style: TextStyle(
@@ -474,7 +474,7 @@ class _ReturnPreview extends StatelessWidget {
             child: Text(
               interest.asNaira,
               key: ValueKey(interest),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 34,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -1.4,
@@ -523,7 +523,7 @@ class _Row extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
       ),
       Text(
         value,
@@ -551,7 +551,7 @@ class _Rules extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'HOW IT WORKS',
           style: TextStyle(
             fontSize: 10.5,
@@ -573,7 +573,7 @@ class _Rules extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 5, right: 9),
                   child: SizedBox(
                     width: 4,
@@ -589,7 +589,7 @@ class _Rules extends StatelessWidget {
                 Expanded(
                   child: Text(
                     line,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       height: 1.5,
                       color: AppColors.textSecondary,
@@ -620,9 +620,9 @@ class _NoBreakWarning extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.shield_rounded, size: 19, color: AppColors.info),
+        Icon(Icons.shield_rounded, size: 19, color: AppColors.info),
         const SizedBox(width: AppSpacing.md),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

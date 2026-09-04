@@ -107,13 +107,13 @@ class _PinSheetState extends State<_PinSheet> {
           const SizedBox(height: AppSpacing.xs),
           Text(
             widget.amountLabel,
-            style: const TextStyle(fontSize: 13, color: AppColors.textTertiary),
+            style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
           ),
           if (widget.amount != null) ...[
             const SizedBox(height: AppSpacing.md),
             Text(
               widget.amount!.asNaira,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 34,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -1.2,
@@ -138,7 +138,7 @@ class _PinSheetState extends State<_PinSheet> {
                         children: [
                           Text(
                             k,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               color: AppColors.textTertiary,
                             ),
@@ -185,7 +185,7 @@ class _PinSheetState extends State<_PinSheet> {
           const SizedBox(height: AppSpacing.sm),
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textTertiary),
             ),

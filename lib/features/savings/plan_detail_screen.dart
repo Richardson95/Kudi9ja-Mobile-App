@@ -31,7 +31,7 @@ class PlanDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Savings plan')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -124,7 +124,7 @@ class PlanDetailScreen extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.warning_amber_rounded,
                           size: 16,
                           color: AppColors.danger,
@@ -133,7 +133,7 @@ class PlanDetailScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Every naira you have saved comes back in full — but you forfeit the whole ${(p.bonusRate * 100).toStringAsFixed(1)}% bonus, currently worth ${p.bonusEarned.asNaira}. There is no partial payout.',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               height: 1.45,
                               color: AppColors.textSecondary,
@@ -198,19 +198,19 @@ class PlanDetailScreen extends StatelessWidget {
         title: const Text('Break this plan?'),
         content: Text(
           'All ${payout.asNaira} you have saved comes back to your wallet. But you give up the ${(p.bonusRate * 100).toStringAsFixed(1)}% bonus — ${forfeited.asNaira} as things stand — and it cannot be recovered.',
-          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text(
+            child: Text(
               'Keep saving',
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
+            child: Text(
               'Break and forfeit bonus',
               style: TextStyle(color: AppColors.danger),
             ),
@@ -275,7 +275,7 @@ class PlanDetailScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Wallet: ${app.balance.asNaira}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.textTertiary,
               ),
@@ -395,7 +395,7 @@ class _Hero extends StatelessWidget {
                       isGoal
                           ? 'of target'
                           : (mature ? 'Matured' : 'through lock'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
                       ),
@@ -422,7 +422,7 @@ class _Hero extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${plan.principal.asNaira} of ${plan.targetAmount!.asNaira}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textTertiary,
               ),
@@ -447,7 +447,7 @@ class _Row extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
       ),
       Text(
         value,
@@ -511,7 +511,7 @@ class _AutoCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${(plan.autoAmount ?? 0).asNaira} ${plan.autoFrequency?.adverb ?? ''}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -538,7 +538,7 @@ class _AutoCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.schedule_rounded,
                   size: 15,
                   color: AppColors.textTertiary,
@@ -547,7 +547,7 @@ class _AutoCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Next contribution ${plan.nextAutoRun!.asDay}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textSecondary,
                     ),
@@ -555,7 +555,7 @@ class _AutoCard extends StatelessWidget {
                 ),
                 Text(
                   '${plan.contributions} so far',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,
                   ),
@@ -581,13 +581,13 @@ class _SealedNotice extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const IconBadge(
+        IconBadge(
           icon: Icons.shield_rounded,
           color: AppColors.info,
           size: 44,
         ),
         const SizedBox(width: AppSpacing.md),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

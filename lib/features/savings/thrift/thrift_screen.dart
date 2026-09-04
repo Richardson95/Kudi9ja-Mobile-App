@@ -23,7 +23,7 @@ class ThriftScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Ajo Circles')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: circles.isEmpty
@@ -67,13 +67,13 @@ class _Intro extends StatelessWidget {
               Container(
                     width: 88,
                     height: 88,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [AppColors.goldWash, Colors.transparent],
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.groups_rounded,
                       size: 40,
                       color: AppColors.gold,
@@ -90,7 +90,7 @@ class _Intro extends StatelessWidget {
           style: Theme.of(context).textTheme.headlineLarge,
         ).animate(delay: 100.ms).fadeIn().slideY(begin: 0.15),
         const SizedBox(height: AppSpacing.sm),
-        const Text(
+        Text(
           'The savings circle you already know — with the record-keeping, the reminders and the payout schedule handled for you.',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -107,7 +107,7 @@ class _Intro extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'HOW A CIRCLE WORKS',
                 style: TextStyle(
                   fontSize: 10.5,
@@ -141,7 +141,7 @@ class _Intro extends StatelessWidget {
                         alignment: Alignment.center,
                         child: Text(
                           n,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             color: AppColors.gold,
@@ -152,7 +152,7 @@ class _Intro extends StatelessWidget {
                       Expanded(
                         child: Text(
                           text,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             height: 1.5,
                             color: AppColors.textSecondary,
@@ -217,7 +217,7 @@ class CircleTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${circle.size} members • ${circle.contribution.asShortNaira} ${circle.frequency.adverb}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
                       ),
@@ -292,7 +292,7 @@ class _Metric extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 2),
       FittedBox(

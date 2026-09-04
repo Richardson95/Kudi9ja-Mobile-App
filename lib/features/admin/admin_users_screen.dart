@@ -70,7 +70,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           style: const TextStyle(fontSize: 14.5),
           decoration: InputDecoration(
             hintText: 'Search name, email, phone or account',
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.search_rounded,
               size: 19,
               color: AppColors.textTertiary,
@@ -125,7 +125,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         const SizedBox(height: AppSpacing.lg),
         Text(
           '${list.length} of ${all.length} customers',
-          style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
         ),
         const SizedBox(height: AppSpacing.md),
 
@@ -211,7 +211,7 @@ class _CustomerTile extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 '${customer.accountNumber} • ${customer.state.isEmpty ? 'Nigeria' : customer.state}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
                 ),
@@ -273,7 +273,7 @@ class _AdminCustomerDetailScreenState
     return Scaffold(
       appBar: AppBar(title: const Text('Customer')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -389,7 +389,7 @@ class _AdminCustomerDetailScreenState
                   ),
                   Text(
                     '${filtered.length} of ${ledger.length}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: AppColors.textTertiary,
                     ),
@@ -439,7 +439,7 @@ class _AdminCustomerDetailScreenState
                 KCard(
                   child: Text(
                     'No ${_txFilter == TxFilter.all ? '' : '${_txFilter.label.toLowerCase()} '}transactions on this record.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textTertiary,
                     ),
@@ -461,7 +461,7 @@ class _AdminCustomerDetailScreenState
                   ),
                 ),
               if (c.isSample)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: AppSpacing.sm),
                   child: Text(
                     'This is illustrative history for a sample customer. A live deployment reads the real ledger from the API.',
@@ -508,7 +508,7 @@ class _Header extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 initialsOf(customer.fullName),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textOnGold,
@@ -529,7 +529,7 @@ class _Header extends StatelessWidget {
                     customer.email,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textSecondary,
                     ),
@@ -561,14 +561,14 @@ class _Header extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            const Text(
+            Text(
               'Net worth',
               style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
             ),
             const Spacer(),
             Text(
               customer.netWorth.asNaira,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.6,
@@ -595,7 +595,7 @@ class _PayIns extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (claims.isEmpty) {
-      return const KCard(
+      return KCard(
         child: Text(
           'No pay-ins yet.',
           style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
@@ -654,7 +654,7 @@ class _PayInRow extends StatelessWidget {
         // The narration the customer was told to quote.
         Text(
           claim.reference,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.4,
@@ -670,7 +670,7 @@ class _PayInRow extends StatelessWidget {
             claim.claimedAt.asDayTime,
             if (claim.senderName.isNotEmpty) 'from ${claim.senderName}',
           ].join(' • '),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11.5,
             height: 1.4,
             color: AppColors.textTertiary,
@@ -692,7 +692,7 @@ class _PayInRow extends StatelessWidget {
                     width: 38,
                     height: 38,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(
+                    errorBuilder: (_, _, _) => Icon(
                       Icons.receipt_long_rounded,
                       size: 20,
                       color: AppColors.textTertiary,
@@ -700,7 +700,7 @@ class _PayInRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                const Text(
+                Text(
                   'View receipt',
                   style: TextStyle(
                     fontSize: 12,
@@ -712,7 +712,7 @@ class _PayInRow extends StatelessWidget {
             ),
           )
         else
-          const Text(
+          Text(
             'No receipt attached',
             style: TextStyle(fontSize: 11.5, color: AppColors.danger),
           ),
@@ -720,7 +720,7 @@ class _PayInRow extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             claim.note,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               height: 1.4,
               color: AppColors.textSecondary,
@@ -745,7 +745,7 @@ class _LiveRecords extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.savings_outlined,
                   size: 16,
                   color: AppColors.info,
@@ -781,7 +781,7 @@ class _LiveRecords extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.bolt_rounded,
                   size: 16,
                   color: AppColors.gold,
@@ -813,7 +813,7 @@ class _LiveRecords extends StatelessWidget {
           ),
         ],
         if (app.plans.isEmpty && app.loans.isEmpty)
-          const Text(
+          Text(
             'No plans or loans on this account yet.',
             style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
           ),
@@ -873,7 +873,7 @@ class _Actions extends StatelessWidget {
         ),
         if (!canAct) ...[
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'Your role is read-only, so account actions are disabled.',
             style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
           ),
@@ -893,12 +893,12 @@ class _Actions extends StatelessWidget {
         title: const Text('Freeze this account?'),
         content: Text(
           '${c.fullName} will not be able to move money until an admin unfreezes them. The action is recorded in the audit log.',
-          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -914,7 +914,7 @@ class _Actions extends StatelessWidget {
               if (!context.mounted) return;
               showToast(context, '${c.fullName} frozen', error: true);
             },
-            child: const Text(
+            child: Text(
               'Freeze',
               style: TextStyle(color: AppColors.danger),
             ),
@@ -930,13 +930,13 @@ class _ActionRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.tint = AppColors.textPrimary,
+    this.tint,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  final Color tint;
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) => Opacity(
@@ -958,7 +958,7 @@ class _ActionRow extends StatelessWidget {
               ),
             ),
           ),
-          const Icon(
+          Icon(
             Icons.chevron_right_rounded,
             size: 18,
             color: AppColors.textTertiary,
@@ -985,7 +985,7 @@ class _Detail extends StatelessWidget {
             width: 118,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textTertiary,
               ),

@@ -475,6 +475,25 @@ The contracting party throughout is **Quadrilateral Technologies Limited
 `legal@kudi9ja.com` (terms), `privacy@kudi9ja.com` (data) and
 `support@kudi9ja.com` (everything else).
 
+## Themes
+
+Kudi9ja ships **dark and light**, chosen in **Profile → Appearance**: *Match my
+phone · Light · Dark*. It defaults to **dark** — gold on black is the brand's
+home ground, and light mode is a deliberate choice rather than something a
+phone setting turns on for a customer who never asked.
+
+`AppColors` used to be compile-time constants, which made a second theme
+impossible. The tokens are now getters over an active `AppPalette`, so the same
+name means white-on-black or ink-on-warm-white depending on which palette is in
+force. `AppTheme.forPalette` applies the palette as it builds, and `MaterialApp`
+pins it to whichever theme is actually being painted.
+
+The light gold is **deepened** (`#9A6510`) rather than matched to the brand hex:
+the brand gold is legible on black but washes out on white, and a 4.5:1 contrast
+floor matters more than an exact match. `theme_test.dart` checks WCAG contrast
+for body text, secondary text, gold, text-on-gold and every semantic colour, in
+both palettes — a palette edit that hurts legibility fails the build.
+
 ## Brand
 
 Assets are the official Kudi9ja marks, recoloured to the gold palette.

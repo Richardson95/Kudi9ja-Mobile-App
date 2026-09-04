@@ -20,7 +20,7 @@ class CreditScoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Credit score')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: ListView(
@@ -36,13 +36,13 @@ class CreditScoreScreen extends StatelessWidget {
                 borderColor: AppColors.gold.withValues(alpha: 0.22),
                 child: Row(
                   children: [
-                    const IconBadge(icon: Icons.bolt_rounded, size: 44),
+                    IconBadge(icon: Icons.bolt_rounded, size: 44),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'What this unlocks',
                             style: TextStyle(
                               fontSize: 11.5,
@@ -52,7 +52,7 @@ class CreditScoreScreen extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             '${app.eligibleLoanAmount.asNaira} available to borrow',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: AppColors.gold,
@@ -111,7 +111,7 @@ class CreditScoreScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 text,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   height: 1.5,
                                   color: AppColors.textSecondary,
@@ -125,7 +125,7 @@ class CreditScoreScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Text(
+              Text(
                 'Your Kudi9ja score is calculated from your activity on this app alone. It is not a credit bureau score and is refreshed every time you save or repay.',
                 style: TextStyle(
                   fontSize: 11.5,
@@ -211,7 +211,7 @@ class _ScoreDial extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
@@ -264,7 +264,7 @@ class _FactorCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       factor.detail,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
                       ),
@@ -309,7 +309,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 10.5,
       fontWeight: FontWeight.w800,
       letterSpacing: 1.6,

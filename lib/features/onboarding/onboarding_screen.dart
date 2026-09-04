@@ -78,7 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -97,7 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       TextButton(
                         onPressed: () =>
                             context.read<AppState>().completeOnboarding(),
-                        child: const Text(
+                        child: Text(
                           'Skip',
                           style: TextStyle(
                             color: AppColors.textTertiary,
@@ -146,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'Licensed lender • Funds secured • CBN compliant',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textTertiary,
                         letterSpacing: 0.3,
@@ -195,7 +195,7 @@ class _SlideView extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           Text(
             slide.eyebrow,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 2.4,
@@ -223,7 +223,7 @@ class _SlideView extends StatelessWidget {
               children: [
                 Text(
                   slide.stat,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -1,
@@ -234,7 +234,7 @@ class _SlideView extends StatelessWidget {
                 Expanded(
                   child: Text(
                     slide.statLabel,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       height: 1.35,
                       color: AppColors.textSecondary,

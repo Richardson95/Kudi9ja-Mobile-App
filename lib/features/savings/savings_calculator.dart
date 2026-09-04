@@ -52,7 +52,7 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Savings calculator')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           top: false,
           child: Column(
@@ -69,7 +69,7 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'If I save...',
                             style: TextStyle(
                               fontSize: 13,
@@ -102,7 +102,7 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'FOR HOW LONG',
                           style: TextStyle(
                             fontSize: 10.5,
@@ -113,7 +113,7 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                         ),
                         Text(
                           _termLabel,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppColors.gold,
@@ -130,7 +130,7 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                       max: settings.maxLockDays.toDouble(),
                       onChanged: (v) => setState(() => _days = v.round()),
                     ),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
@@ -165,7 +165,7 @@ class _SavingsCalculatorScreenState extends State<SavingsCalculatorScreen> {
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.black,
                   border: Border(top: BorderSide(color: AppColors.stroke)),
                 ),
@@ -205,7 +205,7 @@ class _Payout extends StatelessWidget {
     padding: const EdgeInsets.all(AppSpacing.xl),
     child: Column(
       children: [
-        const Text(
+        Text(
           'You receive today',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
@@ -215,7 +215,7 @@ class _Payout extends StatelessWidget {
           child: Text(
             interest.asNaira,
             key: ValueKey(interest),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 38,
               fontWeight: FontWeight.w800,
               letterSpacing: -1.6,
@@ -237,7 +237,7 @@ class _Payout extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Value at maturity',
                     style: TextStyle(
                       fontSize: 11,
@@ -263,7 +263,7 @@ class _Payout extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Rate',
                     style: TextStyle(
                       fontSize: 11,
@@ -271,7 +271,7 @@ class _Payout extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  const Text(
+                  Text(
                     '17% p.a.',
                     style: TextStyle(
                       fontSize: 17,
@@ -323,7 +323,7 @@ class _GrowthChart extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: (maxY <= 0 ? 1 : maxY) / 3,
                   getDrawingHorizontalLine: (_) =>
-                      const FlLine(color: AppColors.stroke, strokeWidth: 1),
+                      FlLine(color: AppColors.stroke, strokeWidth: 1),
                 ),
                 titlesData: const FlTitlesData(show: false),
                 borderData: FlBorderData(show: false),
@@ -355,13 +355,13 @@ class _GrowthChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Today',
                 style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
               ),
               Text(
                 lockPeriodShort(days),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textTertiary,
                 ),
@@ -381,7 +381,7 @@ class _Comparison extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Illustrative one-year comparison against typical alternatives.
-    const rows = <(String, double, Color)>[
+    final rows = <(String, double, Color)>[
       ('Kudi9ja Lock Save', 0.17, AppColors.gold),
       ('Typical savings account', 0.04, AppColors.textTertiary),
       ('Money kept at home', 0.0, AppColors.textTertiary),
@@ -441,7 +441,7 @@ class _Comparison extends StatelessWidget {
               ),
             ),
           const SizedBox(height: AppSpacing.xs),
-          const Text(
+          Text(
             'Comparison rates are illustrative. Kudi9ja pays your 17% upfront rather than at maturity.',
             style: TextStyle(
               fontSize: 11,

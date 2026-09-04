@@ -36,7 +36,7 @@ class ResultScreen extends StatelessWidget {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -63,7 +63,7 @@ class ResultScreen extends StatelessWidget {
                           shape: BoxShape.circle,
                           gradient: success
                               ? AppColors.successGradient
-                              : const LinearGradient(
+                              : LinearGradient(
                                   colors: [
                                     AppColors.danger,
                                     Color(0xFFCF4545),
@@ -116,7 +116,7 @@ class ResultScreen extends StatelessWidget {
                             children: [
                               Text(
                                 details[i].$1,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textTertiary,
                                 ),

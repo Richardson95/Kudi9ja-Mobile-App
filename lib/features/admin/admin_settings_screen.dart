@@ -397,7 +397,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'These take effect for every customer immediately. Existing plans and loans keep the terms they were opened on.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -411,7 +411,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
                     '• $c',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       color: AppColors.gold,
                       height: 1.4,
@@ -424,14 +424,14 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
+            child: Text(
               'Apply',
               style: TextStyle(color: AppColors.gold),
             ),
@@ -1257,7 +1257,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            const KCard(
+            KCard(
               child: Text(
                 'Passcode and PIN lengths are fixed at 6 and 4 digits. Every '
                 'customer code is stored as a hash of a code that length, so '
@@ -1383,7 +1383,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Where every customer payment lands. Changing this changes what customers are told to pay into, everywhere in the app.',
                     style: TextStyle(
                       fontSize: 11.5,
@@ -1467,7 +1467,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             ),
 
             const SizedBox(height: AppSpacing.xl),
-            const Text(
+            Text(
               'Changing a rate never rewrites history. Plans and loans already open keep the terms they were created with; new ones use the values above.',
               style: TextStyle(
                 fontSize: 11.5,
@@ -1485,7 +1485,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             bottom: 0,
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.black,
                 border: Border(top: BorderSide(color: AppColors.stroke)),
               ),
@@ -1521,7 +1521,7 @@ class _ReadOnlyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) => KCard(
     borderColor: AppColors.info.withValues(alpha: 0.3),
-    child: const Row(
+    child: Row(
       children: [
         Icon(Icons.visibility_outlined, size: 18, color: AppColors.info),
         SizedBox(width: AppSpacing.md),
@@ -1565,7 +1565,7 @@ class _TenureRatePicker extends StatelessWidget {
             ),
             Text(
               draft.loanRateRange,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.gold,
@@ -1577,7 +1577,7 @@ class _TenureRatePicker extends StatelessWidget {
         Text(
           'Every month from 1 to ${draft.maxLoanTenureMonths} is priced '
           'separately. Tap one to edit it.',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11.5,
             height: 1.45,
             color: AppColors.textTertiary,
@@ -1702,7 +1702,7 @@ Future<double?> editNumber(
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     helper,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       height: 1.45,
                       color: AppColors.textTertiary,
@@ -1736,11 +1736,11 @@ Future<double?> editNumber(
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: const BorderSide(color: AppColors.stroke),
+                      borderSide: BorderSide(color: AppColors.stroke),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: const BorderSide(color: AppColors.gold),
+                      borderSide: BorderSide(color: AppColors.gold),
                     ),
                   ),
                 ),
@@ -1751,7 +1751,7 @@ Future<double?> editNumber(
                     '${min == null ? 'any' : _trimZeros(min.toString())}'
                     ' to '
                     '${max == null ? 'any' : _trimZeros(max.toString())}$unit',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textTertiary,
                     ),
@@ -1866,7 +1866,7 @@ class _RateCard extends StatelessWidget {
               },
               child: Text(
                 valueLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.4,
@@ -1880,7 +1880,7 @@ class _RateCard extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             helper!,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               color: AppColors.textTertiary,
             ),
@@ -1896,7 +1896,7 @@ class _RateCard extends StatelessWidget {
         if (example != null)
           Text(
             example!,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontStyle: FontStyle.italic,
               color: AppColors.textSecondary,
@@ -1954,7 +1954,7 @@ class _AmountCard extends StatelessWidget {
                 },
                 child: Text(
                   value.asNairaFlat,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.4,
@@ -2044,7 +2044,7 @@ class _StepperCard extends StatelessWidget {
                 },
                 child: Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: AppColors.gold,
@@ -2133,7 +2133,7 @@ class _SwitchCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 helper,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   height: 1.4,
                   color: AppColors.textTertiary,
@@ -2186,7 +2186,7 @@ class _OfferPreview extends StatelessWidget {
           Text(
             'Capped at ${draft.maxLoanAmount.asNairaFlat}, and never below '
             '${draft.minLoanAmount.asNairaFlat}.',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               height: 1.45,
               color: AppColors.textTertiary,
@@ -2201,7 +2201,7 @@ class _OfferPreview extends StatelessWidget {
                   Expanded(
                     child: Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -2211,7 +2211,7 @@ class _OfferPreview extends StatelessWidget {
                     _offer(saved, score) < draft.minLoanAmount
                         ? 'not eligible'
                         : _offer(saved, score).asNairaFlat,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.success,
@@ -2289,7 +2289,7 @@ class _ScorePreview extends StatelessWidget {
                   Expanded(
                     child: Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -2297,7 +2297,7 @@ class _ScorePreview extends StatelessWidget {
                   ),
                   Text(
                     '$score',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: AppColors.gold,
@@ -2346,7 +2346,7 @@ class _FeePreview extends StatelessWidget {
             'Flat up to ${draft.processingFeeThreshold.asNairaFlat}; above '
             'that, ${draft.feeRatePct.toStringAsFixed(2)}% of the whole '
             'amount borrowed.',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               height: 1.45,
               color: AppColors.textTertiary,
@@ -2361,7 +2361,7 @@ class _FeePreview extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Borrow ${s.asNairaFlat}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -2369,7 +2369,7 @@ class _FeePreview extends StatelessWidget {
                   ),
                   Text(
                     'fee ${_fee(s).asNairaFlat}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textTertiary,
                     ),
@@ -2377,7 +2377,7 @@ class _FeePreview extends StatelessWidget {
                   const SizedBox(width: AppSpacing.md),
                   Text(
                     'gets ${(s - _fee(s)).asNairaFlat}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.success,

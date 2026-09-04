@@ -86,7 +86,7 @@ class _LockScreenState extends State<LockScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.nightGradient),
+        decoration: BoxDecoration(gradient: AppColors.nightGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -129,7 +129,7 @@ class _LockScreenState extends State<LockScreen> {
                   left <= 2
                       ? 'Wrong passcode. $left ${left == 1 ? 'attempt' : 'attempts'} left before sign-out.'
                       : 'Wrong passcode. Please try again.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: AppColors.danger,
                     fontWeight: FontWeight.w600,
@@ -152,7 +152,7 @@ class _LockScreenState extends State<LockScreen> {
               const SizedBox(height: AppSpacing.lg),
               TextButton(
                 onPressed: () => _signOut(context),
-                child: const Text(
+                child: Text(
                   'Sign in with password instead',
                   style: TextStyle(
                     color: AppColors.textTertiary,
@@ -173,14 +173,14 @@ class _LockScreenState extends State<LockScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text(
+        content: Text(
           'You will need your email and password to get back in.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
+            child: Text(
               'Stay',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -190,7 +190,7 @@ class _LockScreenState extends State<LockScreen> {
               Navigator.pop(dialogContext);
               context.read<AppState>().signOut();
             },
-            child: const Text(
+            child: Text(
               'Sign out',
               style: TextStyle(color: AppColors.gold),
             ),

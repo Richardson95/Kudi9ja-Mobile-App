@@ -152,7 +152,7 @@ class _PasscodeStepState extends State<PasscodeStep> {
               child: Text(
                 _message ?? '',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.danger,

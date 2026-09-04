@@ -136,7 +136,7 @@ class _CreditCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Available credit',
                         style: TextStyle(
                           fontSize: 12.5,
@@ -146,7 +146,7 @@ class _CreditCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         app.eligibleLoanAmount.asNaira,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -1.1,
@@ -226,7 +226,7 @@ class _ScoreRing extends StatelessWidget {
             strokeWidth: 6,
             strokeCap: StrokeCap.round,
             backgroundColor: AppColors.surfaceHigh,
-            valueColor: const AlwaysStoppedAnimation(AppColors.success),
+            valueColor: AlwaysStoppedAnimation(AppColors.success),
           ),
         ),
         Column(
@@ -242,7 +242,7 @@ class _ScoreRing extends StatelessWidget {
             ),
             Text(
               band,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 color: AppColors.success,
@@ -289,7 +289,7 @@ class _ActiveLoanCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Borrowed ${loan.principal.asShortNaira} • ${loan.tenureMonths} months',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
                       ),
@@ -332,7 +332,7 @@ class _ActiveLoanCard extends StatelessWidget {
               value: loan.repaymentProgress,
               minHeight: 6,
               backgroundColor: AppColors.surfaceHigh,
-              valueColor: const AlwaysStoppedAnimation(AppColors.success),
+              valueColor: AlwaysStoppedAnimation(AppColors.success),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -341,14 +341,14 @@ class _ActiveLoanCard extends StatelessWidget {
             children: [
               Text(
                 '${(loan.repaymentProgress * 100).toStringAsFixed(0)}% repaid',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
                 ),
               ),
               Text(
                 '${loan.amountRepaid.asShortNaira} of ${loan.totalRepayable.asShortNaira}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
                 ),
@@ -438,7 +438,7 @@ class _Metric extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
+        style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 2),
       FittedBox(
@@ -507,7 +507,7 @@ class _NextDueCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${next.installment.amount.asNaira} • ${next.loan.purpose} loan • ${next.installment.dueDate.asDay}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -515,7 +515,7 @@ class _NextDueCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 20,
               color: AppColors.textTertiary,
