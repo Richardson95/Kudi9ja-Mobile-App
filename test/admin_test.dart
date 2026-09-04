@@ -365,7 +365,6 @@ void main() {
         maxCircleMembers: 20,
         otpResendSeconds: 60,
         dailyTransferLimit: 2000000,
-        welcomeBonus: 3000,
         savingsEnabled: false,
         lendingEnabled: false,
         thriftEnabled: false,

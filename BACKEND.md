@@ -533,7 +533,7 @@ loan**. The server must expose them as a single versioned document.
 | **Loan offer** | `loanBaseCap` `loanSavingsMultiple` `loanScoreBaseline` `loanScorePerPoint` `loanOfferRounding` |
 | **Credit score** | `creditBaseScore` `creditPointsPerPlan` `creditPlanPointsCap` `creditNairaPerSavingsPoint` `creditSavingsPointsCap` `creditPointsPerRepaidLoan` `creditRepaidPointsCap` `creditOverduePenalty` `creditVerifiedBonus` `creditScoreFloor` `creditScoreCeiling` |
 | **Security** | `maxPasscodeAttempts` `lockTimeoutMinutes` `otpResendSeconds` |
-| **Wallet** | `dailyTransferLimit` `welcomeBonus` `minDepositAmount` `minWithdrawalAmount` |
+| **Wallet** | `dailyTransferLimit` `minDepositAmount` `minWithdrawalAmount` |
 | **Thrift** | `minCircleContribution` `minCircleMembers` `maxCircleMembers` |
 | **Collection account** | `companyAccountName` `companyAccountNumber` `companyBank` |
 | **Switches** | `savingsEnabled` `lendingEnabled` `thriftEnabled` `maintenanceMode` |

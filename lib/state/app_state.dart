@@ -300,19 +300,12 @@ class AppState extends ChangeNotifier {
     await _store.saveTxnPin(SecurityService.hash(transactionPin));
     await _store.setSignedIn(true);
 
-    // A welcome bonus so a new account is never a dead end.
+    // A new account starts empty. Money only ever enters a wallet through a
+    // confirmed bank transfer.
     _balance = 0;
     _plans = [];
     _loans = [];
     _txns = [];
-    if (settings.welcomeBonus > 0) {
-      await _credit(
-        settings.welcomeBonus,
-        TxKind.deposit,
-        'Welcome bonus from Kudi9ja',
-        counterparty: 'Kudi9ja',
-      );
-    }
 
     await _seedOwnerIfNeeded(user);
 

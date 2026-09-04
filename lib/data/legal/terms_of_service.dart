@@ -391,11 +391,18 @@ LegalDocument termsOfService() {
       ]),
 
       LegalSection('Bonuses and promotions', [
+        const LegalNote(
+          'There is no sign-up bonus and no free credit. Opening an account '
+          'gives you nothing to spend — every naira in your wallet got there '
+          'because you paid it in, earned it on a savings plan, or borrowed '
+          'it.',
+          title: 'Nothing is given away',
+        ),
         const LegalText(
-          'From time to time we run promotions — a welcome credit, a referral '
-          'reward, a seasonal bonus. These are discretionary, are subject to '
-          'whatever specific rules we publish for them, and can be withdrawn '
-          'at any time for the future.',
+          'We may run promotions in future — a referral reward, a seasonal '
+          'bonus. Any such offer is discretionary, is subject to whatever '
+          'specific rules we publish for it at the time, and can be withdrawn '
+          'at any time for the future. None is running today.',
         ),
         const LegalText(
           'Bonuses are for real customers using the app in the ordinary way. '

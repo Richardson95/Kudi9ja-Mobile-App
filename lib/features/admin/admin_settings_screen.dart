@@ -62,7 +62,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _draft.processingFeeThreshold != settings.processingFeeThreshold ||
       _draft.loanProcessingFeeRate != settings.loanProcessingFeeRate ||
       _draft.dailyTransferLimit != settings.dailyTransferLimit ||
-      _draft.welcomeBonus != settings.welcomeBonus ||
       _draft.savingsEnabled != settings.savingsEnabled ||
       _draft.lendingEnabled != settings.lendingEnabled ||
       _draft.thriftEnabled != settings.thriftEnabled ||
@@ -200,11 +199,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       'Transfer limit',
       settings.dailyTransferLimit.asNairaFlat,
       _draft.dailyTransferLimit.asNairaFlat,
-    );
-    cmp(
-      'Welcome bonus',
-      settings.welcomeBonus.asNairaFlat,
-      _draft.welcomeBonus.asNairaFlat,
     );
     cmp('Savings', settings.savingsEnabled, _draft.savingsEnabled);
     cmp('Lending', settings.lendingEnabled, _draft.lendingEnabled);
@@ -940,16 +934,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 () => _draft = _draft.copyWith(dailyTransferLimit: v),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            _AmountCard(
-              label: 'Welcome bonus for new accounts',
-              value: _draft.welcomeBonus,
-              step: 500,
-              enabled: canEdit,
-              onChanged: (v) =>
-                  setState(() => _draft = _draft.copyWith(welcomeBonus: v)),
-            ),
-
 
             const SizedBox(height: AppSpacing.xxl),
             const AdminSectionLabel('CREDIT SCORE'),

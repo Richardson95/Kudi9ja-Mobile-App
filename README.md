@@ -364,7 +364,7 @@ holds the live ones, and every calculation in the app reads the live one.
 | **What a customer is offered** | Base offer, the multiple applied to what they have saved, the amount added per credit-score point, the score baseline, and the rounding — with a preview of three example customers |
 | **Credit score** | Starting score, points per savings plan and their cap, naira saved per point and its cap, points per repaid loan and their cap, the overdue penalty, the verification bonus, and the floor and ceiling — with a preview of four example customers |
 | **Security** | Passcode attempts before lockout; idle minutes before the app locks |
-| **Wallet** | Daily transfer limit; welcome bonus |
+| **Wallet** | Daily transfer limit |
 | **Collection account** | Bank, account name and number |
 | **Switches** | Savings, lending, Ajo circles, maintenance mode |
 

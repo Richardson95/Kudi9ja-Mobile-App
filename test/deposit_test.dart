@@ -143,6 +143,23 @@ void main() {
       expect(payIn.contains('_receipt.isNotEmpty'), isTrue);
     });
 
+    test('a new account starts at zero — nothing is given away', () async {
+      final app = await _account();
+
+      // There was a N2,000 welcome bonus credited on sign-up. It is gone:
+      // money only enters a wallet through a confirmed bank transfer.
+      expect(app.balance, 0);
+      expect(app.transactions, isEmpty);
+
+      final source = File('lib/state/app_state.dart').readAsStringSync();
+      expect(source.contains('welcomeBonus'), isFalse);
+      expect(source.contains('Welcome bonus'), isFalse);
+
+      final settingsSource =
+          File('lib/data/models/platform_settings.dart').readAsStringSync();
+      expect(settingsSource.contains('welcomeBonus'), isFalse);
+    });
+
     test('a receipt is carried on the claim, for the admin to check', () async {
       final app = await _account();
       final claim = await app.submitDepositClaim(

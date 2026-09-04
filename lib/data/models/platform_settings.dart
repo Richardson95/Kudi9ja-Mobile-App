@@ -24,7 +24,6 @@ class PlatformSettings {
     this.processingFeeThreshold = AppConfig.processingFeeThreshold,
     this.loanProcessingFeeRate = AppConfig.loanProcessingFeeRate,
     this.dailyTransferLimit = AppConfig.dailyTransferLimit,
-    this.welcomeBonus = 2000,
     this.savingsEnabled = true,
     this.lendingEnabled = true,
     this.thriftEnabled = true,
@@ -90,7 +89,6 @@ class PlatformSettings {
 
   // Wallet & platform ------------------------------------------------------
   final double dailyTransferLimit;
-  final double welcomeBonus;
   final bool savingsEnabled;
   final bool lendingEnabled;
   final bool thriftEnabled;
@@ -269,7 +267,6 @@ class PlatformSettings {
     double? processingFeeThreshold,
     double? loanProcessingFeeRate,
     double? dailyTransferLimit,
-    double? welcomeBonus,
     bool? savingsEnabled,
     bool? lendingEnabled,
     bool? thriftEnabled,
@@ -326,7 +323,6 @@ class PlatformSettings {
     loanProcessingFeeRate:
         loanProcessingFeeRate ?? this.loanProcessingFeeRate,
     dailyTransferLimit: dailyTransferLimit ?? this.dailyTransferLimit,
-    welcomeBonus: welcomeBonus ?? this.welcomeBonus,
     savingsEnabled: savingsEnabled ?? this.savingsEnabled,
     lendingEnabled: lendingEnabled ?? this.lendingEnabled,
     thriftEnabled: thriftEnabled ?? this.thriftEnabled,
@@ -386,7 +382,6 @@ class PlatformSettings {
     'processingFeeThreshold': processingFeeThreshold,
     'loanProcessingFeeRate': loanProcessingFeeRate,
     'dailyTransferLimit': dailyTransferLimit,
-    'welcomeBonus': welcomeBonus,
     'savingsEnabled': savingsEnabled,
     'lendingEnabled': lendingEnabled,
     'thriftEnabled': thriftEnabled,
@@ -469,7 +464,6 @@ class PlatformSettings {
     dailyTransferLimit:
         (j['dailyTransferLimit'] as num?)?.toDouble() ??
         AppConfig.dailyTransferLimit,
-    welcomeBonus: (j['welcomeBonus'] as num?)?.toDouble() ?? 2000,
     savingsEnabled: j['savingsEnabled'] as bool? ?? true,
     lendingEnabled: j['lendingEnabled'] as bool? ?? true,
     thriftEnabled: j['thriftEnabled'] as bool? ?? true,
