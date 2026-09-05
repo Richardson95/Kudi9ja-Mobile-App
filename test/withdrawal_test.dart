@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kudi9ja/core/constants/app_config.dart';
 import 'package:kudi9ja/data/models/models.dart';
 import 'package:kudi9ja/data/models/platform_settings.dart';
 import 'package:kudi9ja/data/models/withdrawal.dart';
@@ -29,6 +30,10 @@ AppUser _user() => AppUser(
 Future<AppState> _account(double funding) async {
   SharedPreferences.setMockInitialValues({});
   applySettings(const PlatformSettings());
+  // Names this account as the bootstrap owner, the way deployment
+  // configuration does on the server. Nobody becomes an admin by
+  // signing up first.
+  AppConfig.bootstrapOwnerEmail = _user().email;
   final app = AppState(await StorageService.init());
   await app.createAccount(
     user: _user(),
@@ -186,7 +191,6 @@ void main() {
       expect(TxFilter.deposits.matches(tx(TxKind.withdrawal)), isFalse);
 
       expect(TxFilter.withdrawals.matches(tx(TxKind.withdrawal)), isTrue);
-      expect(TxFilter.transfers.matches(tx(TxKind.transfer)), isTrue);
       expect(TxFilter.fees.matches(tx(TxKind.fee)), isTrue);
 
       // Savings covers locking, interest and release.
@@ -222,36 +226,13 @@ void main() {
       expect(app.transactionsFor(me), isNotEmpty);
     });
 
-    test('sample customers return a labelled illustrative ledger', () async {
+    test('the panel invents no ledger for anybody', () async {
+      // The generator that used to fill this in wrote rows labelled "Wallet
+      // funded via Card" — a route this product does not have.
       final app = await _account(50000);
-      final sample = app.customers.firstWhere((c) => c.isSample);
-
-      final ledger = app.transactionsFor(sample);
-      expect(ledger, isNotEmpty);
-      expect(ledger.every((t) => t.counterparty == 'Sample data'), isTrue);
-      // Stable across reads, so the panel does not reshuffle on rebuild.
-      expect(app.transactionsFor(sample), same(ledger));
-    });
-
-    test('a sample ledger spans several filterable kinds', () async {
-      final app = await _account(50000);
-      final sample = app.customers.firstWhere(
-        (c) => c.isSample && c.loansCount > 0,
-      );
-      final ledger = app.transactionsFor(sample);
-
-      for (final f in [
-        TxFilter.deposits,
-        TxFilter.withdrawals,
-        TxFilter.savings,
-        TxFilter.loans,
-      ]) {
-        expect(
-          ledger.where(f.matches),
-          isNotEmpty,
-          reason: '${f.label} should have something to show',
-        );
-      }
+      final me = app.customers.single;
+      expect(me.isThisDevice, isTrue);
+      expect(app.transactionsFor(me), equals(app.transactions));
     });
   });
 

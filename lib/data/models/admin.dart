@@ -192,9 +192,12 @@ extension AuditCategoryX on AuditCategory {
 
 /// A customer as the admin panel sees them.
 ///
-/// The account held on this device is the only real record; [isSample] rows
-/// stand in for the wider customer base that a live API would return, and are
-/// labelled as such everywhere they appear.
+/// Every row is a real account. There is no illustrative data: fabricated
+/// customers in a panel that also freezes accounts and releases money are a
+/// standing invitation to act on one by mistake.
+///
+/// Device-local, [isThisDevice] is true for the one account on this phone.
+/// Against the server this is a page of `GET /api/v1/admin/customers`.
 class CustomerRecord {
   const CustomerRecord({
     required this.id,
@@ -218,7 +221,6 @@ class CustomerRecord {
     this.dateOfBirth,
     this.verified = true,
     this.frozen = false,
-    this.isSample = false,
     this.isThisDevice = false,
   });
 
@@ -243,7 +245,6 @@ class CustomerRecord {
   final DateTime? dateOfBirth;
   final bool verified;
   final bool frozen;
-  final bool isSample;
   final bool isThisDevice;
 
   double get netWorth => balance + totalSaved;

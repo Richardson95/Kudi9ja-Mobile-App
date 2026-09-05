@@ -191,8 +191,8 @@ LegalDocument termsOfService() {
           'Everything you earn or receive through Kudi9ja — a savings return, '
           'a loan we disburse, a thrift payout — lands in your wallet. You '
           'move it out by asking us to pay it to **a Nigerian bank account in '
-          'your own name**, which you nominate when you open your account and '
-          'can change whenever you like.',
+          'your own name**, which you nominate when you open your account. It '
+          'is the only account we will ever pay you into.',
         ),
         const LegalText(
           'When you make the request the amount leaves your wallet '
@@ -203,17 +203,26 @@ LegalDocument termsOfService() {
               'working day**. Bank processing may add to that.',
           'If we decline a request, the full amount goes straight back to your '
               'wallet and we tell you why.',
-          'You are responsible for the destination account details. We cannot '
-              'recall money sent to an account you typed incorrectly, though '
-              'we will help you pursue it.',
+          'We pay only into the account on your profile. You cannot enter a '
+              'different one while making a request, so a payout cannot be '
+              'redirected by a slip of the finger or by anyone who gets hold '
+              'of your phone.',
           'Money committed to a running savings plan or a thrift circle is not '
               'available to withdraw.',
         ]),
-        LegalText(
-          'Transfers between Kudi9ja customers are instant and free, and are '
-          'capped at **${s.dailyTransferLimit.asNairaFlat} per day**. We may '
-          'adjust that limit for your account where the law, our risk rules or '
-          'your verification tier require it.',
+        const LegalText(
+          'Changing your payout account is a deliberate step of its own. We '
+          'ask for a code sent to your email address and your transaction '
+          'PIN, and we check the name on the new account with the bank. **If '
+          'it is not in your name, we refuse the change.** We will also tell '
+          'you whenever it changes, so that if it was not you, you find out '
+          'in time.',
+        ),
+        const LegalNote(
+          'Kudi9ja does not send money to other people. There is no way to '
+          'pay a third party from your wallet, and no way to move money to an '
+          'account that is not yours. The only route out is a withdrawal to '
+          'your own nominated account.',
         ),
       ]),
 

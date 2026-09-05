@@ -14,7 +14,7 @@ Widget _host(Widget child) =>
 
 void main() {
   group('Ajo circle members', () {
-    testWidgets('the name field says who may be added, and how', (
+    testWidgets('the member field asks for a customer reference, not a name', (
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({});
@@ -33,23 +33,20 @@ void main() {
 
       // The members section sits below the fold.
       await tester.dragUntilVisible(
-        find.text('Add full name'),
+        find.text('Add by customer reference'),
         find.byType(Scrollable).first,
         const Offset(0, -180),
       );
       await tester.pumpAndSettle();
 
-      // A circle only debits real Kudi9ja accounts, so the field has to say
-      // so at the point the name is typed.
-      expect(find.text('Add full name'), findsOneWidget);
+      // A member is identified by their reference, not their name: every round
+      // debits a real wallet, and a typed name matches nobody.
+      expect(find.text('Add by customer reference'), findsOneWidget);
       expect(
         find.textContaining('must already have a Kudi9ja account'),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('exactly as it is registered'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('K9-A1B2C3'), findsWidgets);
 
       expect(tester.takeException(), isNull);
     });

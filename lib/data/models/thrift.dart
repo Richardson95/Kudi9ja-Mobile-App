@@ -128,24 +128,42 @@ class ThriftCircle {
   );
 }
 
+/// One seat in a circle.
+///
+/// A member is identified by their **customer reference**, not by their name.
+/// A circle collects real money from real wallets each round, so every seat has
+/// to belong to an account that can actually be debited — a typed name matches
+/// nobody, and a circle built on typed names collects nothing from them and
+/// pays the pot out anyway.
+///
+/// The [name] is what the server resolved that reference to, and it comes back
+/// masked — "Chioma G. A." — so a member list cannot be used to read other
+/// customers' full names off the app.
 class ThriftMember {
   const ThriftMember({
+    required this.customerRef,
     required this.name,
     required this.initials,
     this.isMe = false,
   });
 
+  /// The Kudi9ja reference this seat belongs to, e.g. `K9-A1B2C3`.
+  final String customerRef;
+
+  /// The masked display name the reference resolved to.
   final String name;
   final String initials;
   final bool isMe;
 
   Map<String, dynamic> toJson() => {
+    'customerRef': customerRef,
     'name': name,
     'initials': initials,
     'isMe': isMe,
   };
 
   factory ThriftMember.fromJson(Map<String, dynamic> j) => ThriftMember(
+    customerRef: j['customerRef'] as String? ?? '',
     name: j['name'] as String,
     initials: j['initials'] as String,
     isMe: j['isMe'] as bool? ?? false,

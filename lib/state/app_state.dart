@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/constants/app_config.dart';
 import '../core/theme/app_colors.dart';
 import '../data/models/admin.dart';
 import '../data/models/app_notification.dart';
@@ -307,7 +308,7 @@ class AppState extends ChangeNotifier {
     _loans = [];
     _txns = [];
 
-    await _seedOwnerIfNeeded(user);
+    await _grantBootstrapOwnerIfConfigured(user);
 
     _failedAttempts = 0;
     _stage = AuthStage.unlocked;
@@ -527,19 +528,43 @@ class AppState extends ChangeNotifier {
     return request;
   }
 
-  Future<Transaction> transfer(
-    double amount,
-    String recipient,
-    String note,
-  ) async {
-    final tx = await _debit(
-      amount,
-      TxKind.transfer,
-      note.isEmpty ? 'Transfer to $recipient' : note,
-      counterparty: recipient,
+  /// Changes the bank account withdrawals are paid into.
+  ///
+  /// The payout account is part of who the customer is, not a field filled in
+  /// on the way out of a withdrawal. It was checked against their own name when
+  /// they gave it at sign-up, and it can only be moved to another account in
+  /// that same name — which is what stops the withdrawal flow being used to
+  /// push money into somebody else's account.
+  ///
+  /// **This is the seam.** Against the server this is
+  /// `PATCH /api/v1/me/payout`, carrying the emailed code and the transaction
+  /// PIN, and the server resolves the new account name with the bank and
+  /// refuses the change outright if it is not the customer's own.
+  Future<void> changePayoutAccount({
+    required String bank,
+    required String accountNumber,
+  }) async {
+    final u = _user;
+    if (u == null) return;
+
+    final was = u.hasPayoutAccount
+        ? '${u.payoutBank} ${maskedTail(u.payoutAccountNumber)}'
+        : 'none on file';
+
+    _user = u.copyWith(payoutBank: bank, payoutAccountNumber: accountNumber);
+    await _store.saveUser(_user!);
+
+    // Told, not merely recorded: if this was not the customer, the message is
+    // how they find out in time to stop the next payout.
+    await _notify(
+      NotifyKind.security,
+      'Your payout account changed',
+      'Withdrawals will now go to $bank ${maskedTail(accountNumber)} '
+          '(was $was). If this was not you, contact ${AppConfig.supportEmail} '
+          'immediately.',
     );
+
     notifyListeners();
-    return tx;
   }
 
   static String maskedTail(String v) =>
@@ -1071,9 +1096,26 @@ class AppState extends ChangeNotifier {
 
   /// The first account opened on a device becomes the owner, so the panel is
   /// reachable at all. Every later admin is added from inside it.
-  Future<void> _seedOwnerIfNeeded(AppUser user) async {
-    if (_admins.isNotEmpty) return;
+  /// Grants owner access if this is the account deployment configuration
+  /// names, and there is no owner yet.
+  ///
+  /// Panel access is never earned by signing up first. The device build used to
+  /// make the first account on the phone an owner, which is a development
+  /// affordance and indefensible on a server: there the first account is a
+  /// stranger. So the first owner is *named* instead, and if configuration
+  /// names nobody — which is the default — no owner is ever created here and
+  /// the panel has to be seeded deliberately.
+  ///
+  /// **Seam:** the server does this in `AdminBootstrapService` when an account
+  /// is opened, and reports the result on `GET /api/v1/me` as `admin`.
+  Future<void> _grantBootstrapOwnerIfConfigured(AppUser user) async {
+    final configured = AppConfig.bootstrapOwnerEmail.trim().toLowerCase();
+    if (configured.isEmpty) return;
+    if (configured != user.email.trim().toLowerCase()) return;
+    if (_admins.any((a) => a.role == AdminRole.owner && a.active)) return;
+
     _admins = [
+      ..._admins,
       AdminUser(
         id: _uuid.v4(),
         name: user.fullName,
@@ -1081,16 +1123,27 @@ class AppState extends ChangeNotifier {
         phone: user.phone,
         role: AdminRole.owner,
         addedAt: DateTime.now(),
-        addedBy: 'System (first account on device)',
+        addedBy: 'System (bootstrap owner from deployment configuration)',
       ),
     ];
     await _store.saveAdmins(_admins);
     await _log(
       AuditCategory.team,
       'Owner provisioned',
-      '${user.fullName} became owner as the first account on this device.',
+      '${user.fullName} (${user.email}) was granted owner access as the '
+          'bootstrap owner named in deployment configuration.',
     );
   }
+
+  /// Panel access is granted by an owner, never earned by signing up first.
+  ///
+  /// The device build used to make the first account on the phone an owner,
+  /// which is a development affordance and indefensible on a server: there the
+  /// first account is a stranger. The server names the first owner in
+  /// deployment configuration and grants it when that email opens an account.
+  ///
+  /// Nothing replaces it here, so a fresh install has no admin at all until
+  /// the server says otherwise — which is the correct answer.
 
   Future<void> _log(
     AuditCategory category,
@@ -1279,98 +1332,17 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  /// Real account first, then clearly-labelled sample rows standing in for
-  /// the wider book a live API would return.
+  /// Every customer the panel can see.
+  ///
+  /// Device-local, so today that is the one account on this phone. Against the
+  /// server this is a page of `GET /api/v1/admin/customers`, which searches on
+  /// name, email, phone or customer reference.
+  ///
+  /// There are deliberately no illustrative rows here. Fabricated customers in
+  /// a panel that also freezes accounts and approves payments are a standing
+  /// invitation to act on one by mistake.
   List<CustomerRecord> get customers => [
     if (thisDeviceCustomer != null) thisDeviceCustomer!,
-    ..._sampleCustomers,
-  ];
-
-  static final _sampleCustomers = <CustomerRecord>[
-    CustomerRecord(
-      id: 'sample-1',
-      fullName: 'Chioma Adeyemi',
-      email: 'chioma.adeyemi@example.com',
-      phone: '08031234567',
-      accountNumber: '8031234567',
-      joinedAt: DateTime(2026, 3, 14),
-      balance: 184500,
-      totalSaved: 1250000,
-      totalOwed: 0,
-      interestPaid: 212500,
-      creditScore: 782,
-      plansCount: 4,
-      loansCount: 2,
-      state: 'Lagos',
-      bvn: 22134567890.toString(),
-      nin: 70123456789.toString(),
-      address: '14 Adeola Odeku Street, Victoria Island',
-      gender: 'Female',
-      isSample: true,
-    ),
-    CustomerRecord(
-      id: 'sample-2',
-      fullName: 'Ibrahim Musa Bello',
-      email: 'ibrahim.bello@example.com',
-      phone: '08099887766',
-      accountNumber: '8099887766',
-      joinedAt: DateTime(2026, 5, 2),
-      balance: 42300,
-      totalSaved: 300000,
-      totalOwed: 168000,
-      interestPaid: 51000,
-      creditScore: 648,
-      plansCount: 2,
-      loansCount: 1,
-      state: 'Kano',
-      bvn: 22198765432.toString(),
-      nin: 70198765432.toString(),
-      address: '7 Zoo Road, Kano',
-      gender: 'Male',
-      isSample: true,
-    ),
-    CustomerRecord(
-      id: 'sample-3',
-      fullName: 'Ngozi Emeka Okafor',
-      email: 'ngozi.okafor@example.com',
-      phone: '07044556677',
-      accountNumber: '7044556677',
-      joinedAt: DateTime(2026, 7, 21),
-      balance: 9800,
-      totalSaved: 75000,
-      totalOwed: 260000,
-      interestPaid: 6375,
-      creditScore: 521,
-      plansCount: 1,
-      loansCount: 1,
-      state: 'Enugu',
-      bvn: 22111222333.toString(),
-      nin: 70111222333.toString(),
-      address: '22 Ogui Road, Enugu',
-      gender: 'Female',
-      isSample: true,
-    ),
-    CustomerRecord(
-      id: 'sample-4',
-      fullName: 'Tunde Olawale Johnson',
-      email: 'tunde.johnson@example.com',
-      phone: '08122334455',
-      accountNumber: '8122334455',
-      joinedAt: DateTime(2026, 8, 9),
-      balance: 512000,
-      totalSaved: 2400000,
-      totalOwed: 480000,
-      interestPaid: 408000,
-      creditScore: 810,
-      plansCount: 6,
-      loansCount: 3,
-      state: 'Oyo',
-      bvn: 22144556677.toString(),
-      nin: 70144556677.toString(),
-      address: '5 Bodija Estate, Ibadan',
-      gender: 'Male',
-      isSample: true,
-    ),
   ];
 
   // ── Admin: platform metrics ─────────────────────────────────────────────
@@ -1676,91 +1648,20 @@ class AppState extends ChangeNotifier {
       ? withdrawals
       : const <WithdrawalRequest>[];
 
+  /// Every movement on this customer's wallet, newest first.
+  ///
+  /// Empty for anybody but the account on this device, because there is nobody
+  /// else here. Against the server this is
+  /// `GET /api/v1/admin/customers/{id}/transactions`, which is filterable by
+  /// the same kinds the customer's own wallet screen uses.
+  ///
+  /// There is deliberately no illustrative history behind this. The generator
+  /// that used to fill it invented transactions labelled "Wallet funded via
+  /// Card" — a route this product does not have — in a panel that also freezes
+  /// accounts and releases money. Fabricated rows in that company are a
+  /// standing invitation to act on one by mistake.
   List<Transaction> transactionsFor(CustomerRecord customer) =>
-      customer.isThisDevice ? transactions : _sampleLedger(customer);
-
-  static final Map<String, List<Transaction>> _sampleLedgers = {};
-
-  List<Transaction> _sampleLedger(CustomerRecord c) =>
-      _sampleLedgers.putIfAbsent(c.id, () => _buildSampleLedger(c));
-
-  /// Deterministic illustrative history so the admin filters are usable
-  /// against every row, not just the live account.
-  List<Transaction> _buildSampleLedger(CustomerRecord c) {
-    final now = DateTime.now();
-    final seed = c.id.hashCode.abs();
-    double balance = c.balance;
-
-    final specs = <({TxKind kind, double amount, String label, int daysAgo})>[
-      (
-        kind: TxKind.deposit,
-        amount: 50000 + (seed % 7) * 10000,
-        label: 'Wallet funded via Card',
-        daysAgo: 2,
-      ),
-      (
-        kind: TxKind.savingsLock,
-        amount: 25000 + (seed % 5) * 5000,
-        label: 'Saved into "Target plan"',
-        daysAgo: 5,
-      ),
-      (
-        kind: TxKind.interestPayout,
-        amount: c.interestPaid / 3,
-        label: 'Upfront return on Fixed Savings',
-        daysAgo: 9,
-      ),
-      (
-        kind: TxKind.withdrawal,
-        amount: 20000 + (seed % 4) * 5000,
-        label: 'Withdrawal to bank',
-        daysAgo: 14,
-      ),
-      if (c.loansCount > 0)
-        (
-          kind: TxKind.loanDisbursement,
-          amount: 100000 + (seed % 3) * 50000,
-          label: 'Loan disbursed - Business',
-          daysAgo: 21,
-        ),
-      if (c.loansCount > 0)
-        (
-          kind: TxKind.fee,
-          amount: 5000,
-          label: 'Processing fee deducted from loan',
-          daysAgo: 21,
-        ),
-      if (c.totalOwed > 0)
-        (
-          kind: TxKind.loanRepayment,
-          amount: c.totalOwed / 3,
-          label: 'Loan repayment',
-          daysAgo: 26,
-        ),
-      (
-        kind: TxKind.transfer,
-        amount: 8000 + (seed % 6) * 1000,
-        label: 'Transfer to a friend',
-        daysAgo: 33,
-      ),
-    ];
-
-    return [
-      for (final spec in specs)
-        Transaction(
-          id: '${c.id}-${spec.daysAgo}-${spec.kind.index}',
-          kind: spec.kind,
-          amount: spec.amount,
-          description: spec.label,
-          date: now.subtract(Duration(days: spec.daysAgo)),
-          balanceAfter: balance = spec.kind.isCredit
-              ? balance + spec.amount
-              : balance - spec.amount,
-          reference: 'K9-SAMPLE-${c.id.toUpperCase()}-${spec.daysAgo}',
-          counterparty: 'Sample data',
-        ),
-    ];
-  }
+      customer.isThisDevice ? transactions : const <Transaction>[];
 
   /// The factors behind the credit score, and what each is worth.
   List<CreditFactor> get creditFactors {

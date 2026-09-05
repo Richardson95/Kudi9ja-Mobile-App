@@ -280,28 +280,21 @@ class MetricTile extends StatelessWidget {
   );
 }
 
-/// The badge that distinguishes the real device account from sample rows.
+/// Marks the account held on this device.
+///
+/// A device-build artefact: there is one real account here and the panel says
+/// which row it is. Against the server every row is a real customer and this
+/// badge has nothing to distinguish.
 class SourcePill extends StatelessWidget {
-  const SourcePill({super.key, required this.isSample, this.isThisDevice = false});
-  final bool isSample;
+  const SourcePill({super.key, this.isThisDevice = false});
   final bool isThisDevice;
 
   @override
-  Widget build(BuildContext context) {
-    if (isThisDevice) {
-      return StatusPill(
-        label: 'THIS DEVICE',
-        color: AppColors.success,
-        dense: true,
-      );
-    }
-    if (isSample) {
-      return StatusPill(
-        label: 'SAMPLE',
-        color: AppColors.textTertiary,
-        dense: true,
-      );
-    }
-    return const SizedBox.shrink();
-  }
+  Widget build(BuildContext context) => isThisDevice
+      ? StatusPill(
+          label: 'THIS DEVICE',
+          color: AppColors.success,
+          dense: true,
+        )
+      : const SizedBox.shrink();
 }

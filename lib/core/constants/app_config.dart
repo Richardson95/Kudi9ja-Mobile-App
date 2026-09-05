@@ -3,6 +3,18 @@ abstract final class AppConfig {
   static const appName = 'Kudi9ja';
   static const tagline = 'Pay smart. Pay global.';
 
+  /// The one email address that is granted owner when it opens an account.
+  ///
+  /// **Empty in any real build**, and deliberately so. Panel access is a grant
+  /// the server makes, and the first person to sign up on a server is a
+  /// stranger — so nobody becomes an admin by being early. It exists at all
+  /// because a brand-new deployment needs a first owner, and that owner is
+  /// named in deployment configuration rather than discovered.
+  ///
+  /// Mirrors `AdminBootstrapService` on the server, which reads
+  /// `kudi9ja.bootstrap.owner-email`.
+  static String bootstrapOwnerEmail = '';
+
   // Savings ----------------------------------------------------------------
   /// Annual return on locked savings, paid to the wallet the moment the
   /// plan is created.
@@ -163,8 +175,6 @@ abstract final class AppConfig {
   /// Seconds before a one-time code can be sent again.
   static const otpResendSeconds = 45;
 
-  // Limits -----------------------------------------------------------------
-  static const dailyTransferLimit = 1000000.0;
   // Collection account ------------------------------------------------------
   /// Where customers pay in — to fund a wallet, open savings or repay a loan.
   /// Money only reaches a wallet once an admin has matched the transfer

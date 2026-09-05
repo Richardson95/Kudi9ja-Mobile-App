@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants/banks.dart';
 import '../../data/models/platform_settings.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -13,6 +11,7 @@ import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
+import 'change_payout_screen.dart';
 
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
@@ -30,8 +29,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   @override
   void initState() {
     super.initState();
-    // Most withdrawals go to the account the customer named at sign-up, so
-    // start there. They can still send this one somewhere else.
+    // The destination is not a choice made here. Money goes to the account the
+    // customer named at sign-up, which was checked against their own name —
+    // that is what stops a withdrawal being used to push money into somebody
+    // else's account. Changing it is a deliberate act on its own screen,
+    // behind an emailed code, the PIN and a fresh name check.
     final user = context.read<AppState>().user;
     if (user != null && user.hasPayoutAccount) {
       _bank = user.payoutBank;
@@ -46,6 +48,25 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       _bank != null &&
       _account.text.length == 10 &&
       !_busy;
+
+  /// Opens the payout-account screen and picks up whatever it left behind.
+  ///
+  /// The app state is read before the navigation rather than after it: holding
+  /// a BuildContext across an await is how a widget ends up reading a context
+  /// that has since been disposed.
+  Future<void> _openPayoutChange() async {
+    final app = context.read<AppState>();
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ChangePayoutScreen()),
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _bank = app.user?.payoutBank;
+      _account.text = app.user?.payoutAccountNumber ?? '';
+    });
+  }
 
   @override
   void dispose() {
@@ -104,46 +125,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     );
   }
 
-  void _pickBank() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.92,
-        builder: (_, controller) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                'Select bank',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const HairLine(),
-            Expanded(
-              child: ListView.builder(
-                controller: controller,
-                itemCount: kBanks.length,
-                itemBuilder: (_, i) => ListTile(
-                  title: Text(
-                    kBanks[i],
-                    style: const TextStyle(fontSize: 14.5),
-                  ),
-                  onTap: () {
-                    setState(() => _bank = kBanks[i]);
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final balance = context.select<AppState, double>((s) => s.balance);
@@ -191,23 +172,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
-                    KPickerField(
-                      label: 'Destination bank',
-                      icon: Icons.account_balance_outlined,
-                      value: _bank,
-                      hint: 'Where should it go?',
-                      onTap: _pickBank,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    KField(
-                      label: 'Account number',
-                      hint: '10 digits',
-                      controller: _account,
-                      prefixIcon: Icons.tag_rounded,
-                      keyboardType: TextInputType.number,
-                      maxLength: 10,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: (_) => setState(() {}),
+                    _PayoutDestination(
+                      bank: _bank ?? '',
+                      account: _account.text,
+                      onChange: _openPayoutChange,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Container(
@@ -267,4 +235,101 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       ),
     );
   }
+}
+
+/// Where this withdrawal is going, shown rather than chosen.
+///
+/// Read-only on purpose. The account was verified as the customer's own when
+/// they gave it at sign-up, and a withdrawal that could be redirected to a
+/// freshly typed account would undo that check — which is exactly the shape
+/// somebody moving money into a name that is not theirs would use.
+class _PayoutDestination extends StatelessWidget {
+  const _PayoutDestination({
+    required this.bank,
+    required this.account,
+    required this.onChange,
+  });
+
+  final String bank;
+  final String account;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceAlt,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      border: Border.all(color: AppColors.stroke),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconBadge(
+              icon: Icons.account_balance_rounded,
+              size: 40,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'PAYING INTO',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    bank.isEmpty ? 'No account on file' : bank,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (account.isNotEmpty)
+                    Text(
+                      account,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'This is the account you registered, in your own name. We only pay '
+          'into it.',
+          style: TextStyle(
+            fontSize: 11.5,
+            height: 1.4,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        GestureDetector(
+          onTap: onChange,
+          child: Text(
+            'Change payout account',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.gold,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

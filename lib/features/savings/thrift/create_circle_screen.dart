@@ -23,13 +23,14 @@ class CreateCircleScreen extends StatefulWidget {
 class _CreateCircleScreenState extends State<CreateCircleScreen> {
   final _name = TextEditingController();
   final _contribution = TextEditingController();
-  final _memberName = TextEditingController();
+  final _memberRef = TextEditingController();
   AutoFrequency _frequency = AutoFrequency.monthly;
   String _emoji = '🤝';
   bool _busy = false;
 
   late final List<ThriftMember> _members = [
     ThriftMember(
+      customerRef: context.read<AppState>().user?.customerRef ?? '',
       name: context.read<AppState>().user?.fullName ?? 'You',
       initials: initialsOf(context.read<AppState>().user?.fullName ?? 'You'),
       isMe: true,
@@ -49,13 +50,37 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
   void dispose() {
     _name.dispose();
     _contribution.dispose();
-    _memberName.dispose();
+    _memberRef.dispose();
     super.dispose();
   }
 
+  /// Adds a seat by customer reference.
+  ///
+  /// The reference is what identifies a member, not a name: the circle debits
+  /// a real wallet every round, so a seat has to belong to an account that can
+  /// actually be debited.
+  ///
+  /// **This is the seam.** Against the server the reference goes to
+  /// `POST /api/v1/transfers/resolve`, which answers with the masked name, and
+  /// `POST /api/v1/circles` refuses outright if any reference belongs to
+  /// nobody. Device-local there is nobody else to look up, so the reference is
+  /// checked for shape and shown as typed.
   void _addMember() {
-    final name = _memberName.text.trim();
-    if (name.isEmpty) return;
+    final ref = _memberRef.text.trim().toUpperCase();
+    if (ref.isEmpty) return;
+
+    if (!RegExp(r'^K9-[A-Z0-9]{6}$').hasMatch(ref)) {
+      showToast(
+        context,
+        'A customer reference looks like K9-A1B2C3',
+        error: true,
+      );
+      return;
+    }
+    if (_members.any((m) => m.customerRef.toUpperCase() == ref)) {
+      showToast(context, 'They are already in this circle', error: true);
+      return;
+    }
     if (_members.length >= settings.maxCircleMembers) {
       showToast(
         context,
@@ -64,9 +89,12 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
       );
       return;
     }
+
     setState(() {
-      _members.add(ThriftMember(name: name, initials: initialsOf(name)));
-      _memberName.clear();
+      _members.add(
+        ThriftMember(customerRef: ref, name: ref, initials: ref.substring(3, 5)),
+      );
+      _memberRef.clear();
     });
   }
 
@@ -206,18 +234,18 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
                       children: [
                         Expanded(
                           child: KField(
-                            label: 'Add full name',
-                            hint: 'e.g. Adebayo Ogunlesi',
-                            controller: _memberName,
+                            label: 'Add by customer reference',
+                            hint: 'K9-A1B2C3',
+                            controller: _memberRef,
                             prefixIcon: Icons.person_add_alt_rounded,
-                            textCapitalization: TextCapitalization.words,
-                            // A circle only works if every member is a real
-                            // Kudi9ja account we can debit, so say so where
-                            // the name is actually typed.
+                            textCapitalization: TextCapitalization.characters,
+                            // Every round debits a real wallet, so a seat has
+                            // to belong to a real account. The reference is on
+                            // each member's own Kudi9ja profile.
                             helper:
                                 'They must already have a Kudi9ja account. '
-                                'Type their full name exactly as it is '
-                                'registered on the app.',
+                                'Ask them for the reference on their profile '
+                                '— it looks like K9-A1B2C3.',
                             onChanged: (_) => setState(() {}),
                           ),
                         ),

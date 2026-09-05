@@ -375,10 +375,10 @@ void main() {
           currentRound: round,
           roundsPaid: paid,
           members: const [
-            ThriftMember(name: 'Ada', initials: 'A'),
-            ThriftMember(name: 'Me', initials: 'M', isMe: true),
-            ThriftMember(name: 'Bola', initials: 'B'),
-            ThriftMember(name: 'Chidi', initials: 'C'),
+            ThriftMember(customerRef: 'K9-AAA111', name: 'Ada', initials: 'A'),
+            ThriftMember(customerRef: 'K9-ME0001', name: 'Me', initials: 'M', isMe: true),
+            ThriftMember(customerRef: 'K9-BBB222', name: 'Bola', initials: 'B'),
+            ThriftMember(customerRef: 'K9-CCC333', name: 'Chidi', initials: 'C'),
           ],
         );
 
@@ -419,8 +419,8 @@ void main() {
         contribution: 20000,
         frequency: AutoFrequency.monthly,
         members: const [
-          ThriftMember(name: 'Me', initials: 'M', isMe: true),
-          ThriftMember(name: 'Sade', initials: 'S'),
+          ThriftMember(customerRef: 'K9-ME0001', name: 'Me', initials: 'M', isMe: true),
+          ThriftMember(customerRef: 'K9-SSS444', name: 'Sade', initials: 'S'),
         ],
       );
 

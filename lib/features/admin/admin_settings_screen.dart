@@ -61,7 +61,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _draft.flatProcessingFee != settings.flatProcessingFee ||
       _draft.processingFeeThreshold != settings.processingFeeThreshold ||
       _draft.loanProcessingFeeRate != settings.loanProcessingFeeRate ||
-      _draft.dailyTransferLimit != settings.dailyTransferLimit ||
       _draft.savingsEnabled != settings.savingsEnabled ||
       _draft.lendingEnabled != settings.lendingEnabled ||
       _draft.thriftEnabled != settings.thriftEnabled ||
@@ -194,11 +193,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       'Management fee rate above threshold',
       '${settings.feeRatePct.toStringAsFixed(2)}%',
       '${_draft.feeRatePct.toStringAsFixed(2)}%',
-    );
-    cmp(
-      'Transfer limit',
-      settings.dailyTransferLimit.asNairaFlat,
-      _draft.dailyTransferLimit.asNairaFlat,
     );
     cmp('Savings', settings.savingsEnabled, _draft.savingsEnabled);
     cmp('Lending', settings.lendingEnabled, _draft.lendingEnabled);
@@ -925,15 +919,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
             const SizedBox(height: AppSpacing.xxl),
             const AdminSectionLabel('WALLET'),
-            _AmountCard(
-              label: 'Daily transfer limit',
-              value: _draft.dailyTransferLimit,
-              step: 100000,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(dailyTransferLimit: v),
-              ),
-            ),
 
             const SizedBox(height: AppSpacing.xxl),
             const AdminSectionLabel('CREDIT SCORE'),

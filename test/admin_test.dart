@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kudi9ja/data/models/admin.dart';
+import 'package:kudi9ja/core/constants/app_config.dart';
 import 'package:kudi9ja/data/models/models.dart';
 import 'package:kudi9ja/data/models/platform_settings.dart';
 import 'package:kudi9ja/data/services/storage_service.dart';
@@ -29,6 +30,10 @@ AppUser _user({String email = 'owner@example.com', String name = 'Ada Owner'}) =
 Future<AppState> _account({String email = 'owner@example.com'}) async {
   SharedPreferences.setMockInitialValues({});
   applySettings(const PlatformSettings()); // reset the global between tests
+  // Names this account as the bootstrap owner, the way deployment
+  // configuration does on the server. Nobody becomes an admin by
+  // signing up first.
+  AppConfig.bootstrapOwnerEmail = email;
   final app = AppState(await StorageService.init());
   await app.createAccount(
     user: _user(email: email),
@@ -60,12 +65,48 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Access control', () {
-    test('the first account on a device becomes the owner', () async {
+    test('the account configuration names becomes the owner', () async {
       final app = await _account();
       expect(app.isAdmin, isTrue);
       expect(app.adminRole, AdminRole.owner);
       expect(app.admins.length, 1);
-      expect(app.admins.first.addedBy, contains('first account'));
+      expect(app.admins.first.addedBy, contains('deployment configuration'));
+    });
+
+    test('nobody becomes an owner just by signing up first', () async {
+      // What the server does when nothing is configured. On a server the first
+      // account to sign up is a stranger, so being early grants nothing.
+      SharedPreferences.setMockInitialValues({});
+      applySettings(const PlatformSettings());
+      AppConfig.bootstrapOwnerEmail = '';
+
+      final app = AppState(await StorageService.init());
+      await app.createAccount(
+        user: _user(email: 'stranger@example.com'),
+        password: 'Str0ng!pass',
+        signInPasscode: '918273',
+        transactionPin: '4917',
+      );
+
+      expect(app.isAdmin, isFalse);
+      expect(app.admins, isEmpty);
+    });
+
+    test('an account that is not the named one is granted nothing', () async {
+      SharedPreferences.setMockInitialValues({});
+      applySettings(const PlatformSettings());
+      AppConfig.bootstrapOwnerEmail = 'someone.else@example.com';
+
+      final app = AppState(await StorageService.init());
+      await app.createAccount(
+        user: _user(email: 'stranger@example.com'),
+        password: 'Str0ng!pass',
+        signInPasscode: '918273',
+        transactionPin: '4917',
+      );
+
+      expect(app.isAdmin, isFalse);
+      expect(app.admins, isEmpty);
     });
 
     test('a suspended admin loses the panel and can be reinstated', () async {
@@ -364,7 +405,6 @@ void main() {
         minCircleMembers: 3,
         maxCircleMembers: 20,
         otpResendSeconds: 60,
-        dailyTransferLimit: 2000000,
         savingsEnabled: false,
         lendingEnabled: false,
         thriftEnabled: false,
@@ -490,16 +530,17 @@ void main() {
       final app = await _account();
       final me = app.customers.first;
       expect(me.isThisDevice, isTrue);
-      expect(me.isSample, isFalse);
       expect(me.fullName, 'Ada Owner');
       expect(me.bvn, '22112233445');
     });
 
-    test('every other row is flagged as sample data', () async {
+    test('the panel invents no customers', () async {
+      // Fabricated rows in a panel that also freezes accounts and releases
+      // money are a standing invitation to act on one by mistake.
       final app = await _account();
-      final others = app.customers.skip(1);
-      expect(others, isNotEmpty);
-      expect(others.every((c) => c.isSample), isTrue);
+      // The list holds exactly the accounts that exist — here, the one on
+      // this device — and there is no flag for anything else.
+      expect(app.customers.single.isThisDevice, isTrue);
     });
 
     test('metrics aggregate the whole visible book', () async {

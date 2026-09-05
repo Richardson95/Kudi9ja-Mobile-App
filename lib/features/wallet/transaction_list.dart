@@ -11,7 +11,6 @@ import 'receipt_screen.dart';
 IconData iconForTx(TxKind kind) => switch (kind) {
   TxKind.deposit => Icons.add_rounded,
   TxKind.withdrawal => Icons.north_east_rounded,
-  TxKind.transfer => Icons.send_rounded,
   TxKind.savingsLock => Icons.lock_rounded,
   TxKind.interestPayout => Icons.trending_up_rounded,
   TxKind.savingsRelease => Icons.lock_open_rounded,

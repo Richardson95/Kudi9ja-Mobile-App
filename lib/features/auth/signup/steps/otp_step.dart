@@ -144,9 +144,6 @@ class _OtpStepState extends State<OtpStep> {
                   style: TextButton.styleFrom(foregroundColor: AppColors.gold),
                 ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        // Demo affordance: a real build never reveals the code client-side.
-        _DemoCode(code: _issued),
       ],
     );
   }
@@ -159,43 +156,4 @@ class _OtpStepState extends State<OtpStep> {
     return '$shown${'*' * (name.length - shown.length)}${email.substring(at)}';
   }
 
-}
-
-class _DemoCode extends StatelessWidget {
-  const _DemoCode({required this.code});
-  final String code;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: AppSpacing.lg,
-      vertical: AppSpacing.md,
-    ),
-    decoration: BoxDecoration(
-      color: AppColors.surfaceAlt,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      border: Border.all(color: AppColors.stroke),
-    ),
-    child: Row(
-      children: [
-        Icon(Icons.science_outlined, size: 16, color: AppColors.textTertiary),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Text(
-            'Demo mode — your code is',
-            style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-          ),
-        ),
-        SelectableText(
-          code,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 3,
-            color: AppColors.gold,
-          ),
-        ),
-      ],
-    ),
-  );
 }

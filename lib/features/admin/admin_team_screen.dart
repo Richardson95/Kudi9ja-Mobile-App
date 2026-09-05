@@ -679,14 +679,6 @@ class _CandidateTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (customer.isSample) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    StatusPill(
-                      label: 'SAMPLE',
-                      color: AppColors.textTertiary,
-                      dense: true,
-                    ),
-                  ],
                 ],
               ),
             ],

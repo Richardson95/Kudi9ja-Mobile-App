@@ -12,7 +12,7 @@ import '../../widgets/primitives.dart';
 import '../shell/home_shell.dart';
 import 'pay_in_screen.dart';
 import 'transaction_list.dart';
-import 'transfer_screen.dart';
+import 'change_payout_screen.dart';
 import 'withdraw_screen.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -204,11 +204,11 @@ class _BalanceStrip extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _Action(
-                  icon: Icons.send_rounded,
-                  label: 'Send',
+                  icon: Icons.account_balance_rounded,
+                  label: 'Payout account',
                   onTap: () => Navigator.of(
                     context,
-                  ).push(slideRoute(const TransferScreen())),
+                  ).push(slideRoute(const ChangePayoutScreen())),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

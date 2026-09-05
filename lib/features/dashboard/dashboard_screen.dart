@@ -19,7 +19,7 @@ import '../savings/new_plan_sheet.dart';
 import '../savings/plan_detail_screen.dart';
 import '../wallet/pay_in_screen.dart';
 import '../wallet/transaction_list.dart';
-import '../wallet/transfer_screen.dart';
+import '../wallet/change_payout_screen.dart';
 import '../wallet/withdraw_screen.dart';
 import 'balance_card.dart';
 import '../../data/models/platform_settings.dart';
@@ -210,7 +210,7 @@ class _QuickActions extends StatelessWidget {
       (Icons.add_rounded, 'Add money', const PayInScreen()),
       (Icons.savings_outlined, 'Save', const CreatePlanScreen()),
       (Icons.bolt_rounded, 'Borrow', const LoanRequestScreen()),
-      (Icons.send_rounded, 'Send', const TransferScreen()),
+      (Icons.account_balance_rounded, 'Payout account', const ChangePayoutScreen()),
       (Icons.north_east_rounded, 'Withdraw', const WithdrawScreen()),
     ];
 

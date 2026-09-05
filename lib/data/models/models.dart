@@ -605,7 +605,6 @@ class Installment {
 enum TxKind {
   deposit,
   withdrawal,
-  transfer,
   savingsLock,
   interestPayout,
   savingsRelease,
@@ -618,7 +617,6 @@ extension TxKindX on TxKind {
   String get label => switch (this) {
     TxKind.deposit => 'Wallet funding',
     TxKind.withdrawal => 'Withdrawal',
-    TxKind.transfer => 'Transfer',
     TxKind.savingsLock => 'Savings lock',
     TxKind.interestPayout => 'Interest payout',
     TxKind.savingsRelease => 'Savings release',
@@ -713,14 +711,13 @@ class Transaction {
 
 /// The filter set shared by the customer wallet and the admin customer
 /// record, so both screens slice history the same way.
-enum TxFilter { all, deposits, withdrawals, transfers, savings, loans, fees }
+enum TxFilter { all, deposits, withdrawals, savings, loans, fees }
 
 extension TxFilterX on TxFilter {
   String get label => switch (this) {
     TxFilter.all => 'All',
     TxFilter.deposits => 'Deposits',
     TxFilter.withdrawals => 'Withdrawals',
-    TxFilter.transfers => 'Transfers',
     TxFilter.savings => 'Savings',
     TxFilter.loans => 'Loans',
     TxFilter.fees => 'Fees',
@@ -730,7 +727,6 @@ extension TxFilterX on TxFilter {
     TxFilter.all => true,
     TxFilter.deposits => tx.kind == TxKind.deposit,
     TxFilter.withdrawals => tx.kind == TxKind.withdrawal,
-    TxFilter.transfers => tx.kind == TxKind.transfer,
     TxFilter.savings =>
       tx.kind == TxKind.savingsLock ||
           tx.kind == TxKind.interestPayout ||

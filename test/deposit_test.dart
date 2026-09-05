@@ -31,6 +31,10 @@ AppUser _user() => AppUser(
 Future<AppState> _account({double funding = 0}) async {
   SharedPreferences.setMockInitialValues({});
   applySettings(const PlatformSettings());
+  // Names this account as the bootstrap owner, the way deployment
+  // configuration does on the server. Nobody becomes an admin by
+  // signing up first.
+  AppConfig.bootstrapOwnerEmail = _user().email;
   final app = AppState(await StorageService.init());
   await app.createAccount(
     user: _user(),

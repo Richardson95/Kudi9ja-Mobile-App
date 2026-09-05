@@ -23,7 +23,6 @@ class PlatformSettings {
     this.flatProcessingFee = AppConfig.flatProcessingFee,
     this.processingFeeThreshold = AppConfig.processingFeeThreshold,
     this.loanProcessingFeeRate = AppConfig.loanProcessingFeeRate,
-    this.dailyTransferLimit = AppConfig.dailyTransferLimit,
     this.savingsEnabled = true,
     this.lendingEnabled = true,
     this.thriftEnabled = true,
@@ -88,7 +87,6 @@ class PlatformSettings {
   final double loanProcessingFeeRate;
 
   // Wallet & platform ------------------------------------------------------
-  final double dailyTransferLimit;
   final bool savingsEnabled;
   final bool lendingEnabled;
   final bool thriftEnabled;
@@ -266,7 +264,6 @@ class PlatformSettings {
     double? flatProcessingFee,
     double? processingFeeThreshold,
     double? loanProcessingFeeRate,
-    double? dailyTransferLimit,
     bool? savingsEnabled,
     bool? lendingEnabled,
     bool? thriftEnabled,
@@ -322,7 +319,6 @@ class PlatformSettings {
         processingFeeThreshold ?? this.processingFeeThreshold,
     loanProcessingFeeRate:
         loanProcessingFeeRate ?? this.loanProcessingFeeRate,
-    dailyTransferLimit: dailyTransferLimit ?? this.dailyTransferLimit,
     savingsEnabled: savingsEnabled ?? this.savingsEnabled,
     lendingEnabled: lendingEnabled ?? this.lendingEnabled,
     thriftEnabled: thriftEnabled ?? this.thriftEnabled,
@@ -381,7 +377,6 @@ class PlatformSettings {
     'flatProcessingFee': flatProcessingFee,
     'processingFeeThreshold': processingFeeThreshold,
     'loanProcessingFeeRate': loanProcessingFeeRate,
-    'dailyTransferLimit': dailyTransferLimit,
     'savingsEnabled': savingsEnabled,
     'lendingEnabled': lendingEnabled,
     'thriftEnabled': thriftEnabled,
@@ -461,9 +456,6 @@ class PlatformSettings {
     loanProcessingFeeRate:
         (j['loanProcessingFeeRate'] as num?)?.toDouble() ??
         AppConfig.loanProcessingFeeRate,
-    dailyTransferLimit:
-        (j['dailyTransferLimit'] as num?)?.toDouble() ??
-        AppConfig.dailyTransferLimit,
     savingsEnabled: j['savingsEnabled'] as bool? ?? true,
     lendingEnabled: j['lendingEnabled'] as bool? ?? true,
     thriftEnabled: j['thriftEnabled'] as bool? ?? true,

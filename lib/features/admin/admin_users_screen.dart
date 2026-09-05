@@ -203,7 +203,6 @@ class _CustomerTile extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   SourcePill(
-                    isSample: customer.isSample,
                     isThisDevice: customer.isThisDevice,
                   ),
                 ],
@@ -460,18 +459,6 @@ class _AdminCustomerDetailScreenState
                     ],
                   ),
                 ),
-              if (c.isSample)
-                Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.sm),
-                  child: Text(
-                    'This is illustrative history for a sample customer. A live deployment reads the real ledger from the API.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      height: 1.45,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ),
 
               const SizedBox(height: AppSpacing.xl),
               const AdminSectionLabel('ACTIONS'),
@@ -538,8 +525,7 @@ class _Header extends StatelessWidget {
                   Row(
                     children: [
                       SourcePill(
-                        isSample: customer.isSample,
-                        isThisDevice: customer.isThisDevice,
+                            isThisDevice: customer.isThisDevice,
                       ),
                       const SizedBox(width: 6),
                       StatusPill(
