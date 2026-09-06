@@ -157,13 +157,14 @@ Future<void> _run() async {
   // calls seventy-odd of them. Comparing the source against the server's own
   // OpenAPI document catches the whole class at once.
   await check('every path Kudi9jaApi calls exists on the server', () async {
-    final source = File('lib/data/api/kudi9ja_api.dart').readAsStringSync();
+    final source = File('lib/data/api/kudi9ja_api.dart').readAsStringSync() +
+        File('lib/data/api/admin_api.dart').readAsStringSync();
     final used = RegExp(
       r"_client\.(?:get|post|patch|put|delete|upload)\(\s*'(/[^']*)'",
       multiLine: true,
     ).allMatches(source).map((m) => m.group(1)!).toSet();
 
-    if (used.length < 50) {
+    if (used.length < 80) {
       throw StateError('only found ${used.length} paths in the source — the '
           'pattern has probably stopped matching, which would make this test '
           'pass by finding nothing');

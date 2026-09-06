@@ -21,6 +21,7 @@
 library;
 
 import '../../core/theme/app_colors.dart';
+import '../models/admin.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
 import '../models/models.dart';
@@ -503,3 +504,100 @@ class Page<T> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The admin panel
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A row in the customer list.
+///
+/// The list endpoint is deliberately thin — it carries what a list shows and
+/// nothing more. Balances beyond the wallet, identity numbers and scores come
+/// from the detail endpoint, so browsing a page of customers does not spray
+/// everyone's BVN across the wire.
+CustomerRecord customerRowFromApi(Map<String, dynamic> j) => CustomerRecord(
+      id: _str(j['id']),
+      fullName: _str(j['fullName']),
+      email: _str(j['email']),
+      phone: _str(j['phone']),
+      // The customer reference, not a Kudi9ja account number: Kudi9ja issues
+      // none, and this is what a bank narration is matched against.
+      accountNumber: _str(j['customerRef']),
+      joinedAt: _date(j['createdAt']),
+      balance: _money(j['balance']),
+      totalSaved: 0,
+      totalOwed: 0,
+      interestPaid: 0,
+      creditScore: 0,
+      plansCount: 0,
+      loansCount: 0,
+      verified: _str(j['kycTier']) != 'TIER0',
+      frozen: _str(j['accountStatus']) == 'FROZEN',
+    );
+
+/// The full customer record behind one row.
+CustomerRecord customerDetailFromApi(Map<String, dynamic> j) {
+  final money = _obj(j['financials']);
+  return CustomerRecord(
+    id: _str(j['id']),
+    fullName: _str(j['fullName']),
+    email: _str(j['email']),
+    phone: _str(j['phone']),
+    accountNumber: _str(j['customerRef']),
+    joinedAt: _date(j['createdAt']),
+    balance: _money(money['balance']),
+    totalSaved: _money(money['totalSaved']),
+    totalOwed: _money(money['totalOwed']),
+    interestPaid: _money(money['totalInterestEarned']),
+    creditScore: _int(money['creditScore']),
+    plansCount: _int(money['totalPlans']),
+    loansCount: _int(money['totalLoans']),
+    state: _str(j['state']),
+    // Four digits, which is all the server will ever return. The panel shows
+    // them so a support call can be verified without anybody reading a whole
+    // BVN aloud.
+    bvn: _str(j['bvnLast4']),
+    nin: _str(j['ninLast4']),
+    address: _str(j['address']),
+    gender: _str(j['gender']),
+    dateOfBirth: _dateOrNull(j['dateOfBirth']),
+    verified: _str(j['kycTier']) != 'TIER0',
+    frozen: _str(j['accountStatus']) == 'FROZEN',
+  );
+}
+
+/// A pay-in claim as the panel sees it — with the customer attached, which the
+/// customer's own view of the same claim has no need of.
+DepositClaim adminClaimFromApi(Map<String, dynamic> j) => claimFromApi(
+      j,
+      customerName: _str(j['customerName']),
+      customerRef: _str(j['customerRef']),
+    );
+
+WithdrawalRequest adminWithdrawalFromApi(Map<String, dynamic> j) =>
+    withdrawalFromApi(
+      j,
+      customerName: _str(j['customerName']),
+      customerRef: _str(j['customerRef']),
+    );
+
+AdminUser teamMemberFromApi(Map<String, dynamic> j) => AdminUser(
+      id: _str(j['id']),
+      name: _str(j['name']),
+      email: _str(j['email']),
+      role: _enum(j['role'], AdminRole.values, AdminRole.viewer),
+      addedAt: _date(j['addedAt']),
+      phone: _str(j['phone']),
+      addedBy: _str(j['addedBy']),
+      active: _bool(j['active'], true),
+      lastActive: _dateOrNull(j['lastActiveAt']),
+    );
+
+AuditEntry auditRowFromApi(Map<String, dynamic> j) => AuditEntry(
+      id: _str(j['id']),
+      actor: _str(j['actor']),
+      action: _str(j['action']),
+      detail: _str(j['detail']),
+      date: _date(j['date']),
+      category: _enum(j['category'], AuditCategory.values, AuditCategory.general),
+    );

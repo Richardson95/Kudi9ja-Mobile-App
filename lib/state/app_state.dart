@@ -14,6 +14,7 @@ import '../data/models/thrift.dart';
 import '../data/models/withdrawal.dart';
 import '../data/services/push_service.dart';
 import '../data/services/security_service.dart';
+import '../data/api/admin_api.dart';
 import '../data/api/api_exception.dart';
 import '../data/api/kudi9ja_api.dart';
 import '../data/api/mappers.dart';
@@ -96,6 +97,22 @@ class AppState extends ChangeNotifier {
 
   /// Whether this handset is currently reachable by push.
   bool get pushActive => _push?.isActive ?? false;
+
+  /// The admin half of the API, built on the same client.
+  ///
+  /// Present whenever there is a server. Holding it does not grant anything —
+  /// every call it makes is authorised again server-side, per action, so a
+  /// support user calling an owner-only endpoint is refused there.
+  AdminApi? get _admin =>
+      _api == null ? null : (_adminApi ??= AdminApi(_api.client));
+  AdminApi? _adminApi;
+
+  /// What the server says this admin may do. Read from the panel rather than
+  /// assumed from a locally stored role.
+  AdminRole? _serverAdminRole;
+
+  /// The customer list, the queues and the team, as the server reports them.
+  List<CustomerRecord> _serverCustomers = [];
 
   /// Whether this app is talking to a server at all.
   bool get isOnline => _api != null;
@@ -699,6 +716,84 @@ class AppState extends ChangeNotifier {
   void handlePush() {
     if (_stage == AuthStage.signedOut) return;
     unawaited(refreshFromServer());
+  }
+
+  // ── The admin panel ─────────────────────────────────────────────────────
+
+  /// Pulls everything the panel shows.
+  ///
+  /// Called when the panel is opened and after any action that changes a queue.
+  /// Like [refreshFromServer] it never throws: a panel that goes blank because
+  /// one list failed is less useful than one showing a queue a minute old.
+  Future<void> refreshAdminPanel() async {
+    final admin = _admin;
+    if (admin == null) return;
+
+    _syncing = true;
+    notifyListeners();
+
+    try {
+      final results = await Future.wait([
+        admin.whoAmI(),
+        admin.customers(size: 200),
+        admin.payIns(size: 200),
+        admin.withdrawals(size: 200),
+        admin.team(),
+        admin.audit(size: 200),
+      ]);
+
+      final me = results[0] as Map<String, dynamic>;
+      _serverAdminRole = _roleFromWire(me['role']);
+      _isAdminOnServer = true;
+
+      _serverCustomers = (results[1] as Page<CustomerRecord>).items;
+      _deposits = (results[2] as Page<DepositClaim>).items;
+      _withdrawals = (results[3] as Page<WithdrawalRequest>).items;
+      _admins = results[4] as List<AdminUser>;
+      _audit = (results[5] as Page<AuditEntry>).items;
+
+      _lastError = null;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      if (e.code == ApiErrorCode.notAnAdmin || e.code == ApiErrorCode.forbidden) {
+        // Access was revoked while the panel was open. Say so rather than
+        // leaving somebody looking at a screen whose every button now fails.
+        _isAdminOnServer = false;
+        _serverAdminRole = null;
+      }
+    } finally {
+      _syncing = false;
+      notifyListeners();
+    }
+  }
+
+  static AdminRole? _roleFromWire(Object? value) {
+    if (value is! String) return null;
+    final wanted = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+    for (final role in AdminRole.values) {
+      if (role.name.toLowerCase() == wanted) return role;
+    }
+    return null;
+  }
+
+  /// The full record behind one row in the customer list.
+  ///
+  /// Fetched on demand rather than with the list: identity numbers and balances
+  /// should not cross the wire for two hundred people because somebody scrolled.
+  Future<CustomerRecord?> loadCustomer(String id) async {
+    final admin = _admin;
+    if (admin == null) {
+      return _serverCustomers.where((c) => c.id == id).firstOrNull ??
+          (thisDeviceCustomer?.id == id ? thisDeviceCustomer : null);
+    }
+    try {
+      final detail = customerDetailFromApi(await admin.customer(id));
+      _lastError = null;
+      return detail;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      return null;
+    }
   }
 
   /// Called whenever the app leaves the foreground.
@@ -1590,7 +1685,14 @@ class AppState extends ChangeNotifier {
   /// entrance grants no access by itself.
   bool get isAdmin => isOnline ? _isAdminOnServer : currentAdmin != null;
 
-  AdminRole get adminRole => currentAdmin?.role ?? AdminRole.viewer;
+  /// What this admin may do.
+  ///
+  /// Online the server's answer, which is also the one enforced. The panel uses
+  /// it to hide controls a person cannot use; hiding a button has never stopped
+  /// anybody, which is why the server checks again on every call.
+  AdminRole get adminRole => isOnline
+      ? (_serverAdminRole ?? AdminRole.viewer)
+      : (currentAdmin?.role ?? AdminRole.viewer);
 
   /// The first account opened on a device becomes the owner, so the panel is
   /// reachable at all. Every later admin is added from inside it.
@@ -1710,6 +1812,17 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> changeAdminRole(String id, AdminRole role) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.changeRole(id, role.name.toUpperCase());
+        await refreshAdminPanel();
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _admins.indexWhere((a) => a.id == id);
     if (i < 0 || !adminRole.canManageTeam) return;
     // Demoting yourself would drop the permission that allows the change to
@@ -1727,6 +1840,17 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setAdminActive(String id, bool active) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.setActive(id, active);
+        await refreshAdminPanel();
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _admins.indexWhere((a) => a.id == id);
     if (i < 0 || !adminRole.canManageTeam) return;
     // Suspending yourself would revoke the very permission needed to undo it,
@@ -1743,6 +1867,19 @@ class AppState extends ChangeNotifier {
   }
 
   Future<({bool ok, String message})> removeAdmin(String id) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.revokeAccess(id);
+        await refreshAdminPanel();
+        return (ok: true, message: 'Panel access removed.');
+      } on ApiException catch (e) {
+        // The server refuses to remove the last owner, and refuses to let an
+        // admin lock themselves out. Both come back with a message that says
+        // which, so it is passed through rather than replaced.
+        return (ok: false, message: e.message);
+      }
+    }
     final i = _admins.indexWhere((a) => a.id == id);
     if (i < 0) return (ok: false, message: 'Admin not found.');
     if (!adminRole.canManageTeam) {
@@ -1839,9 +1976,14 @@ class AppState extends ChangeNotifier {
   /// There are deliberately no illustrative rows here. Fabricated customers in
   /// a panel that also freezes accounts and approves payments are a standing
   /// invitation to act on one by mistake.
-  List<CustomerRecord> get customers => [
-    if (thisDeviceCustomer != null) thisDeviceCustomer!,
-  ];
+  /// Every customer the panel can see.
+  ///
+  /// Offline this is only the account on this device, because there is nowhere
+  /// else to learn about anybody — the panel used to invent no one, and still
+  /// does not. Online it is what the server returns.
+  List<CustomerRecord> get customers => isOnline
+      ? List.unmodifiable(_serverCustomers)
+      : [if (thisDeviceCustomer != null) thisDeviceCustomer!];
 
   // ── Admin: platform metrics ─────────────────────────────────────────────
   /// Book-wide figures across every customer the panel can see.
@@ -1950,6 +2092,19 @@ class AppState extends ChangeNotifier {
   /// Admin has matched the receipt to the statement. Credits the wallet, or
   /// reduces the loan, depending on what the customer said it was for.
   Future<void> confirmDeposit(String id) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.confirmPayIn(id);
+        // The customer's wallet was credited server-side. Re-reading the queue
+        // is how the panel learns what actually happened, rather than assuming.
+        await refreshAdminPanel();
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _deposits.indexWhere((d) => d.id == id);
     if (i < 0 || !_deposits[i].isPending) return;
     if (!adminRole.canActOnLoans) return;
@@ -2003,6 +2158,17 @@ class AppState extends ChangeNotifier {
 
   /// Admin could not find the payment, or the receipt does not match.
   Future<void> rejectDeposit(String id, String reason) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.rejectPayIn(id, note: reason);
+        await refreshAdminPanel();
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _deposits.indexWhere((d) => d.id == id);
     if (i < 0 || !_deposits[i].isPending) return;
     if (!adminRole.canActOnLoans) return;
@@ -2049,6 +2215,17 @@ class AppState extends ChangeNotifier {
   /// Releases the money to the customer's bank. The wallet was already
   /// debited when they asked, so approval only settles the record.
   Future<void> approveWithdrawal(String id) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.approveWithdrawal(id);
+        await refreshAdminPanel();
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _withdrawals.indexWhere((w) => w.id == id);
     if (i < 0 || !_withdrawals[i].isPending) return;
     if (!adminRole.canActOnLoans) return;
@@ -2086,6 +2263,17 @@ class AppState extends ChangeNotifier {
 
   /// Refuses the request and puts every naira back in the wallet.
   Future<void> declineWithdrawal(String id, String reason) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.declineWithdrawal(id, reason: reason);
+        await refreshAdminPanel();
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _withdrawals.indexWhere((w) => w.id == id);
     if (i < 0 || !_withdrawals[i].isPending) return;
     if (!adminRole.canActOnLoans) return;

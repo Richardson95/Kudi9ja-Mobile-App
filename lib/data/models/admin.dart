@@ -178,7 +178,25 @@ class AuditEntry {
   );
 }
 
-enum AuditCategory { general, settings, team, customer, loan }
+enum AuditCategory {
+  general,
+  settings,
+  team,
+  customer,
+  loan,
+
+  /// Somebody looked at a customer's records — a receipt, a bank account, an
+  /// export of their data.
+  ///
+  /// Kept separate from [customer], which is about changing something. The
+  /// Privacy Policy commits to being able to say who *viewed* a customer's
+  /// details, and an entry filed under "General" answers nobody's question.
+  dataAccess,
+
+  /// A regulatory action: a report filed, a retention period run, an account
+  /// frozen under an obligation rather than at anyone's discretion.
+  compliance,
+}
 
 extension AuditCategoryX on AuditCategory {
   String get label => switch (this) {
@@ -187,6 +205,8 @@ extension AuditCategoryX on AuditCategory {
     AuditCategory.team => 'Admin team',
     AuditCategory.customer => 'Customer',
     AuditCategory.loan => 'Lending',
+    AuditCategory.dataAccess => 'Record access',
+    AuditCategory.compliance => 'Compliance',
   };
 }
 

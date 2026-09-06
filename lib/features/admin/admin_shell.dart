@@ -27,6 +27,18 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   int _index = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // The queues, the team and the audit trail are the server's, and they move
+    // while nobody is looking — another admin confirms a payment, a customer
+    // requests a withdrawal. So they are read when the panel opens rather than
+    // relied on from whenever it was last open.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppState>().refreshAdminPanel();
+    });
+  }
+
   static const _tabs = [
     (Icons.dashboard_rounded, Icons.dashboard_outlined, 'Home'),
     (Icons.people_alt_rounded, Icons.people_alt_outlined, 'Users'),

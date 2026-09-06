@@ -147,6 +147,17 @@ class _Entry extends StatelessWidget {
       ),
       AuditCategory.customer => (Icons.person_rounded, AppColors.success),
       AuditCategory.loan => (Icons.bolt_rounded, AppColors.gold),
+      // Somebody read a customer's records rather than changing them. Given
+      // its own mark because it answers a different question — the Privacy
+      // Policy promises we can say who *looked*.
+      AuditCategory.dataAccess => (
+        Icons.visibility_outlined,
+        AppColors.info,
+      ),
+      AuditCategory.compliance => (
+        Icons.gavel_rounded,
+        AppColors.warning,
+      ),
       AuditCategory.general => (
         Icons.info_outline_rounded,
         AppColors.textSecondary,
