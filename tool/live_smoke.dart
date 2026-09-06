@@ -150,6 +150,44 @@ Future<void> _run() async {
     }
   });
 
+  // ── Every path the app calls exists on the server ──────────────────────────
+  //
+  // The single highest-value check here. A mistyped path compiles, passes every
+  // mocked test, and fails only when a customer taps the button — and the app
+  // calls seventy-odd of them. Comparing the source against the server's own
+  // OpenAPI document catches the whole class at once.
+  await check('every path Kudi9jaApi calls exists on the server', () async {
+    final source = File('lib/data/api/kudi9ja_api.dart').readAsStringSync();
+    final used = RegExp(
+      r"_client\.(?:get|post|patch|put|delete|upload)\(\s*'(/[^']*)'",
+      multiLine: true,
+    ).allMatches(source).map((m) => m.group(1)!).toSet();
+
+    if (used.length < 50) {
+      throw StateError('only found ${used.length} paths in the source — the '
+          'pattern has probably stopped matching, which would make this test '
+          'pass by finding nothing');
+    }
+
+    final spec = await client.get('/../../v3/api-docs') as Map<String, dynamic>;
+    final available = (spec['paths'] as Map).keys
+        .map((p) => '$p'.replaceAll(RegExp(r'\{[^}]+\}'), '{x}'))
+        .toSet();
+
+    final placeholder = RegExp(r'\$\{?[A-Za-z_][A-Za-z0-9_.]*\}?');
+    final missing = <String>[];
+    for (final path in used) {
+      final normalised = '/api/v1${path.replaceAll(placeholder, '{x}')}';
+      if (!available.contains(normalised)) missing.add(path);
+    }
+
+    if (missing.isNotEmpty) {
+      throw StateError('the app calls paths the server does not serve: '
+          '${missing.join(', ')}');
+    }
+    stdout.writeln('        ${used.length} paths, all present');
+  });
+
   client.close();
 
   stdout.writeln('');

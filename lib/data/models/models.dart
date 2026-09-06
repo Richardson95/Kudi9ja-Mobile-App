@@ -35,7 +35,8 @@ class AppUser {
     this.biometricsEnabled = false,
     this.securityQuestion = '',
     this.securityAnswer = '',
-  });
+    String? customerRef,
+  }) : _customerRef = customerRef;
 
   final String id;
   final String fullName;
@@ -66,10 +67,18 @@ class AppUser {
 
   String get firstName => fullName.trim().split(RegExp(r'\s+')).first;
 
+  final String? _customerRef;
+
   /// A short, stable code identifying this customer on a bank transfer and
   /// in the admin queues. It replaces the account number Kudi9ja used to
   /// issue — it is a reference, not an account anyone can pay into directly.
+  ///
+  /// **The server issues this.** It is what an admin matches a bank statement
+  /// against, so a locally invented one would not be found: the derivation
+  /// below is a fallback for accounts that predate the app talking to a
+  /// server, and for tests, never a second source of truth.
   String get customerRef =>
+      _customerRef ??
       'K9-${id.replaceAll('-', '').substring(0, 6).toUpperCase()}';
 
   AppUser copyWith({
@@ -102,6 +111,7 @@ class AppUser {
     biometricsEnabled: biometricsEnabled ?? this.biometricsEnabled,
     securityQuestion: securityQuestion,
     securityAnswer: securityAnswer,
+    customerRef: _customerRef,
   );
 
   Map<String, dynamic> toJson() => {
@@ -124,6 +134,7 @@ class AppUser {
     'biometricsEnabled': biometricsEnabled,
     'securityQuestion': securityQuestion,
     'securityAnswer': securityAnswer,
+    'customerRef': _customerRef,
   };
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
@@ -149,12 +160,27 @@ class AppUser {
     biometricsEnabled: j['biometricsEnabled'] as bool? ?? false,
     securityQuestion: j['securityQuestion'] as String? ?? '',
     securityAnswer: j['securityAnswer'] as String? ?? '',
+    customerRef: j['customerRef'] as String?,
   );
 }
 
 // ── Savings ───────────────────────────────────────────────────────────────
 
-enum SavingsStatus { active, matured, withdrawn, broken }
+enum SavingsStatus {
+  active,
+  matured,
+  withdrawn,
+  broken,
+
+  /// Released before maturity by an administrator, on grounds the customer
+  /// asked for and a person agreed to — bereavement, a medical emergency.
+  ///
+  /// Distinct from [broken] because breaking a plan forfeits the bonus and is
+  /// the customer's own doing, while this is a decision made for them and
+  /// carries no penalty. Showing one as the other would tell a grieving
+  /// customer they had been charged for something they did not do.
+  releasedOnCompassionateGrounds,
+}
 
 extension SavingsStatusX on SavingsStatus {
   String get label => switch (this) {
@@ -162,7 +188,11 @@ extension SavingsStatusX on SavingsStatus {
     SavingsStatus.matured => 'Matured',
     SavingsStatus.withdrawn => 'Withdrawn',
     SavingsStatus.broken => 'Broken early',
+    SavingsStatus.releasedOnCompassionateGrounds => 'Released early',
   };
+
+  /// Whether the plan is finished, whatever finished it.
+  bool get isClosed => this != SavingsStatus.active;
 }
 
 /// The two ways to save on Kudi9ja. They differ in when the return is paid
@@ -431,7 +461,22 @@ class SavingsPlan {
 
 // ── Loans ─────────────────────────────────────────────────────────────────
 
-enum LoanStatus { pending, active, repaid, overdue, rejected }
+enum LoanStatus {
+  pending,
+  active,
+  repaid,
+  overdue,
+  rejected,
+
+  /// Withdrawn by the borrower inside the cancellation window, before the
+  /// money was theirs to keep. Nothing is owed.
+  cancelled,
+
+  /// Given up on by Kudi9ja after it went bad. The debt is not forgiven — it
+  /// stays on the customer's record and can still be pursued — but it stops
+  /// accruing and stops appearing as money the business expects to collect.
+  writtenOff,
+}
 
 extension LoanStatusX on LoanStatus {
   String get label => switch (this) {
@@ -440,7 +485,16 @@ extension LoanStatusX on LoanStatus {
     LoanStatus.repaid => 'Fully repaid',
     LoanStatus.overdue => 'Overdue',
     LoanStatus.rejected => 'Declined',
+    LoanStatus.cancelled => 'Cancelled',
+    LoanStatus.writtenOff => 'Written off',
   };
+
+  /// Whether the customer still owes anything on this loan.
+  ///
+  /// A written-off loan is deliberately **not** open: it must not sit in the
+  /// customer's list of things to repay or be added into what they owe, even
+  /// though the debt itself has not been forgiven.
+  bool get isOpen => this == LoanStatus.active || this == LoanStatus.overdue;
 }
 
 class Loan {
