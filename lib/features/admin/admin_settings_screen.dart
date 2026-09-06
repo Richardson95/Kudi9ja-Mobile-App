@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/admin.dart';
 import '../../data/models/platform_settings.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
@@ -430,7 +431,17 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _saving = true);
-    await context.read<AppState>().updatePlatformSettings(_draft, summary);
+    try {
+      await context.read<AppState>().updatePlatformSettings(_draft, summary);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      // SETTINGS_STALE means another admin changed the rate card while this one
+      // was editing. Saying so is the whole point: the alternative is one
+      // person's rate change silently undoing another's.
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _saving = false;

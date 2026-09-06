@@ -230,7 +230,15 @@ class _SignInScreenState extends State<SignInScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Remove this account?'),
         content: Text(
-          'This clears the Kudi9ja account stored on this device, including its savings plans and history. This cannot be undone.',
+          // Two different truths. On a device talking to the server the account
+          // survives and the customer can sign back in; without one, the device
+          // is the only place it exists and removing it really is final.
+          context.read<AppState>().isOnline
+              ? 'This signs you out and clears everything Kudi9ja keeps on this '
+                  'phone. Your account, savings and history are safe — sign back '
+                  'in with your email and password to see them again.'
+              : 'This clears the Kudi9ja account stored on this device, '
+                  'including its savings plans and history. This cannot be undone.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [

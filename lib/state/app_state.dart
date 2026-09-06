@@ -918,7 +918,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes the account **from this device**.
+  ///
+  /// Not a closure. Online the account carries on existing and the customer can
+  /// sign back in — closing it for good is a separate, deliberate act that
+  /// needs a code and a password, because it cannot be undone.
+  ///
+  /// The session token is cleared as well as the cached data. Wiping the cache
+  /// while leaving a valid refresh token behind would leave the next person to
+  /// pick up the phone signed in to an account the screen says was removed.
   Future<void> deleteAccount() async {
+    await _push?.stop();
+    await _api?.client.tokens.clear();
     await _store.wipeAccount();
     _user = null;
     _balance = 0;
@@ -1947,6 +1958,16 @@ class AppState extends ChangeNotifier {
     _autoDebit = on;
     await _store.setAutoDebit(on);
     notifyListeners();
+    if (_api != null) {
+      try {
+        // It is the server that pulls instalments from the wallet, so a
+        // preference it never hears about does nothing at all.
+        await _api.updateProfile(autoDebit: on);
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+    }
   }
 
   /// Clears a loan ahead of schedule and books the interest rebate.
@@ -2247,10 +2268,56 @@ class AppState extends ChangeNotifier {
   }
 
   /// Persists a settings change and records exactly what moved.
+  /// The version of the settings this app last read from the server.
+  ///
+  /// Sent back on a save so the server can refuse it if somebody else changed
+  /// the rate card in the meantime. Two admins editing at once is not exotic —
+  /// it is a Monday morning — and the loser of that race would otherwise
+  /// silently undo the winner's change.
+  int _settingsVersion = 0;
+
   Future<void> updatePlatformSettings(
     PlatformSettings next,
     List<String> changes,
   ) async {
+    final admin = _admin;
+    if (admin != null) {
+      // Read the live settings first, then lay this app's fields over them.
+      //
+      // Sending only what the app knows about would wipe anything it does not.
+      // The server already has a field the app has never heard of —
+      // loanCancellationHours, the window a borrower may cancel in — and a save
+      // that omitted it would quietly set it to nothing, taking the
+      // cancellation window with it. Overlaying rather than replacing means a
+      // field the app cannot edit is a field it cannot destroy, today or after
+      // the next server release.
+      final current = await admin.settings();
+      final live = Map<String, dynamic>.from(
+          (current['settings'] as Map?)?.cast<String, dynamic>() ?? current);
+
+      final version = live.remove('version');
+      live.remove('createdAt');
+      live.remove('createdBy');
+      if (version is num) _settingsVersion = version.toInt();
+
+      // Saved before it is applied. Applying first and only then trying to save
+      // is how a rejected change still appears to have worked — and every rate
+      // on this screen is a price a real customer will be charged.
+      final saved = await admin.saveSettings(
+        expectedVersion: _settingsVersion,
+        settings: {...live, ...next.toJson()},
+      );
+      final savedVersion =
+          saved['version'] ?? (saved['settings'] as Map?)?['version'];
+      if (savedVersion is num) _settingsVersion = savedVersion.toInt();
+
+      applySettings(next);
+      await _store.savePlatformSettings(next);
+      _lastError = null;
+      notifyListeners();
+      return;
+    }
+
     applySettings(next);
     await _store.savePlatformSettings(next);
     if (changes.isNotEmpty) {
@@ -2268,6 +2335,11 @@ class AppState extends ChangeNotifier {
     String action,
     String detail,
   ) async {
+    // Online the server writes the audit trail itself, as part of the action it
+    // is recording. Adding an entry here as well would put a line in the log
+    // that no server-side action backs — and an audit trail is only worth
+    // anything if every line in it is true.
+    if (isOnline) return;
     await _log(category, action, detail);
     notifyListeners();
   }

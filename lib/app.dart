@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -55,6 +57,12 @@ class _Kudi9jaAppState extends State<Kudi9jaApp> with WidgetsBindingObserver {
             DateTime.now().difference(since) >=
                 Duration(minutes: settings.lockTimeoutMinutes)) {
           app.lock();
+        } else if (app.stage == AuthStage.unlocked) {
+          // Back within the idle window, so no passcode — but the world moved
+          // while the app was away. An admin may have confirmed a payment, a
+          // plan may have matured. Coming back to figures from two minutes ago
+          // is how a customer decides the balance is wrong.
+          unawaited(app.refreshFromServer());
         }
         _backgroundedAt = null;
       case AppLifecycleState.inactive:
