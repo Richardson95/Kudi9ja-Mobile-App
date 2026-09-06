@@ -151,6 +151,64 @@ class ApiClient {
     return _withRefresh(attempt, authenticated: authenticated);
   }
 
+  /// How long to wait before a second try at a server that was not ready.
+  ///
+  /// Short, because the failures this covers come back fast: a proxy answering
+  /// 502 while the instance behind it starts does so in about a second.
+  static const _retryPause = Duration(seconds: 3);
+
+  /// Runs an attempt, and tries once more if the server was not ready.
+  ///
+  /// A sleeping instance does not refuse a request politely — it produces a
+  /// timeout, a dropped connection, or the hosting proxy's own 502/503 while
+  /// the container starts. All three are indistinguishable from being offline
+  /// to the code that reads them, and all three are cured by asking again a
+  /// moment later.
+  ///
+  /// Only once, and only for those. A refusal from the application itself —
+  /// a wrong password, insufficient funds — is an answer, and asking again
+  /// would get the same answer more slowly.
+  ///
+  /// Safe for money, because every money-moving request carries an idempotency
+  /// key: if the first attempt reached the server after all, the second is
+  /// recognised as the same request and returns the original result rather
+  /// than moving the money twice.
+  Future<http.Response> _attemptWithRetry(
+      Future<http.Response> Function() attempt) async {
+    try {
+      final response = await attempt();
+      if (!_serverNotReady(response)) return response;
+      await Future<void>.delayed(_retryPause);
+      return attempt();
+    } on TimeoutException {
+      await Future<void>.delayed(_retryPause);
+      return attempt();
+    } on SocketException {
+      await Future<void>.delayed(_retryPause);
+      return attempt();
+    } on http.ClientException {
+      await Future<void>.delayed(_retryPause);
+      return attempt();
+    }
+  }
+
+  /// Whether this is the host saying "not yet" rather than the application
+  /// saying anything at all.
+  ///
+  /// Checked on the body as well as the status, because the application does
+  /// legitimately return 503 for maintenance mode — and that one is a real
+  /// answer, in the usual envelope, which must reach the customer rather than
+  /// being retried behind their back.
+  static bool _serverNotReady(http.Response response) {
+    if (response.statusCode != 502 &&
+        response.statusCode != 503 &&
+        response.statusCode != 504) {
+      return false;
+    }
+    final type = response.headers['content-type'] ?? '';
+    return !type.contains('json');
+  }
+
   /// Runs a request, refreshing the session once if the server says the access
   /// token has expired.
   Future<dynamic> _withRefresh(
@@ -165,7 +223,7 @@ class ApiClient {
 
     http.Response response;
     try {
-      response = await attempt();
+      response = await _attemptWithRetry(attempt);
     } on TimeoutException {
       throw ApiException.offline('timed out after ${_timeout.inSeconds}s');
     } on SocketException catch (e) {
@@ -189,7 +247,7 @@ class ApiClient {
     if (!refreshed) throw error;
 
     try {
-      return _decode(await attempt());
+      return _decode(await _attemptWithRetry(attempt));
     } on TimeoutException {
       throw ApiException.offline('timed out after ${_timeout.inSeconds}s');
     } on SocketException catch (e) {

@@ -202,6 +202,118 @@ void main() {
     });
   });
 
+  group('A server that is still waking up', () {
+    /// The free hosting tier sleeps, and a sleeping instance does not refuse a
+    /// request politely — the proxy in front of it answers 502 with an HTML
+    /// page while the container starts. Reporting that as "we could not reach
+    /// Kudi9ja" is what a customer saw at the first screen of sign-up.
+    test('a proxy 502 is retried once and then succeeds', () async {
+      var calls = 0;
+      final client = ApiClient(
+        tokens: await signedIn(),
+        baseUrl: 'https://api.test',
+        httpClient: MockClient((_) async {
+          calls++;
+          if (calls == 1) {
+            return http.Response('<html>502 Bad Gateway</html>', 502,
+                headers: {'content-type': 'text/html'});
+          }
+          return json({'ok': true});
+        }),
+      );
+
+      expect(await client.get('/banks'), {'ok': true});
+      expect(calls, 2);
+    });
+
+    test('a timeout is retried once', () async {
+      var calls = 0;
+      final client = ApiClient(
+        tokens: await signedIn(),
+        baseUrl: 'https://api.test',
+        httpClient: MockClient((_) async {
+          calls++;
+          if (calls == 1) throw http.ClientException('connection closed');
+          return json({'ok': true});
+        }),
+      );
+
+      expect(await client.get('/banks'), {'ok': true});
+      expect(calls, 2);
+    });
+
+    test('it gives up after one retry rather than looping', () async {
+      var calls = 0;
+      final client = ApiClient(
+        tokens: await signedIn(),
+        baseUrl: 'https://api.test',
+        httpClient: MockClient((_) async {
+          calls++;
+          throw http.ClientException('still down');
+        }),
+      );
+
+      await expectLater(
+        client.get('/banks'),
+        throwsA(isA<ApiException>()
+            .having((e) => e.code, 'code', ApiErrorCode.network)),
+      );
+      expect(calls, 2);
+    });
+
+    /// The application itself returns 503 for maintenance mode, in the usual
+    /// envelope. That is a real answer and must reach the customer, not be
+    /// retried behind their back and then reported as a connection problem.
+    test('a real maintenance 503 is not retried', () async {
+      var calls = 0;
+      final client = ApiClient(
+        tokens: await signedIn(),
+        baseUrl: 'https://api.test',
+        httpClient: MockClient((_) async {
+          calls++;
+          return json({
+            'code': 'MAINTENANCE',
+            'message': 'Kudi9ja is down for maintenance until 6am.',
+            'details': {},
+          }, status: 503);
+        }),
+      );
+
+      await expectLater(
+        client.get('/banks'),
+        throwsA(isA<ApiException>()
+            .having((e) => e.code, 'code', ApiErrorCode.maintenance)
+            .having((e) => e.message, 'message', contains('maintenance'))),
+      );
+      expect(calls, 1, reason: 'an answer is not a failure to answer');
+    });
+
+    /// Asking twice must not move money twice. Every money call carries a key,
+    /// and the retry reuses the same one so the server recognises the repeat.
+    test('a retried money call keeps the same idempotency key', () async {
+      final keys = <String?>[];
+      var calls = 0;
+      final client = ApiClient(
+        tokens: await signedIn(),
+        baseUrl: 'https://api.test',
+        httpClient: MockClient((request) async {
+          keys.add(request.headers['Idempotency-Key']);
+          calls++;
+          if (calls == 1) {
+            return http.Response('<html>502</html>', 502,
+                headers: {'content-type': 'text/html'});
+          }
+          return json({'id': 'w-1'});
+        }),
+      );
+
+      await client.post('/withdrawals', body: {}, idempotencyKey: 'key-abc');
+
+      expect(keys, ['key-abc', 'key-abc'],
+          reason: 'a different key on the retry would be a second withdrawal');
+    });
+  });
+
   group('Session refresh', () {
     test('refreshes and retries when the access token has expired', () async {
       final tokens = await signedIn();
