@@ -169,7 +169,7 @@ class LoanDetailScreen extends StatelessWidget {
       return;
     }
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Repay your loan',
       amountLabel: 'Paying towards ${loan.purpose} loan',
@@ -179,7 +179,7 @@ class LoanDetailScreen extends StatelessWidget {
         ('After this payment', (loan.outstanding - due).asNaira),
       ],
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     await app.repayLoan(loan.id, due);
     if (!context.mounted) return;
@@ -250,7 +250,7 @@ class LoanDetailScreen extends StatelessWidget {
       return;
     }
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Settle early',
       amountLabel: 'Clearing your ${loan.purpose} loan',
@@ -261,7 +261,7 @@ class LoanDetailScreen extends StatelessWidget {
         ('You pay', due.asNaira),
       ],
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     final result = await app.payOffEarly(loan.id);
     if (!context.mounted) return;

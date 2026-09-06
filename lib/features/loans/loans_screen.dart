@@ -400,7 +400,7 @@ class _ActiveLoanCard extends StatelessWidget {
       return;
     }
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Repay your loan',
       amountLabel: 'Paying towards ${loan.purpose} loan',
@@ -410,7 +410,7 @@ class _ActiveLoanCard extends StatelessWidget {
         ('After this payment', (loan.outstanding - due).asNaira),
       ],
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     await app.repayLoan(loan.id, due);
     if (!context.mounted) return;

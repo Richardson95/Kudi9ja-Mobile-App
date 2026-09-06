@@ -153,14 +153,14 @@ class PlanDetailScreen extends StatelessWidget {
   }
 
   Future<void> _withdraw(BuildContext context, SavingsPlan p) async {
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Withdraw savings',
       amountLabel: 'Releasing to your wallet',
       amount: p.principal,
       details: [('Plan', p.title), ('Matured', p.maturityDate.asDay)],
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     final result = await context.read<AppState>().withdrawPlan(p.id);
     if (!context.mounted) return;
@@ -220,7 +220,7 @@ class PlanDetailScreen extends StatelessWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Break this plan',
       amountLabel: 'Returning to your wallet',
@@ -230,7 +230,7 @@ class PlanDetailScreen extends StatelessWidget {
         ('Bonus forfeited', '-${forfeited.asNaira}'),
       ],
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     final received = await context.read<AppState>().breakPlan(p.id);
     if (!context.mounted) return;
@@ -299,13 +299,13 @@ class PlanDetailScreen extends StatelessWidget {
       return;
     }
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Top up savings',
       amountLabel: 'Adding to "${p.title}"',
       amount: amount,
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     final done = await app.topUpPlan(p.id, amount);
     if (!context.mounted) return;

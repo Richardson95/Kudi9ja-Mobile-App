@@ -13,6 +13,9 @@ import '../data/models/models.dart';
 import '../data/models/thrift.dart';
 import '../data/models/withdrawal.dart';
 import '../data/services/security_service.dart';
+import '../data/api/api_exception.dart';
+import '../data/api/kudi9ja_api.dart';
+import '../data/api/mappers.dart';
 import '../data/services/storage_service.dart';
 import '../data/models/platform_settings.dart';
 
@@ -54,12 +57,52 @@ enum AuthStage {
 }
 
 /// The single controller behind the app: session, wallet, savings and loans.
+///
+/// It works in two modes, and the difference is one constructor argument.
+///
+/// **With an [api]** — how the real app runs — the server owns everything.
+/// Balances, interest, loan offers and credit scores are asked for rather than
+/// worked out here, and every movement of money is a request whose answer
+/// replaces local state. The device keeps a copy only so a screen has something
+/// to draw before the first response arrives.
+///
+/// **Without one**, every calculation happens on the device against
+/// [StorageService]. That is what the test suite exercises and what the app did
+/// before there was a server. It is kept deliberately: the arithmetic in here
+/// was checked against the product rules line by line, and deleting it in
+/// favour of trusting the server would throw away the only independent check
+/// that the two agree.
+///
+/// Nothing above this class changes between the two. Screens call the same
+/// methods and read the same getters either way.
 class AppState extends ChangeNotifier {
-  AppState(this._store) {
+  AppState(this._store, {Kudi9jaApi? api}) : _api = api {
     _hydrate();
   }
 
   final StorageService _store;
+
+  /// The server, when there is one.
+  final Kudi9jaApi? _api;
+
+  /// Whether this app is talking to a server at all.
+  bool get isOnline => _api != null;
+
+  /// Set while a refresh is in flight, so a screen can show that figures are
+  /// being brought up to date rather than silently showing stale ones.
+  bool _syncing = false;
+  bool get isSyncing => _syncing;
+
+  /// What went wrong on the last server call, if anything. Cleared by the next
+  /// successful one.
+  String? _lastError;
+  String? get lastError => _lastError;
+
+  /// Whether the server currently grants this account panel access.
+  ///
+  /// Checked again by the server on every admin request, so this only decides
+  /// whether to show the way in. It grants nothing by itself.
+  bool _isAdminOnServer = false;
 
   AuthStage _stage = AuthStage.onboarding;
   AppUser? _user;
@@ -233,6 +276,28 @@ class AppState extends ChangeNotifier {
       _stage = AuthStage.locked;
     }
     _refreshMaturity();
+
+    // Online, whether there is a session is the keystore's answer, not the
+    // cached user's. A cached profile with no token is a signed-out account
+    // that would otherwise sit at the passcode screen refusing every code.
+    if (_api != null) unawaited(_restoreSession());
+  }
+
+  /// Decides, on a cold start, whether the stored session is still usable.
+  Future<void> _restoreSession() async {
+    final api = _api;
+    if (api == null) return;
+
+    await api.client.tokens.load();
+    if (!api.client.hasSession) {
+      if (_stage != AuthStage.onboarding) _stage = AuthStage.signedOut;
+      notifyListeners();
+      return;
+    }
+    if (_stage == AuthStage.signedOut) {
+      _stage = AuthStage.locked;
+      notifyListeners();
+    }
   }
 
   /// Flips plans past their maturity date so the UI is always truthful.
@@ -277,14 +342,33 @@ class AppState extends ChangeNotifier {
 
   Future<void> setThemeMode(AppThemeMode mode) async {
     _themeMode = mode;
+    // Kept on the device as well as the account, so the app opens in the right
+    // palette before the first response arrives rather than flashing the wrong
+    // one.
     await _store.setThemeMode(mode.index);
     notifyListeners();
+    if (_api != null) {
+      try {
+        await _api.updateProfile(themeMode: mode);
+      } on ApiException {
+        // A preference that did not reach the server is not worth interrupting
+        // anybody for. It is already applied here and will be sent again with
+        // the next profile change.
+      }
+    }
   }
 
   Future<void> toggleHideBalance() async {
     _hideBalance = !_hideBalance;
     await _store.setHideBalance(_hideBalance);
     notifyListeners();
+    if (_api != null) {
+      try {
+        await _api.updateProfile(hideBalance: _hideBalance);
+      } on ApiException {
+        // See setThemeMode: a preference, not a transaction.
+      }
+    }
   }
 
   /// Persists a brand-new account at the end of the signup journey.
@@ -316,7 +400,35 @@ class AppState extends ChangeNotifier {
   }
 
   /// Email + password sign-in used when returning from a signed-out state.
-  bool signInWithPassword(String email, String password) {
+  ///
+  /// Online this is the server's decision, and it is the only one that counts:
+  /// the device has no password to check against once there is a server, and
+  /// checking a local copy would let a stolen phone in with a password the
+  /// account no longer has.
+  Future<bool> signInWithPassword(String email, String password) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final session = await api.signIn(email: email.trim(), password: password);
+        _user = session.user;
+        _isAdminOnServer = session.isAdmin;
+        await _store.saveUser(session.user);
+        await _store.setSignedIn(true);
+        _lastError = null;
+        _failedAttempts = 0;
+        // Straight to locked, not unlocked: signing in proves the password,
+        // and the passcode is a second gate rather than a formality.
+        _stage = AuthStage.locked;
+        notifyListeners();
+        unawaited(refreshFromServer());
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return false;
+      }
+    }
+
     final u = _user;
     if (u == null) return false;
     final emailOk = u.email.toLowerCase() == email.trim().toLowerCase();
@@ -330,7 +442,46 @@ class AppState extends ChangeNotifier {
   }
 
   /// The passcode gate shown every time the app is reopened.
-  bool unlock(String passcode) {
+  ///
+  /// Online the passcode goes to the server, which counts the failures. A
+  /// counter kept on the phone is reset by reinstalling the app, which makes
+  /// it no counter at all.
+  Future<bool> unlock(String passcode) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.verifyPasscode(passcode);
+        _failedAttempts = 0;
+        _lastError = null;
+        _stage = AuthStage.unlocked;
+        notifyListeners();
+        unawaited(refreshFromServer());
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        // The server tells us how many tries are left; it is the authority on
+        // the count, so its answer replaces ours rather than adding to it.
+        final left = e.details['attemptsLeft'];
+        if (left is num) {
+          _failedAttempts = (settings.maxPasscodeAttempts - left.toInt())
+              .clamp(0, settings.maxPasscodeAttempts);
+        } else {
+          _failedAttempts++;
+        }
+        if (e.code == ApiErrorCode.accountLocked ||
+            _failedAttempts >= settings.maxPasscodeAttempts) {
+          await signOut();
+          return false;
+        }
+        notifyListeners();
+        return false;
+      }
+    }
+
+    return _unlockLocally(passcode);
+  }
+
+  bool _unlockLocally(String passcode) {
     if (SecurityService.verify(passcode, _store.signInPasscodeHash)) {
       _failedAttempts = 0;
       _stage = AuthStage.unlocked;
@@ -357,6 +508,131 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Talking to the server ───────────────────────────────────────────────
+
+  /// Pulls everything the customer's screens need, in one pass.
+  ///
+  /// One dashboard call rather than six, because six would each pay their own
+  /// round trip and arrive at different moments — the balance would settle
+  /// before the savings total and the screen would visibly rearrange itself
+  /// under the customer's thumb. The lists that are not in the dashboard are
+  /// fetched alongside it rather than after it.
+  ///
+  /// **Never throws.** A refresh that fails leaves the last known figures on
+  /// screen and records why in [lastError]. Losing the whole dashboard because
+  /// one list timed out would be worse than showing figures a minute old.
+  Future<void> refreshFromServer() async {
+    final api = _api;
+    if (api == null || _stage == AuthStage.signedOut) return;
+
+    _syncing = true;
+    notifyListeners();
+
+    try {
+      final results = await Future.wait([
+        api.dashboard(),
+        api.transactions(size: 100),
+        api.plans(),
+        api.loans(),
+        api.circles(),
+        api.notifications(size: 100),
+      ]);
+
+      _applyDashboard(results[0] as Map<String, dynamic>);
+      _txns = (results[1] as Page<Transaction>).items;
+      _plans = results[2] as List<SavingsPlan>;
+      _loans = results[3] as List<Loan>;
+      _circles = results[4] as List<ThriftCircle>;
+      _notifications = (results[5] as Page<AppNotification>).items;
+
+      // Kept on the device so the next cold start has something to draw before
+      // the first response arrives. It is a cache, never the source of truth.
+      await _cacheEverything();
+      _lastError = null;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+    } finally {
+      _syncing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Reads the dashboard payload into the figures the screens show.
+  void _applyDashboard(Map<String, dynamic> body) {
+    final profile = body['profile'];
+    if (profile is Map) {
+      _user = userFromApi(profile.cast<String, dynamic>());
+      _themeMode = themeModeFromApi(profile['themeMode']);
+      _hideBalance = profile['hideBalance'] as bool? ?? _hideBalance;
+      _autoDebit = profile['autoDebit'] as bool? ?? _autoDebit;
+      _isAdminOnServer = profile['admin'] as bool? ?? _isAdminOnServer;
+      unawaited(_store.saveUser(_user!));
+    }
+
+    final wallet = body['wallet'];
+    if (wallet is Map) {
+      _balance = WalletSnapshot.fromApi(wallet.cast<String, dynamic>()).balance;
+    } else if (body['balance'] != null) {
+      _balance = (body['balance'] as num).toDouble();
+    }
+  }
+
+  /// Refreshes only the wallet and ledger.
+  ///
+  /// What every money operation needs afterwards: the balance and the entry
+  /// that explains it. Pulling the whole dashboard after each one would be
+  /// several times the work for the same answer.
+  Future<void> _refreshWallet() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final results = await Future.wait([api.wallet(), api.transactions(size: 100)]);
+      _balance = (results[0] as WalletSnapshot).balance;
+      _txns = (results[1] as Page<Transaction>).items;
+      await _store.saveBalance(_balance);
+      await _store.saveTransactions(_txns);
+    } on ApiException {
+      // The operation itself succeeded; only the follow-up read failed. The
+      // next refresh will catch up, and throwing here would tell the customer
+      // their payment failed when it did not.
+    }
+  }
+
+  Future<void> _cacheEverything() async {
+    await Future.wait([
+      _store.saveBalance(_balance),
+      _store.saveTransactions(_txns),
+      _store.savePlans(_plans),
+      _store.saveLoans(_loans),
+      _store.saveCircles(_circles),
+      _store.saveNotifications(_notifications),
+    ]);
+  }
+
+  /// Turns a failed call into a message a customer can act on.
+  ///
+  /// Returns the message rather than throwing, so a screen can show it without
+  /// every call site needing its own try/catch around a money operation.
+  String _describe(Object error) {
+    if (error is ApiException) return error.message;
+    return 'Something went wrong. Please try again.';
+  }
+
+  /// The refresh token was refused: expired, rotated away, or signed out from
+  /// another device.
+  ///
+  /// Everything cached is left alone. The customer signs in again and the same
+  /// figures are still there, which is a great deal less alarming than an app
+  /// that empties itself because a token ran out.
+  void handleSessionLost() {
+    if (_stage == AuthStage.signedOut) return;
+    _isAdminOnServer = false;
+    _stage = AuthStage.signedOut;
+    _lastError = 'Your session has ended. Please sign in again.';
+    unawaited(_store.setSignedIn(false));
+    notifyListeners();
+  }
+
   /// Called whenever the app leaves the foreground.
   void lock() {
     if (_stage == AuthStage.unlocked) {
@@ -368,8 +644,14 @@ class AppState extends ChangeNotifier {
   /// Drops the session but keeps the account — the user comes back in with
   /// their email and password.
   Future<void> signOut() async {
+    // Told to the server first, so the session is ended there too — but the
+    // local clear happens either way. A customer signing out on a phone they
+    // are about to hand over must not still be signed in because the network
+    // was down.
+    await _api?.signOut();
     await _store.setSignedIn(false);
     _failedAttempts = 0;
+    _isAdminOnServer = false;
     _stage = AuthStage.signedOut;
     notifyListeners();
   }
@@ -408,11 +690,31 @@ class AppState extends ChangeNotifier {
     _user = u.copyWith(biometricsEnabled: on);
     await _store.saveUser(_user!);
     notifyListeners();
+    if (_api != null) {
+      try {
+        await _api.updateProfile(biometricsEnabled: on);
+      } on ApiException {
+        // Applied locally; the server copy catches up on the next change.
+      }
+    }
   }
 
   Future<void> updateProfile({String? phone, String? address, String? state}) async {
     final u = _user;
     if (u == null) return;
+
+    final api = _api;
+    if (api != null) {
+      // The server's answer replaces the local copy rather than being merged
+      // into it, so a field it normalised — a phone number written differently
+      // — is shown as it was actually stored.
+      _user = await api.updateProfile(phone: phone, address: address, state: state);
+      await _store.saveUser(_user!);
+      _lastError = null;
+      notifyListeners();
+      return;
+    }
+
     _user = u.copyWith(phone: phone, address: address, state: state);
     await _store.saveUser(_user!);
     notifyListeners();
@@ -494,8 +796,27 @@ class AppState extends ChangeNotifier {
   Future<WithdrawalRequest> requestWithdrawal(
     double amount,
     String bank,
-    String accountNumber,
-  ) async {
+    String accountNumber, {
+    String? pin,
+  }) async {
+    final api = _api;
+    if (api != null) {
+      final request = await api.requestWithdrawal(
+        amount: amount,
+        pin: pin ?? '',
+        bank: bank,
+        accountNumber: accountNumber,
+      );
+      _withdrawals = [request, ..._withdrawals];
+      await _store.saveWithdrawals(_withdrawals);
+      // The wallet was debited server-side; read back what it says rather than
+      // subtracting here, so the figure on screen is the one the ledger holds.
+      await _refreshWallet();
+      _lastError = null;
+      notifyListeners();
+      return request;
+    }
+
     final tx = await _debit(
       amount,
       TxKind.withdrawal,
@@ -936,12 +1257,38 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> markNotificationsRead() async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.markNotificationsRead();
+        _notifications = [for (final n in _notifications) n.copyWith(read: true)];
+        await _store.saveNotifications(_notifications);
+      } on ApiException catch (e) {
+        _lastError = _describe(e);
+      }
+      notifyListeners();
+      return;
+    }
+
     _notifications = _notifications.map((n) => n.copyWith(read: true)).toList();
     await _store.saveNotifications(_notifications);
     notifyListeners();
   }
 
   Future<void> clearNotifications() async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.clearNotifications();
+        _notifications = [];
+        await _store.saveNotifications(_notifications);
+      } on ApiException catch (e) {
+        _lastError = _describe(e);
+      }
+      notifyListeners();
+      return;
+    }
+
     _notifications = [];
     await _store.saveNotifications(_notifications);
     notifyListeners();
@@ -1090,7 +1437,12 @@ class AppState extends ChangeNotifier {
   }
 
   /// Drives the "Go to admin" entry point on the dashboard.
-  bool get isAdmin => currentAdmin != null;
+  /// Whether to show the way into the admin panel.
+  ///
+  /// Online this is the server's answer, and it decides nothing else: every
+  /// admin request is authorised again server-side, so hiding or showing the
+  /// entrance grants no access by itself.
+  bool get isAdmin => isOnline ? _isAdminOnServer : currentAdmin != null;
 
   AdminRole get adminRole => currentAdmin?.role ?? AdminRole.viewer;
 

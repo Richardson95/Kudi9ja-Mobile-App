@@ -59,7 +59,7 @@ class _LockScreenState extends State<LockScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 240));
     if (!mounted) return;
 
-    final ok = context.read<AppState>().unlock(_code);
+    final ok = await context.read<AppState>().unlock(_code);
     if (ok) {
       HapticFeedback.heavyImpact();
       return;

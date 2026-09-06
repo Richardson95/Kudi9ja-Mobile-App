@@ -82,7 +82,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       return;
     }
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Request withdrawal',
       amountLabel: 'Sending to your bank',
@@ -93,7 +93,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         ('Status', 'Goes for approval'),
       ],
     );
-    if (!ok || !mounted) return;
+    if (pin == null || !mounted) return;
 
     setState(() => _busy = true);
     await Future<void>.delayed(const Duration(milliseconds: 1000));
@@ -103,6 +103,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       _value,
       _bank!,
       _account.text,
+      pin: pin,
     );
     if (!mounted) return;
 

@@ -60,7 +60,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
-    final confirmed = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Lock this away',
       amountLabel: 'You are locking',
@@ -71,7 +71,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
         ('Matures', DateTime.now().add(Duration(days: _days)).asDay),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (pin == null || !mounted) return;
 
     setState(() => _busy = true);
     final app = context.read<AppState>();

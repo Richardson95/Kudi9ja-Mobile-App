@@ -1,37 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 
 import '../core/constants/app_config.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
-import '../state/app_state.dart';
 import 'passcode.dart';
 import 'primitives.dart';
 
-/// Every movement of money passes through here. Returns true once the
-/// transaction PIN is confirmed.
-Future<bool> confirmWithPin(
+/// Every movement of money passes through here.
+///
+/// Returns the PIN the customer entered, or null if they backed out.
+///
+/// It deliberately does **not** check the PIN. The server does, as part of the
+/// operation itself — every money endpoint takes the PIN in the same request
+/// that moves the money. Checking here as well would be theatre: the hash is on
+/// the device, anyone running a modified build skips the check entirely, and a
+/// failed-attempt counter kept on the phone is reset by reinstalling the app.
+///
+/// Verifying with the operation also closes the gap between "PIN accepted" and
+/// "money moved", which is the window an attacker with the unlocked phone wants.
+///
+/// The cost is that a wrong PIN is reported after a round trip rather than
+/// instantly. That is the honest trade — immediate feedback from a check that
+/// proves nothing is not worth keeping.
+Future<String?> confirmWithPin(
   BuildContext context, {
   required String title,
   required String amountLabel,
   double? amount,
   List<(String, String)> details = const [],
-}) async {
-  final ok = await showModalBottomSheet<bool>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: AppColors.surface,
-    builder: (_) => _PinSheet(
-      title: title,
-      amountLabel: amountLabel,
-      amount: amount,
-      details: details,
-    ),
-  );
-  return ok ?? false;
-}
+}) =>
+    showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      builder: (_) => _PinSheet(
+        title: title,
+        amountLabel: amountLabel,
+        amount: amount,
+        details: details,
+      ),
+    );
 
 class _PinSheet extends StatefulWidget {
   const _PinSheet({
@@ -52,43 +62,23 @@ class _PinSheet extends StatefulWidget {
 
 class _PinSheetState extends State<_PinSheet> {
   String _pin = '';
-  bool _error = false;
   bool _busy = false;
-  int _attempts = 0;
 
   void _digit(String d) {
     if (_pin.length >= AppConfig.transactionPinLength || _busy) return;
-    setState(() {
-      _pin += d;
-      _error = false;
-    });
+    setState(() => _pin += d);
     if (_pin.length == AppConfig.transactionPinLength) _submit();
   }
 
   Future<void> _submit() async {
     setState(() => _busy = true);
-    await Future<void>.delayed(const Duration(milliseconds: 260));
+    // Long enough for the last dot to register as filled before the sheet
+    // leaves; without it the keypad appears to swallow the final digit.
+    await Future<void>.delayed(const Duration(milliseconds: 180));
     if (!mounted) return;
 
-    if (context.read<AppState>().verifyTransactionPin(_pin)) {
-      HapticFeedback.heavyImpact();
-      Navigator.of(context).pop(true);
-      return;
-    }
-
-    HapticFeedback.vibrate();
-    _attempts++;
-    setState(() {
-      _error = true;
-      _busy = false;
-    });
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() {
-      _pin = '';
-      _error = false;
-    });
-    if (_attempts >= 3 && mounted) Navigator.of(context).pop(false);
+    HapticFeedback.heavyImpact();
+    Navigator.of(context).pop(_pin);
   }
 
   @override
@@ -159,18 +149,17 @@ class _PinSheetState extends State<_PinSheet> {
           ],
           const SizedBox(height: AppSpacing.xl),
           Text(
-            _error ? 'Incorrect PIN, try again' : 'Enter your transaction PIN',
+            'Enter your transaction PIN',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: _error ? AppColors.danger : AppColors.textSecondary,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
           PasscodeDots(
             length: AppConfig.transactionPinLength,
             filled: _pin.length,
-            error: _error,
           ),
           const SizedBox(height: AppSpacing.xl),
           NumericKeypad(
@@ -184,7 +173,7 @@ class _PinSheetState extends State<_PinSheet> {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.textTertiary),

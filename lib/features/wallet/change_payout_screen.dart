@@ -80,13 +80,13 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
     final bank = _bank!;
     final account = _account.text.trim();
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Confirm new account',
       amountLabel: 'Future withdrawals will be paid here',
       details: [('Bank', bank), ('Account', account)],
     );
-    if (!ok || !mounted) return;
+    if (pin == null || !mounted) return;
 
     setState(() => _busy = true);
     await Future<void>.delayed(const Duration(milliseconds: 900));

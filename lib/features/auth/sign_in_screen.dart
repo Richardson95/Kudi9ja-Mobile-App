@@ -48,7 +48,7 @@ class _SignInScreenState extends State<SignInScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
 
-    final ok = context.read<AppState>().signInWithPassword(
+    final ok = await context.read<AppState>().signInWithPassword(
       _email.text,
       _password.text,
     );

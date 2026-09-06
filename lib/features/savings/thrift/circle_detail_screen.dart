@@ -134,7 +134,7 @@ class CircleDetailScreen extends StatelessWidget {
       return;
     }
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Pay into ${c.name}',
       amountLabel: 'Round ${c.currentRound} contribution',
@@ -145,7 +145,7 @@ class CircleDetailScreen extends StatelessWidget {
         ('Pot', c.potSize.asNaira),
       ],
     );
-    if (!ok || !context.mounted) return;
+    if (pin == null || !context.mounted) return;
 
     await app.contributeToCircle(c.id);
     if (!context.mounted) return;

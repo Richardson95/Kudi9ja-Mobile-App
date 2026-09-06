@@ -66,7 +66,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
-    final ok = await confirmWithPin(
+    final pin = await confirmWithPin(
       context,
       title: 'Confirm your loan',
       amountLabel: 'You will receive',
@@ -79,7 +79,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         ('Total repayable', _total.asNaira),
       ],
     );
-    if (!ok || !mounted) return;
+    if (pin == null || !mounted) return;
 
     setState(() => _busy = true);
     // Stands in for the underwriting decision.
