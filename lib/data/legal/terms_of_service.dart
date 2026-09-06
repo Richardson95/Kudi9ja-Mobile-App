@@ -36,7 +36,6 @@ LegalDocument termsOfService() {
           ('General support', AppConfig.supportEmail),
           ('Questions about these Terms', AppConfig.legalEmail),
           ('Privacy and your data', AppConfig.privacyEmail),
-          ('Phone', AppConfig.supportPhone),
           ('WhatsApp', '+234 805 679 1426 or +234 803 630 0582'),
           ('Address', AppConfig.registeredAddress),
         ]),

@@ -167,7 +167,9 @@ class ProfileScreen extends StatelessWidget {
               _Row(
                 icon: Icons.headset_mic_outlined,
                 label: 'Contact support',
-                sublabel: AppConfig.supportPhone,
+                // The address, now that there is no phone line. A row whose
+                // subtitle is blank looks like something failed to load.
+                sublabel: AppConfig.supportEmail,
                 onTap: () => showToast(
                   context,
                   'Our team is reachable at ${AppConfig.supportEmail}',

@@ -205,7 +205,15 @@ abstract final class AppConfig {
   static const companyBank = 'Zenith Bank';
 
   static const supportEmail = 'support@kudi9ja.com';
-  static const supportPhone = '+234 800 5834 952';
+  /// Empty on purpose.
+  ///
+  /// The number that used to be here did not answer. A published contact line
+  /// that rings out is worse than none at all — a customer trying to report
+  /// fraud spends their one good minute on it and reaches support angrier than
+  /// they started. Support is by email and by the WhatsApp lines below, both of
+  /// which are real, and every screen that showed this now hides the row when
+  /// it is blank.
+  static const supportPhone = '';
 
   // Legal entity -----------------------------------------------------------
   /// Kudi9ja is a product; the company behind it is the one that contracts

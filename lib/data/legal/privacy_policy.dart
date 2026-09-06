@@ -35,7 +35,6 @@ LegalDocument privacyPolicy() => LegalDocument(
         ('Data protection contact', AppConfig.privacyEmail),
         ('Legal and contractual questions', AppConfig.legalEmail),
         ('General support', AppConfig.supportEmail),
-        ('Phone', AppConfig.supportPhone),
         ('WhatsApp', '+234 805 679 1426 or +234 803 630 0582'),
         ('Post', AppConfig.registeredAddress),
       ]),

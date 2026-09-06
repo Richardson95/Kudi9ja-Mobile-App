@@ -601,11 +601,12 @@ class _ContactFooter extends StatelessWidget {
           label: 'General support',
           value: AppConfig.supportEmail,
         ),
-        const _CopyRow(
-          icon: Icons.call_outlined,
-          label: 'Phone',
-          value: AppConfig.supportPhone,
-        ),
+        if (AppConfig.supportPhone.isNotEmpty)
+          const _CopyRow(
+            icon: Icons.call_outlined,
+            label: 'Phone',
+            value: AppConfig.supportPhone,
+          ),
         for (final number in AppConfig.supportWhatsapp.keys)
           _CopyRow(
             icon: Icons.chat_bubble_outline_rounded,
