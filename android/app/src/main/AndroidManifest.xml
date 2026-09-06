@@ -2,6 +2,10 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Android 13 and later. The customer is asked; a refusal is an answer,
+         and the app works without it — notifications still appear when Kudi9ja
+         is opened. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Kudi9ja"
         android:name="${applicationName}"
@@ -27,9 +31,24 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Lets a tapped notification reach Flutter, so the app can open
+                 on what the notification was about rather than on the
+                 dashboard. -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- Money notifications go to a high-importance channel so Android
+             does not silently collapse them with the rest. The id must match
+             kudi9ja.push.android-channel-id on the server, which is what it
+             sets on every message it sends. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="kudi9ja-money" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

@@ -26,6 +26,10 @@ dependencies:
   # Tokens go in the platform keystore, not shared_preferences: a refresh token
   # is a bearer credential worth thirty days of access.
   flutter_secure_storage: ^9.2.2
+  # Receiving push. The server already sends through Firebase whenever money
+  # moves; these are what let a handset hear it.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
 
 dev_dependencies:
   flutter_test:

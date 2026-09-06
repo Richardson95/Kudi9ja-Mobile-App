@@ -12,6 +12,7 @@ import '../data/models/deposit.dart';
 import '../data/models/models.dart';
 import '../data/models/thrift.dart';
 import '../data/models/withdrawal.dart';
+import '../data/services/push_service.dart';
 import '../data/services/security_service.dart';
 import '../data/api/api_exception.dart';
 import '../data/api/kudi9ja_api.dart';
@@ -76,7 +77,9 @@ enum AuthStage {
 /// Nothing above this class changes between the two. Screens call the same
 /// methods and read the same getters either way.
 class AppState extends ChangeNotifier {
-  AppState(this._store, {Kudi9jaApi? api}) : _api = api {
+  AppState(this._store, {Kudi9jaApi? api, PushService? push})
+      : _api = api,
+        _push = push {
     _hydrate();
   }
 
@@ -84,6 +87,15 @@ class AppState extends ChangeNotifier {
 
   /// The server, when there is one.
   final Kudi9jaApi? _api;
+
+  /// Push, when the build has Firebase. Absent in tests and in any build where
+  /// Firebase was never configured — which the app runs perfectly well without,
+  /// because notifications are written on the server either way and appear the
+  /// moment Kudi9ja is opened.
+  final PushService? _push;
+
+  /// Whether this handset is currently reachable by push.
+  bool get pushActive => _push?.isActive ?? false;
 
   /// Whether this app is talking to a server at all.
   bool get isOnline => _api != null;
@@ -438,6 +450,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     unawaited(refreshFromServer());
+    unawaited(_push?.start());
   }
 
   /// Email + password sign-in used when returning from a signed-out state.
@@ -462,6 +475,9 @@ class AppState extends ChangeNotifier {
         _stage = AuthStage.locked;
         notifyListeners();
         unawaited(refreshFromServer());
+        // Registered against the account that just signed in, so a customer on
+        // two handsets is reachable on both.
+        unawaited(_push?.start());
         return true;
       } on ApiException catch (e) {
         _lastError = e.message;
@@ -674,6 +690,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A push arrived while the app was open.
+  ///
+  /// The notification itself carries only a title and a line of body — the
+  /// server deliberately keeps balances off a lock screen. So this refreshes
+  /// rather than trying to apply what the message said: the figures come from
+  /// the ledger, as they do everywhere else.
+  void handlePush() {
+    if (_stage == AuthStage.signedOut) return;
+    unawaited(refreshFromServer());
+  }
+
   /// Called whenever the app leaves the foreground.
   void lock() {
     if (_stage == AuthStage.unlocked) {
@@ -685,6 +712,11 @@ class AppState extends ChangeNotifier {
   /// Drops the session but keeps the account — the user comes back in with
   /// their email and password.
   Future<void> signOut() async {
+    // Unregistered before the session goes, since removing a device needs the
+    // session that owns it. Only this handset: signing out on one phone must
+    // not silence the customer's other devices.
+    await _push?.stop();
+
     // Told to the server first, so the session is ended there too — but the
     // local clear happens either way. A customer signing out on a phone they
     // are about to hand over must not still be signed in because the network

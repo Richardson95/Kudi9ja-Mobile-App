@@ -6,6 +6,7 @@ import 'app.dart';
 import 'data/api/api_client.dart';
 import 'data/api/kudi9ja_api.dart';
 import 'data/api/token_store.dart';
+import 'data/services/push_service.dart';
 import 'data/services/storage_service.dart';
 import 'state/app_state.dart';
 
@@ -43,7 +44,19 @@ Future<void> main() async {
     onSessionLost: () => state.handleSessionLost(),
   ));
 
-  state = AppState(storage, api: api);
+  // Push is optional. A build without Firebase configured, a customer who
+  // declines permission, a device without Play Services — all normal, and all
+  // leave the app working: notifications are written on the server regardless
+  // and appear the moment Kudi9ja is opened.
+  final push = PushService(api);
+
+  state = AppState(storage, api: api, push: push);
+
+  // A notification landing while the app is open, or being tapped, means
+  // something moved. Read it back from the ledger rather than trusting the
+  // message body, which deliberately carries no figures.
+  push.onMessage = (_) => state.handlePush();
+  push.onOpened = (_) => state.handlePush();
 
   runApp(
     ChangeNotifierProvider.value(
