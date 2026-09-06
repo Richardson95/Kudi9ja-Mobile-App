@@ -147,14 +147,34 @@ class CircleDetailScreen extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    await app.contributeToCircle(c.id);
+    await app.contributeToCircle(c.id, pin: pin);
     if (!context.mounted) return;
     showToast(context, 'Round ${c.currentRound} settled. Well done.');
   }
 
   Future<void> _advance(BuildContext context, ThriftCircle c) async {
     final app = context.read<AppState>();
-    final payout = await app.advanceCircle(c.id);
+
+    // Closing a round moves the pot into somebody's wallet, so it is gated like
+    // any other movement of money. It had no gate before, which was survivable
+    // while the whole circle lived on one device and is not once the pot is
+    // real and other people have paid into it.
+    final pin = await confirmWithPin(
+      context,
+      title: 'Close round ${c.currentRound}',
+      amountLabel: c.currentRound == c.myRound
+          ? 'Collecting the pot from ${c.name}'
+          : 'Closing this round of ${c.name}',
+      amount: c.currentRound == c.myRound ? c.potSize : null,
+      details: [
+        ('Circle', c.name),
+        ('Round', '${c.currentRound} of ${c.members.length}'),
+        ('Collector', c.currentCollector?.name ?? '-'),
+      ],
+    );
+    if (pin == null || !context.mounted) return;
+
+    final payout = await app.advanceCircle(c.id, pin: pin);
     if (!context.mounted) return;
 
     showToast(

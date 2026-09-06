@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
@@ -86,11 +87,22 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
-    final loan = await context.read<AppState>().requestLoan(
-      principal: _principal,
-      months: _tenure,
-      purpose: _purpose,
-    );
+    final Loan loan;
+    try {
+      loan = await context.read<AppState>().requestLoan(
+        principal: _principal,
+        months: _tenure,
+        purpose: _purpose,
+        pin: pin,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      // NOT_ELIGIBLE and OFFER_EXCEEDED both come back with the figure the
+      // customer can actually borrow, which is the useful part.
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

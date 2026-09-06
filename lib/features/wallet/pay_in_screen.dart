@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../data/models/deposit.dart';
 import '../../data/models/models.dart';
 import '../../data/models/platform_settings.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/company_account.dart';
 import '../../widgets/inputs.dart';
@@ -39,12 +42,13 @@ class _PayInScreenState extends State<PayInScreen> {
   String _receipt = '';
   bool _busy = false;
 
-  /// Minted once, when this screen opens, and quoted on the transfer. Every
-  /// pay-in carries its own, so two payments of the same amount on the same
-  /// day are still tellable apart on the bank statement.
-  late final String _reference = context
-      .read<AppState>()
-      .newPaymentReference();
+  /// The narration this customer must quote on the transfer.
+  ///
+  /// Issued by the server, not invented here. It is what an admin matches
+  /// against the bank statement, so a locally minted one would simply never be
+  /// found — the customer's money would arrive and sit unclaimed.
+  String _reference = '';
+  bool _loadingReference = true;
 
   bool get _isLoan => widget.loan != null;
   double get _value => parseAmount(_amount.text);
@@ -52,7 +56,37 @@ class _PayInScreenState extends State<PayInScreen> {
   bool get _canSubmit =>
       _value >= settings.minDepositAmount &&
       _receipt.isNotEmpty &&
+      // Without a reference there is nothing for an admin to match the payment
+      // against, so the claim would arrive unmatchable.
+      _reference.isNotEmpty &&
       !_busy;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadReference());
+  }
+
+  Future<void> _loadReference() async {
+    final reference = await context.read<AppState>().paymentReference();
+    if (!mounted) return;
+    setState(() {
+      _reference = reference;
+      _loadingReference = false;
+    });
+  }
+
+  /// The customer took the reference away. Record it, and put the next one up.
+  ///
+  /// A reference is spent once it has been copied — the next payment needs its
+  /// own, or two transfers of the same amount on the same day are
+  /// indistinguishable on the statement, which is the one thing the reference
+  /// exists to prevent.
+  Future<void> _referenceCopied() async {
+    final next = await context.read<AppState>().markReferenceCopied();
+    if (!mounted || next.isEmpty) return;
+    setState(() => _reference = next);
+  }
 
   @override
   void dispose() {
@@ -66,15 +100,23 @@ class _PayInScreenState extends State<PayInScreen> {
     setState(() => _busy = true);
 
     final app = context.read<AppState>();
-    final claim = await app.submitDepositClaim(
-      amount: _value,
-      purpose: _isLoan ? DepositPurpose.loanRepayment : DepositPurpose.wallet,
-      reference: _reference,
-      receiptPath: _receipt,
-      senderName: _sender.text.trim(),
-      loanId: widget.loan?.id,
-      loanPurpose: widget.loan?.purpose ?? '',
-    );
+    final DepositClaim claim;
+    try {
+      claim = await app.submitDepositClaim(
+        amount: _value,
+        purpose: _isLoan ? DepositPurpose.loanRepayment : DepositPurpose.wallet,
+        reference: _reference,
+        receiptPath: _receipt,
+        senderName: _sender.text.trim(),
+        loanId: widget.loan?.id,
+        loanPurpose: widget.loan?.purpose ?? '',
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
@@ -124,7 +166,8 @@ class _PayInScreenState extends State<PayInScreen> {
                     const SizedBox(height: AppSpacing.xl),
 
                     CompanyAccountCard(
-                      reference: _reference,
+                      reference: _loadingReference ? null : _reference,
+                      onReferenceCopied: _referenceCopied,
                       amount: _value > 0 ? _value.asNairaFlat : null,
                     ),
                     const SizedBox(height: AppSpacing.xl),

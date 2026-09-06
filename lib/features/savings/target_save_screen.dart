@@ -6,8 +6,10 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
 import '../../data/models/platform_settings.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
+import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
 import 'new_plan_sheet.dart';
@@ -53,15 +55,40 @@ class _TargetSaveScreenState extends State<TargetSaveScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
+
+    // Opening a target plan commits the customer to a contribution every cycle,
+    // and the first is taken now. Gated like every other movement of money.
+    final pin = await confirmWithPin(
+      context,
+      title: 'Start ${_title.text.trim()}',
+      amountLabel: 'Saving towards ${_goalAmount.asNaira}',
+      amount: _perDeposit,
+      details: [
+        ('Goal', _goalAmount.asNaira),
+        ('Every', _frequency.label),
+        ('For', '$_months months'),
+      ],
+    );
+    if (pin == null || !mounted) return;
+
     setState(() => _busy = true);
 
-    final plan = await context.read<AppState>().createTargetPlan(
-      title: _title.text.trim(),
-      emoji: _emoji,
-      goal: _goalAmount,
-      frequency: _frequency,
-      months: _months,
-    );
+    final SavingsPlan plan;
+    try {
+      plan = await context.read<AppState>().createTargetPlan(
+        title: _title.text.trim(),
+        emoji: _emoji,
+        goal: _goalAmount,
+        frequency: _frequency,
+        months: _months,
+        pin: pin,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

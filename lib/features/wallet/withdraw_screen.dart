@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/withdrawal.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
@@ -99,12 +100,20 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
-    final request = await app.requestWithdrawal(
-      _value,
-      _bank!,
-      _account.text,
-      pin: pin,
-    );
+    final WithdrawalRequest request;
+    try {
+      request = await app.requestWithdrawal(
+        _value,
+        _bank!,
+        _account.text,
+        pin: pin,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

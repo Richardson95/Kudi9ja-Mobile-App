@@ -181,7 +181,7 @@ class LoanDetailScreen extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    await app.repayLoan(loan.id, due);
+    await app.repayLoan(loan.id, due, pin: pin);
     if (!context.mounted) return;
     showToast(context, '${due.asNaira} repaid successfully.');
   }
@@ -263,7 +263,7 @@ class LoanDetailScreen extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    final result = await app.payOffEarly(loan.id);
+    final result = await app.payOffEarly(loan.id, pin: pin);
     if (!context.mounted) return;
 
     Navigator.of(context).pushReplacement(

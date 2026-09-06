@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
@@ -75,11 +76,20 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
 
     setState(() => _busy = true);
     final app = context.read<AppState>();
-    final plan = await app.createFixedPlan(
-      title: _title.text.trim(),
-      principal: _principal,
-      days: _days,
-    );
+    final SavingsPlan plan;
+    try {
+      plan = await app.createFixedPlan(
+        title: _title.text.trim(),
+        principal: _principal,
+        days: _days,
+        pin: pin,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

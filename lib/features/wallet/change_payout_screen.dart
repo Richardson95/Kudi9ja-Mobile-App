@@ -6,8 +6,10 @@ import '../../core/constants/app_config.dart';
 import '../../core/constants/banks.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
+import '../../widgets/code_sheet.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
@@ -89,10 +91,45 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
     if (pin == null || !mounted) return;
 
     setState(() => _busy = true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
 
-    await app.changePayoutAccount(bank: bank, accountNumber: account);
+    // A code sent to the registered email, on top of the PIN. Somebody holding
+    // a stolen unlocked phone has the PIN screen in front of them; they do not
+    // have the customer's inbox.
+    final sent = await app.requestPayoutChangeCode();
+    if (!mounted) return;
+    if (!sent) {
+      setState(() => _busy = false);
+      showToast(context, app.lastError ?? 'We could not send the code.',
+          error: true);
+      return;
+    }
+
+    final code = await confirmWithEmailedCode(
+      context,
+      title: 'Confirm it is you',
+      message: 'We sent a code to your email address. '
+          'Enter it to change where your money is paid out.',
+    );
+    if (code == null || !mounted) {
+      setState(() => _busy = false);
+      return;
+    }
+
+    try {
+      await app.changePayoutAccount(
+        bank: bank,
+        accountNumber: account,
+        code: code,
+        pin: pin,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      // The server tells a wrong code apart from a name that does not match the
+      // account, and those need very different things from the customer.
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

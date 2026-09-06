@@ -7,8 +7,10 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/models.dart';
 import '../../../data/models/thrift.dart';
 import '../../../data/models/platform_settings.dart';
+import '../../../data/api/api_exception.dart';
 import '../../../state/app_state.dart';
 import '../../../widgets/inputs.dart';
+import '../../../widgets/pin_sheet.dart';
 import '../../../widgets/primitives.dart';
 import '../../../widgets/result_screen.dart';
 import '../new_plan_sheet.dart';
@@ -100,15 +102,43 @@ class _CreateCircleScreenState extends State<CreateCircleScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
+
+    // Starting a circle commits the customer to a contribution every round, and
+    // the first one is taken now. That is a money movement, and it is gated the
+    // same way every other one is.
+    final pin = await confirmWithPin(
+      context,
+      title: 'Start ${_name.text.trim()}',
+      amountLabel: 'Your contribution each round',
+      amount: _amount,
+      details: [
+        ('Members', '${_members.length + 1}'),
+        ('Frequency', _frequency.label),
+        ('Pot each round', (_amount * (_members.length + 1)).asNaira),
+      ],
+    );
+    if (pin == null || !mounted) return;
+
     setState(() => _busy = true);
 
-    final circle = await context.read<AppState>().createCircle(
-      name: _name.text.trim(),
-      emoji: _emoji,
-      contribution: _amount,
-      frequency: _frequency,
-      members: _members,
-    );
+    final ThriftCircle circle;
+    try {
+      circle = await context.read<AppState>().createCircle(
+        name: _name.text.trim(),
+        emoji: _emoji,
+        contribution: _amount,
+        frequency: _frequency,
+        members: _members,
+        pin: pin,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      // MEMBER_NOT_A_CUSTOMER names the reference that is not a real account,
+      // which is exactly what the person needs to correct.
+      showToast(context, e.message, error: true);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

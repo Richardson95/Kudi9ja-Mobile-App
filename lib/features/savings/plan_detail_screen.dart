@@ -162,7 +162,7 @@ class PlanDetailScreen extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    final result = await context.read<AppState>().withdrawPlan(p.id);
+    final result = await context.read<AppState>().withdrawPlan(p.id, pin: pin);
     if (!context.mounted) return;
 
     Navigator.of(context).pushReplacement(
@@ -232,7 +232,7 @@ class PlanDetailScreen extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    final received = await context.read<AppState>().breakPlan(p.id);
+    final received = await context.read<AppState>().breakPlan(p.id, pin: pin);
     if (!context.mounted) return;
 
     Navigator.of(context).pushReplacement(
@@ -307,7 +307,7 @@ class PlanDetailScreen extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    final done = await app.topUpPlan(p.id, amount);
+    final done = await app.topUpPlan(p.id, amount, pin: pin);
     if (!context.mounted) return;
     showToast(
       context,

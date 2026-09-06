@@ -412,7 +412,7 @@ class _ActiveLoanCard extends StatelessWidget {
     );
     if (pin == null || !context.mounted) return;
 
-    await app.repayLoan(loan.id, due);
+    await app.repayLoan(loan.id, due, pin: pin);
     if (!context.mounted) return;
 
     final settled = due >= loan.outstanding - 0.01;

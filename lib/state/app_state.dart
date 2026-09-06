@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -796,6 +797,99 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Puts the server's version of a plan in place of the local one.
+  void _replacePlan(SavingsPlan plan) {
+    final i = _plans.indexWhere((p) => p.id == plan.id);
+    if (i < 0) {
+      _plans = [plan, ..._plans];
+    } else {
+      _plans[i] = plan;
+    }
+  }
+
+  /// Re-reads plans and the wallet after an operation that moved both.
+  ///
+  /// Read back rather than adjusted here. A plan withdrawal credits principal
+  /// and possibly a bonus, and works out the tax of breaking early; doing that
+  /// arithmetic twice — once on the server, once on the phone — is how the two
+  /// come to disagree.
+  Future<void> _reloadPlansAndWallet() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final results = await Future.wait([api.plans(), api.wallet()]);
+      _plans = results[0] as List<SavingsPlan>;
+      _balance = (results[1] as WalletSnapshot).balance;
+      await _store.savePlans(_plans);
+      await _store.saveBalance(_balance);
+      await _refreshLedger();
+    } on ApiException {
+      // The operation succeeded; only the follow-up read failed. Saying it
+      // failed would be worse than showing figures a moment out of date.
+    }
+    notifyListeners();
+  }
+
+  Future<void> _reloadLoansAndWallet() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final results = await Future.wait([api.loans(), api.wallet()]);
+      _loans = results[0] as List<Loan>;
+      _balance = (results[1] as WalletSnapshot).balance;
+      await _store.saveLoans(_loans);
+      await _store.saveBalance(_balance);
+      await _refreshLedger();
+    } on ApiException {
+      // See above.
+    }
+    notifyListeners();
+  }
+
+  Future<void> _reloadCirclesAndWallet() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final results = await Future.wait([api.circles(), api.wallet()]);
+      _circles = results[0] as List<ThriftCircle>;
+      _balance = (results[1] as WalletSnapshot).balance;
+      await _store.saveCircles(_circles);
+      await _store.saveBalance(_balance);
+      await _refreshLedger();
+    } on ApiException {
+      // See above.
+    }
+    notifyListeners();
+  }
+
+  /// Re-reads the ledger. Every money movement writes an entry, and a balance
+  /// that changed with nothing to explain it is what makes a customer call.
+  Future<void> _refreshLedger() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      _txns = (await api.transactions(size: 100)).items;
+      await _store.saveTransactions(_txns);
+    } on ApiException {
+      // Not worth reporting on its own.
+    }
+  }
+
+  /// The receipt's type, from its extension.
+  ///
+  /// Sent so the server stores it as what it is. A wrong or missing value is
+  /// not guessed at — the server falls back to the filename, exactly as it does
+  /// for a browser upload.
+  static String? _contentTypeFor(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    return null;
+  }
+
   /// Called whenever the app leaves the foreground.
   void lock() {
     if (_stage == AuthStage.unlocked) {
@@ -1102,12 +1196,48 @@ class AppState extends ChangeNotifier {
   /// `PATCH /api/v1/me/payout`, carrying the emailed code and the transaction
   /// PIN, and the server resolves the new account name with the bank and
   /// refuses the change outright if it is not the customer's own.
+  /// Asks the server to email a code authorising a payout-account change.
+  ///
+  /// Changing where money leaves to is the single most valuable thing an
+  /// account takeover can do, which is why it takes a code sent out of band as
+  /// well as the transaction PIN — a stolen unlocked phone is then not enough
+  /// on its own.
+  Future<bool> requestPayoutChangeCode() async {
+    final api = _api;
+    if (api == null) return true;
+    try {
+      await api.requestPayoutChangeCode();
+      _lastError = null;
+      return true;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> changePayoutAccount({
     required String bank,
     required String accountNumber,
+    String? code,
+    String? pin,
   }) async {
     final u = _user;
     if (u == null) return;
+
+    final api = _api;
+    if (api != null) {
+      _user = await api.changePayoutAccount(
+        bank: bank,
+        accountNumber: accountNumber,
+        code: code ?? '',
+        pin: pin ?? '',
+      );
+      await _store.saveUser(_user!);
+      _lastError = null;
+      notifyListeners();
+      return;
+    }
 
     final was = u.hasPayoutAccount
         ? '${u.payoutBank} ${maskedTail(u.payoutAccountNumber)}'
@@ -1141,7 +1271,27 @@ class AppState extends ChangeNotifier {
     required double principal,
     required int days,
     String emoji = '🔒',
+    String? pin,
   }) async {
+    final api = _api;
+    if (api != null) {
+      // The server prices the plan. Same formula, but quoting locally and being
+      // told a different figure afterwards is how a customer ends up arguing
+      // about their own savings.
+      final plan = await api.createFixedPlan(
+        title: title,
+        principal: principal,
+        days: days,
+        emoji: emoji,
+        pin: pin ?? '',
+      );
+      _plans = [plan, ..._plans.where((p) => p.id != plan.id)];
+      await _store.savePlans(_plans);
+      await _refreshWallet();
+      _lastError = null;
+      notifyListeners();
+      return plan;
+    }
     final interest = Finance.savingsInterest(principal, days);
     final now = DateTime.now();
     final plan = SavingsPlan(
@@ -1187,7 +1337,25 @@ class AppState extends ChangeNotifier {
     required double goal,
     required AutoFrequency frequency,
     required int months,
+    String? pin,
   }) async {
+    final api = _api;
+    if (api != null) {
+      final plan = await api.createTargetPlan(
+        title: title,
+        goal: goal,
+        frequency: frequency.name.toUpperCase(),
+        months: months,
+        emoji: emoji,
+        pin: pin ?? '',
+      );
+      _plans = [plan, ..._plans.where((p) => p.id != plan.id)];
+      await _store.savePlans(_plans);
+      await _refreshWallet();
+      _lastError = null;
+      notifyListeners();
+      return plan;
+    }
     final now = DateTime.now();
     final amount = Finance.targetPerDeposit(goal, frequency, months);
     final rate = Finance.targetRateFor(months);
@@ -1226,6 +1394,17 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setAutoSaveEnabled(String planId, bool on) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        _replacePlan(await api.setAutoSave(planId, enabled: on));
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+      }
+      notifyListeners();
+      return;
+    }
     final i = _plans.indexWhere((p) => p.id == planId);
     if (i < 0) return;
     _plans[i] = _plans[i].copyWith(
@@ -1289,7 +1468,21 @@ class AppState extends ChangeNotifier {
   ///
   /// On **Target Savings** it simply counts towards the total, and so towards
   /// the bonus at the end.
-  Future<bool> topUpPlan(String planId, double amount) async {
+  Future<bool> topUpPlan(String planId, double amount, {String? pin}) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        _replacePlan(await api.topUpPlan(planId, amount: amount, pin: pin ?? ''));
+        await _refreshWallet();
+        _lastError = null;
+        notifyListeners();
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return false;
+      }
+    }
     final i = _plans.indexWhere((p) => p.id == planId);
     if (i < 0) return false;
     final p = _plans[i];
@@ -1344,7 +1537,26 @@ class AppState extends ChangeNotifier {
   /// Releases a matured plan. A Fixed plan returns its principal (the 17%
   /// was paid on day one); a Target plan returns the principal plus its 10%
   /// bonus, earned by running to term.
-  Future<({double principal, double bonus})> withdrawPlan(String planId) async {
+  Future<({double principal, double bonus})> withdrawPlan(
+    String planId, {
+    String? pin,
+  }) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final result = await api.withdrawPlan(planId, pin: pin ?? '');
+        await _reloadPlansAndWallet();
+        _lastError = null;
+        return (
+          principal: (result['principalReturned'] as num?)?.toDouble() ?? 0,
+          bonus: (result['bonusPaid'] as num?)?.toDouble() ?? 0,
+        );
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return (principal: 0.0, bonus: 0.0);
+      }
+    }
     final i = _plans.indexWhere((p) => p.id == planId);
     if (i < 0) return (principal: 0.0, bonus: 0.0);
 
@@ -1385,7 +1597,22 @@ class AppState extends ChangeNotifier {
   /// Breaks a Target Savings plan. Every naira saved comes back, but the 10%
   /// bonus is forfeited in full. Fixed plans cannot be broken and this is a
   /// no-op for them.
-  Future<double> breakPlan(String planId) async {
+  Future<double> breakPlan(String planId, {String? pin}) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final result = await api.breakPlan(planId, pin: pin ?? '');
+        await _reloadPlansAndWallet();
+        _lastError = null;
+        return (result['totalCredited'] as num?)?.toDouble() ??
+            (result['principalReturned'] as num?)?.toDouble() ??
+            0;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return 0;
+      }
+    }
     final i = _plans.indexWhere((p) => p.id == planId);
     if (i < 0) return 0;
     final p = _plans[i];
@@ -1414,7 +1641,23 @@ class AppState extends ChangeNotifier {
     required double principal,
     required int months,
     required String purpose,
+    String? pin,
   }) async {
+    final api = _api;
+    if (api != null) {
+      final loan = await api.requestLoan(
+        amount: principal,
+        months: months,
+        purpose: purpose,
+        pin: pin ?? '',
+      );
+      _loans = [loan, ..._loans.where((l) => l.id != loan.id)];
+      await _store.saveLoans(_loans);
+      await _refreshWallet();
+      _lastError = null;
+      notifyListeners();
+      return loan;
+    }
     final now = DateTime.now();
     final fee = Finance.processingFee(principal);
     final loan = Loan(
@@ -1456,7 +1699,19 @@ class AppState extends ChangeNotifier {
     return loan;
   }
 
-  Future<void> repayLoan(String loanId, double amount) async {
+  Future<void> repayLoan(String loanId, double amount, {String? pin}) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.repayLoan(loanId, amount: amount, pin: pin ?? '');
+        await _reloadLoansAndWallet();
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _loans.indexWhere((l) => l.id == loanId);
     if (i < 0) return;
     final l = _loans[i];
@@ -1542,7 +1797,31 @@ class AppState extends ChangeNotifier {
     required double contribution,
     required AutoFrequency frequency,
     required List<ThriftMember> members,
+    String? pin,
   }) async {
+    final api = _api;
+    if (api != null) {
+      // Members go by customer reference, and the server checks each one is a
+      // real account. A circle built around people who do not exist collects
+      // nothing from them and pays the pot out anyway.
+      final circle = await api.createCircle(
+        name: name,
+        contribution: contribution,
+        frequency: frequency.name.toUpperCase(),
+        memberRefs: [
+          for (final m in members)
+            if (!m.isMe && m.customerRef.isNotEmpty) m.customerRef,
+        ],
+        emoji: emoji,
+        pin: pin ?? '',
+      );
+      _circles = [circle, ..._circles.where((c) => c.id != circle.id)];
+      await _store.saveCircles(_circles);
+      await _refreshWallet();
+      _lastError = null;
+      notifyListeners();
+      return circle;
+    }
     final circle = ThriftCircle(
       id: _uuid.v4(),
       name: name,
@@ -1566,7 +1845,19 @@ class AppState extends ChangeNotifier {
   }
 
   /// Pays this user's contribution into the current round.
-  Future<void> contributeToCircle(String circleId) async {
+  Future<void> contributeToCircle(String circleId, {String? pin}) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.contributeToCircle(circleId, pin: pin ?? '');
+        await _reloadCirclesAndWallet();
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     final i = _circles.indexWhere((c) => c.id == circleId);
     if (i < 0) return;
     final c = _circles[i];
@@ -1591,7 +1882,20 @@ class AppState extends ChangeNotifier {
   }
 
   /// Advances the rotation. When it is this user's turn, the pot is paid out.
-  Future<double> advanceCircle(String circleId) async {
+  Future<double> advanceCircle(String circleId, {String? pin}) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final result = await api.collectCirclePot(circleId, pin: pin ?? '');
+        await _reloadCirclesAndWallet();
+        _lastError = null;
+        return (result['payout'] as num?)?.toDouble() ?? 0;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return 0;
+      }
+    }
     final i = _circles.indexWhere((c) => c.id == circleId);
     if (i < 0) return 0;
     final c = _circles[i];
@@ -1621,6 +1925,18 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> leaveCircle(String circleId) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.leaveCircle(circleId);
+        await _reloadCirclesAndWallet();
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+      }
+      return;
+    }
     _circles.removeWhere((c) => c.id == circleId);
     await _store.saveCircles(_circles);
     notifyListeners();
@@ -1634,7 +1950,26 @@ class AppState extends ChangeNotifier {
   }
 
   /// Clears a loan ahead of schedule and books the interest rebate.
-  Future<({double paid, double rebate})> payOffEarly(String loanId) async {
+  Future<({double paid, double rebate})> payOffEarly(
+    String loanId, {
+    String? pin,
+  }) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final result = await api.settleLoan(loanId, pin: pin ?? '');
+        await _reloadLoansAndWallet();
+        _lastError = null;
+        return (
+          paid: (result['amountPaid'] as num?)?.toDouble() ?? 0,
+          rebate: (result['rebate'] as num?)?.toDouble() ?? 0,
+        );
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return (paid: 0.0, rebate: 0.0);
+      }
+    }
     final i = _loans.indexWhere((l) => l.id == loanId);
     if (i < 0) return (paid: 0.0, rebate: 0.0);
 
@@ -2039,6 +2374,49 @@ class AppState extends ChangeNotifier {
   ///
   ///     K9-A1B2C3-7F4K
   ///     ^^^^^^^^^ the customer   ^^^^ this payment
+  /// The reference currently on this customer's pay-in screen.
+  ///
+  /// Idempotent online: asking twice gives the same one back. A customer who
+  /// opens the screen three times has not made three payments, and three
+  /// references on their record would be three things for an admin to rule out.
+  Future<String> paymentReference() async {
+    final api = _api;
+    if (api == null) return newPaymentReference();
+    try {
+      final instruction = await api.paymentReference();
+      _lastError = null;
+      return instruction.reference;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      // Nothing usable to show. An invented reference would be worse than
+      // none: the customer would quote it on a real transfer and no admin
+      // would ever find it.
+      return '';
+    }
+  }
+
+  /// Records that the reference was copied, and returns the next one.
+  ///
+  /// The copy is the event worth recording. Until then it is text on a screen;
+  /// afterwards it is on its way into a bank narration, and the admin holding
+  /// the statement needs it on the customer's record to match against.
+  Future<String> markReferenceCopied() async {
+    final api = _api;
+    if (api == null) return newPaymentReference();
+    try {
+      final next = await api.referenceCopied();
+      _lastError = null;
+      return next.reference;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      // The copy did not register, so the reference on screen is still the
+      // live one. Returning it unchanged is right — replacing it would leave
+      // the customer quoting a reference the server has no record of.
+      return '';
+    }
+  }
+
+  /// Offline only: a reference minted on the device.
   String newPaymentReference() {
     final base = _user?.customerRef ?? 'K9-000000';
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -2055,13 +2433,40 @@ class AppState extends ChangeNotifier {
     required double amount,
     required DepositPurpose purpose,
     /// The narration the customer was shown and quoted on the transfer.
-    /// Generated by [newPaymentReference] when the pay-in screen opened.
+    /// Issued by the server when the pay-in screen opened.
     required String reference,
     String receiptPath = '',
     String senderName = '',
     String? loanId,
     String loanPurpose = '',
   }) async {
+    final api = _api;
+    if (api != null) {
+      // The receipt is part of the claim rather than an attachment to it: a
+      // claim without one cannot be submitted, because it is what an admin
+      // looks at when the narration is wrong or missing.
+      final file = File(receiptPath);
+      final bytes = await file.readAsBytes();
+
+      final claim = await api.submitClaim(
+        amount: amount,
+        reference: reference,
+        senderName: senderName,
+        purpose: purpose,
+        loanId: loanId,
+        receiptBytes: bytes,
+        receiptFilename: receiptPath.split(RegExp(r'[/\\]')).last,
+        receiptContentType: _contentTypeFor(receiptPath),
+      );
+
+      _deposits = [claim, ..._deposits];
+      await _store.saveDeposits(_deposits);
+      _lastError = null;
+      notifyListeners();
+      // Deliberately no wallet refresh: submitting a claim moves no money. The
+      // balance changes only when an admin matches it against the statement.
+      return claim;
+    }
     final claim = DepositClaim(
       id: _uuid.v4(),
       customerName: _user?.fullName ?? 'Customer',

@@ -12,12 +12,24 @@ import 'primitives.dart';
 /// The collection account every incoming payment goes to, with copy buttons
 /// and the narration the customer must quote so it can be matched.
 class CompanyAccountCard extends StatelessWidget {
-  const CompanyAccountCard({super.key, this.reference, this.amount});
+  const CompanyAccountCard({
+    super.key,
+    this.reference,
+    this.amount,
+    this.onReferenceCopied,
+  });
 
   /// The narration for one specific payment. Null where the card is shown
   /// for reference rather than against a payment being made.
   final String? reference;
   final String? amount;
+
+  /// Called the moment the reference reaches the clipboard.
+  ///
+  /// The copy is what the server records — until then the reference is text on
+  /// a screen; afterwards it is on its way into a bank narration, and an admin
+  /// needs it on the customer's record to match a statement against.
+  final VoidCallback? onReferenceCopied;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -122,7 +134,11 @@ class CompanyAccountCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _CopyButton(value: reference!, label: 'Reference copied'),
+              _CopyButton(
+                value: reference!,
+                label: 'Reference copied',
+                onCopied: onReferenceCopied,
+              ),
             ],
           ),
         ],
@@ -159,9 +175,14 @@ class CompanyAccountCard extends StatelessWidget {
 }
 
 class _CopyButton extends StatelessWidget {
-  const _CopyButton({required this.value, required this.label});
+  const _CopyButton({
+    required this.value,
+    required this.label,
+    this.onCopied,
+  });
   final String value;
   final String label;
+  final VoidCallback? onCopied;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -169,6 +190,7 @@ class _CopyButton extends StatelessWidget {
       Clipboard.setData(ClipboardData(text: value));
       HapticFeedback.selectionClick();
       showToast(context, label);
+      onCopied?.call();
     },
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
