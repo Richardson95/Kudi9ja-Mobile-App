@@ -19,10 +19,28 @@ import 'step_scaffold.dart';
 /// collected so support can reach a customer, not as a second factor, so
 /// there is no SMS code to wait for.
 class OtpStep extends StatefulWidget {
-  const OtpStep({super.key, required this.onNext, required this.draft});
+  const OtpStep({
+    super.key,
+    required this.onNext,
+    required this.draft,
+    this.onVerify,
+    this.onResend,
+  });
 
   final VoidCallback onNext;
   final SignupDraft draft;
+
+  /// Checks the code with the server. Returns null if it was right, or a
+  /// message to show if it was not.
+  ///
+  /// When absent the code is checked on the device, which is what the app did
+  /// before there was a server and what the tests still exercise. A code the
+  /// device both issues and checks verifies nothing about the email address —
+  /// it only proves the customer can read their own screen.
+  final Future<String?> Function(String code)? onVerify;
+
+  /// Asks the server for another code. Returns null, or a message.
+  final Future<String?> Function()? onResend;
 
   @override
   State<OtpStep> createState() => _OtpStepState();
@@ -34,6 +52,11 @@ class _OtpStepState extends State<OtpStep> {
   String _entered = '';
   bool _error = false;
   bool _verifying = false;
+
+  /// What went wrong, in the server's words where there is a server. An expired
+  /// code and a wrong one are different problems with different remedies, and
+  /// one message for both sends a customer looking for a typo that is not there.
+  String? _message;
   int _secondsLeft = settings.otpResendSeconds;
   Timer? _timer;
 
@@ -57,7 +80,25 @@ class _OtpStepState extends State<OtpStep> {
     });
   }
 
-  void _resend() {
+  Future<void> _resend() async {
+    final ask = widget.onResend;
+    if (ask != null) {
+      setState(() => _error = false);
+      final problem = await ask();
+      if (!mounted) return;
+      if (problem != null) {
+        setState(() {
+          _error = true;
+          _message = problem;
+        });
+        return;
+      }
+      _otpKey.currentState?.clear();
+      _startCountdown();
+      showToast(context, 'A new code is on its way to $_destination');
+      return;
+    }
+
     setState(() {
       _issued = SecurityService.issueOtp();
       _error = false;
@@ -69,11 +110,18 @@ class _OtpStepState extends State<OtpStep> {
 
   Future<void> _verify() async {
     if (_entered.length != 6) return;
-    setState(() => _verifying = true);
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    setState(() {
+      _verifying = true;
+      _message = null;
+    });
+
+    final check = widget.onVerify;
+    final problem = check != null
+        ? await check(_entered)
+        : await _checkOnDevice();
     if (!mounted) return;
 
-    if (_entered == _issued) {
+    if (problem == null) {
       HapticFeedback.heavyImpact();
       _timer?.cancel();
       widget.onNext();
@@ -84,8 +132,17 @@ class _OtpStepState extends State<OtpStep> {
     setState(() {
       _error = true;
       _verifying = false;
+      _message = problem;
     });
     _otpKey.currentState?.clear();
+  }
+
+  /// The offline path: the device issued the code, so the device checks it.
+  Future<String?> _checkOnDevice() async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return _entered == _issued
+        ? null
+        : 'That code is not correct. Check and try again.';
   }
 
   @override
@@ -119,7 +176,7 @@ class _OtpStepState extends State<OtpStep> {
         if (_error)
           Center(
             child: Text(
-              'That code is not correct. Check and try again.',
+              _message ?? 'That code is not correct. Check and try again.',
               style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.danger,
@@ -138,7 +195,7 @@ class _OtpStepState extends State<OtpStep> {
                   ),
                 )
               : TextButton.icon(
-                  onPressed: _resend,
+                  onPressed: () => _resend(),
                   icon: const Icon(Icons.refresh_rounded, size: 17),
                   label: const Text('Resend code'),
                   style: TextButton.styleFrom(foregroundColor: AppColors.gold),

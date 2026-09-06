@@ -1,6 +1,16 @@
 /// Everything collected across the signup wizard, held in one place until
 /// the final step commits it to an account.
 class SignupDraft {
+  /// The server's draft this wizard is filling in, once the first step has
+  /// created one.
+  ///
+  /// Sign-up is validated a step at a time rather than all at the end, so an
+  /// email already in use is caught on the screen that asked for it instead of
+  /// after the customer has typed a BVN, a bank account and three passcodes.
+  /// An abandoned draft expires on the server; it never becomes a half-made
+  /// account that can be neither finished nor signed into.
+  String? draftId;
+
   String fullName = '';
   String email = '';
   String phone = '';

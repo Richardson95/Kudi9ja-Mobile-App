@@ -88,6 +88,13 @@ class AppState extends ChangeNotifier {
   /// Whether this app is talking to a server at all.
   bool get isOnline => _api != null;
 
+  /// The server, for the sign-up wizard.
+  ///
+  /// Sign-up is the one flow that runs before there is an account, so it cannot
+  /// go through the usual methods here — it drives the server's draft directly,
+  /// step by step, and only becomes an account at the end.
+  Kudi9jaApi? get api => _api;
+
   /// Set while a refresh is in flight, so a screen can show that figures are
   /// being brought up to date rather than silently showing stale ones.
   bool _syncing = false;
@@ -399,6 +406,40 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Turns a completed server draft into an account, and signs the customer in.
+  ///
+  /// Nothing about the account is decided here. The server has been validating
+  /// each step as it arrived, so this only asks it to finish, and takes the
+  /// session and profile it hands back.
+  ///
+  /// The customer lands **unlocked** rather than locked. They have just typed
+  /// their passcode twice while setting it; asking for it a third time, ten
+  /// seconds later, reads as the app not having noticed.
+  Future<void> completeSignupFromDraft(Kudi9jaApi api, String draftId) async {
+    final session = await api.completeSignup(draftId);
+
+    _user = session.user;
+    _isAdminOnServer = session.isAdmin;
+    await _store.saveUser(session.user);
+    await _store.setSignedIn(true);
+
+    // A new account starts empty. Money only ever enters a wallet through a
+    // confirmed bank transfer.
+    _balance = 0;
+    _plans = [];
+    _loans = [];
+    _txns = [];
+    _circles = [];
+    _notifications = [];
+
+    _failedAttempts = 0;
+    _lastError = null;
+    _stage = AuthStage.unlocked;
+    notifyListeners();
+
+    unawaited(refreshFromServer());
+  }
+
   /// Email + password sign-in used when returning from a signed-out state.
   ///
   /// Online this is the server's decision, and it is the only one that counts:
@@ -668,19 +709,92 @@ class AppState extends ChangeNotifier {
   }
 
   // ── Credential checks & changes ─────────────────────────────────────────
-  bool verifyTransactionPin(String pin) =>
-      SecurityService.verify(pin, _store.txnPinHash);
 
-  bool verifySignInPasscode(String code) =>
-      SecurityService.verify(code, _store.signInPasscodeHash);
+  /// Checks the transaction PIN on its own.
+  ///
+  /// Used only where there is nothing to attach it to — confirming it is really
+  /// the customer before letting them set a new one. Money movements do not
+  /// come through here: they send the PIN with the operation, so it is checked
+  /// and acted on in the same breath.
+  Future<bool> verifyTransactionPin(String pin) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.verifyPin(pin);
+        _lastError = null;
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        return false;
+      }
+    }
+    return SecurityService.verify(pin, _store.txnPinHash);
+  }
 
-  Future<void> changeSignInPasscode(String next) async {
+  Future<bool> verifySignInPasscode(String code) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.verifyPasscode(code);
+        _lastError = null;
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        return false;
+      }
+    }
+    return SecurityService.verify(code, _store.signInPasscodeHash);
+  }
+
+  /// Replaces the sign-in passcode.
+  ///
+  /// The server wants the current one alongside the new one, and is right to:
+  /// it will not take a change on the word of whoever happens to be holding an
+  /// unlocked phone. [current] comes from the screen that just asked for it.
+  Future<void> changeSignInPasscode(String next, {String? current}) async {
+    final api = _api;
+    if (api != null) {
+      await api.changePasscode(
+        currentPasscode: current ?? '',
+        newPasscode: next,
+      );
+      _lastError = null;
+      notifyListeners();
+      return;
+    }
     await _store.saveSignInPasscode(SecurityService.hash(next));
     notifyListeners();
   }
 
-  Future<void> changeTransactionPin(String next) async {
+  Future<void> changeTransactionPin(String next, {String? current}) async {
+    final api = _api;
+    if (api != null) {
+      await api.changePin(currentPin: current ?? '', newPin: next);
+      _lastError = null;
+      notifyListeners();
+      return;
+    }
     await _store.saveTxnPin(SecurityService.hash(next));
+    notifyListeners();
+  }
+
+  /// Replaces the account password.
+  ///
+  /// Online only — offline there is no server to hold the new one, and a
+  /// password changed on one device that no other device knows about is worse
+  /// than no change at all.
+  Future<void> changePassword({
+    required String current,
+    required String next,
+  }) async {
+    final api = _api;
+    if (api == null) {
+      await _store.savePassword(SecurityService.hash(next));
+      notifyListeners();
+      return;
+    }
+    await api.changePassword(currentPassword: current, newPassword: next);
+    _lastError = null;
     notifyListeners();
   }
 

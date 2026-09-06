@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/api/api_exception.dart';
 import '../../data/services/security_service.dart';
 import '../../state/app_state.dart';
 import '../../widgets/passcode.dart';
 import '../../widgets/primitives.dart';
 import '../auth/signup/steps/passcode_step.dart';
+import 'change_password_screen.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -91,6 +93,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 subtitle:
                     '${AppConfig.transactionPinLength} digits, required for every transaction',
                 onTap: () => _change(context, PasscodeMode.transaction),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _Tile(
+                icon: Icons.lock_reset_rounded,
+                title: 'Password',
+                subtitle: 'Signs you in on a new phone, and after five wrong passcodes',
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
 
@@ -222,12 +233,12 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final app = context.read<AppState>();
     final isSignIn = mode == PasscodeMode.signIn;
 
-    final verified = await Navigator.of(context).push<bool>(
+    final verified = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => _VerifyCurrentScreen(mode: mode),
       ),
     );
-    if (verified != true || !context.mounted) return;
+    if (verified == null || !context.mounted) return;
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -245,10 +256,16 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 mode: mode,
                 embedded: true,
                 onDone: (code) async {
-                  if (isSignIn) {
-                    await app.changeSignInPasscode(code);
-                  } else {
-                    await app.changeTransactionPin(code);
+                  try {
+                    if (isSignIn) {
+                      await app.changeSignInPasscode(code, current: verified);
+                    } else {
+                      await app.changeTransactionPin(code, current: verified);
+                    }
+                  } on ApiException catch (e) {
+                    if (!routeContext.mounted) return;
+                    showToast(routeContext, e.message, error: true);
+                    return;
                   }
                   if (!routeContext.mounted) return;
                   Navigator.pop(routeContext);
@@ -301,11 +318,16 @@ class _VerifyCurrentScreenState extends State<_VerifyCurrentScreen> {
     if (!mounted) return;
 
     final ok = _isSignIn
-        ? app.verifySignInPasscode(_code)
-        : app.verifyTransactionPin(_code);
+        ? await app.verifySignInPasscode(_code)
+        : await app.verifyTransactionPin(_code);
+    if (!mounted) return;
 
     if (ok) {
-      Navigator.pop(context, true);
+      // The code itself goes back, not just the fact that it was right. The
+      // server will not change a passcode without the current one, and asking
+      // the customer to type it a second time on the next screen would be
+      // asking for something they have just proved.
+      Navigator.pop(context, _code);
       return;
     }
     setState(() => _error = true);
