@@ -17,13 +17,34 @@ abstract final class Validators {
     return ok ? null : 'Enter a valid email address';
   }
 
+  /// The prefixes Nigerian networks actually issue.
+  ///
+  /// Matches the server's rule exactly. A looser check here does not make the
+  /// app more forgiving — it makes it reject the number one screen later, in
+  /// the server's words rather than its own, after the customer has moved on.
+  static final _phonePrefixes = RegExp(r'^0(70|80|81|90|91)\d{8}$');
+
   static String? phone(String? v) {
     if (v == null || v.trim().isEmpty) return 'Phone number is required';
-    final digits = v.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.length != 11 || !digits.startsWith('0')) {
+    final digits = normalisePhone(v);
+    if (!_phonePrefixes.hasMatch(digits)) {
       return 'Enter an 11-digit number e.g. 08031234567';
     }
     return null;
+  }
+
+  /// Strips everything that is not a digit, and turns a +234 number into the
+  /// local form the server expects.
+  ///
+  /// People write their number every way there is — with spaces, with hyphens,
+  /// with the country code. All of those are the same number, and the customer
+  /// should not have to guess which spelling is wanted.
+  static String normalisePhone(String v) {
+    var digits = v.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('234') && digits.length == 13) {
+      digits = '0${digits.substring(3)}';
+    }
+    return digits;
   }
 
   static String? bvn(String? v) {

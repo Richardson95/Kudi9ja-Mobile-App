@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/validators.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/api/api_exception.dart';
 import '../../../data/api/kudi9ja_api.dart';
@@ -108,7 +109,10 @@ class _SignupFlowState extends State<SignupFlow> {
           final draft = await api.startSignup(
             fullName: _draft.fullName.trim(),
             email: _draft.email.trim().toLowerCase(),
-            phone: _draft.phone.trim(),
+            // Normalised, not as typed. The field accepts spaces and a +234
+            // prefix because people write their number every way there is; the
+            // server takes one form.
+            phone: Validators.normalisePhone(_draft.phone),
             dateOfBirth: _draft.dateOfBirth!,
             gender: _draft.gender,
           );
