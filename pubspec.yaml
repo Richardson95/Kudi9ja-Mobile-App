@@ -20,6 +20,12 @@ dependencies:
   uuid: ^4.5.1
   crypto: ^3.0.7
   image_picker: ^1.2.3
+  # Talking to the Kudi9ja server.
+  http: ^1.2.2
+  http_parser: ^4.0.2
+  # Tokens go in the platform keystore, not shared_preferences: a refresh token
+  # is a bearer credential worth thirty days of access.
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   flutter_test:

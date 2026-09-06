@@ -15,6 +15,27 @@ abstract final class AppConfig {
   /// `kudi9ja.bootstrap.owner-email`.
   static String bootstrapOwnerEmail = '';
 
+  // API --------------------------------------------------------------------
+  /// Where the server is.
+  ///
+  /// Overridable at build time so a debug build can point at a laptop without
+  /// editing source and risking that edit being committed:
+  ///
+  /// ```
+  /// flutter run --dart-define=KUDI9JA_API=http://10.0.2.2:8080/api/v1
+  /// ```
+  ///
+  /// (`10.0.2.2` is the host machine as seen from the Android emulator;
+  /// `localhost` there is the emulator itself.)
+  static const apiBaseUrl = String.fromEnvironment(
+    'KUDI9JA_API',
+    defaultValue: 'https://kudi9ja-mobile-backend.onrender.com/api/v1',
+  );
+
+  /// How the server labels this session in the customer's device list, so a
+  /// stolen session can be recognised and signed out from the security screen.
+  static const deviceLabel = 'Kudi9ja mobile';
+
   // Savings ----------------------------------------------------------------
   /// Annual return on locked savings, paid to the wallet the moment the
   /// plan is created.
