@@ -91,7 +91,7 @@ class _PersonalStepState extends State<PersonalStep> {
         children: [
           KField(
             label: 'Full name',
-            hint: 'Adaeze Okonkwo',
+            hint: 'Exactly as it appears on your BVN',
             controller: _name,
             prefixIcon: Icons.person_outline_rounded,
             textCapitalization: TextCapitalization.words,
@@ -110,7 +110,7 @@ class _PersonalStepState extends State<PersonalStep> {
           ),
           KField(
             label: 'Phone number',
-            hint: '08031234567',
+            hint: '11 digits, starting 070, 080, 081, 090 or 091',
             controller: _phone,
             prefixIcon: Icons.phone_iphone_rounded,
             keyboardType: TextInputType.phone,

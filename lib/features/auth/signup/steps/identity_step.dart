@@ -164,7 +164,7 @@ class _IdentityStepState extends State<IdentityStep> {
           ),
           KField(
             label: 'Residential address',
-            hint: '12 Adeola Odeku Street, Victoria Island',
+            hint: 'Street, area and city',
             controller: _address,
             prefixIcon: Icons.home_outlined,
             textCapitalization: TextCapitalization.words,

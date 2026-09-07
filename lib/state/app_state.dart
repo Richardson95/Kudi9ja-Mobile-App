@@ -115,6 +115,16 @@ class AppState extends ChangeNotifier {
   /// The customer list, the queues and the team, as the server reports them.
   List<CustomerRecord> _serverCustomers = [];
 
+  /// Every bank a payout can go to, as the server names them.
+  ///
+  /// Fetched rather than bundled, because the server matches a payout account
+  /// by bank *name* — so a list the app maintains separately is a list that
+  /// will eventually disagree, and a customer whose bank is spelled differently
+  /// here is simply refused.
+  List<String> _banks = [];
+  List<String> get banks => List.unmodifiable(_banks);
+  bool _loadingBanks = false;
+
   /// Whether this app is talking to a server at all.
   bool get isOnline => _api != null;
 
@@ -888,6 +898,41 @@ class AppState extends ChangeNotifier {
     if (lower.endsWith('.webp')) return 'image/webp';
     if (lower.endsWith('.pdf')) return 'application/pdf';
     return null;
+  }
+
+  /// Loads the bank list, once.
+  ///
+  /// Cached on the device so the picker has something to show instantly on the
+  /// next launch, and so a customer on a bad connection is not stuck at the
+  /// payout step. Never throws: the bundled fallback covers a failure.
+  Future<void> loadBanks() async {
+    if (_loadingBanks || _banks.isNotEmpty) return;
+    final api = _api;
+
+    // The cached copy first, so the sheet is not empty while the call runs.
+    final cached = _store.banks;
+    if (cached.isNotEmpty) {
+      _banks = cached;
+      notifyListeners();
+    }
+    if (api == null) return;
+
+    _loadingBanks = true;
+    try {
+      final fetched = (await api.banks())
+          .map((b) => (b['name'] as String?) ?? '')
+          .where((n) => n.isNotEmpty)
+          .toList();
+      if (fetched.isNotEmpty) {
+        _banks = fetched;
+        await _store.saveBanks(fetched);
+        notifyListeners();
+      }
+    } on ApiException {
+      // The fallback list is shown. Not worth telling anybody about.
+    } finally {
+      _loadingBanks = false;
+    }
   }
 
   /// Called whenever the app leaves the foreground.

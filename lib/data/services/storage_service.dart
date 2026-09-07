@@ -41,6 +41,7 @@ class StorageService {
   static const _kSettings = 'k9.settings';
   static const _kWithdrawals = 'k9.withdrawals';
   static const _kDeposits = 'k9.deposits';
+  static const _kBanks = 'k9.banks';
 
   // ── Onboarding ──────────────────────────────────────────────────────────
   bool get hasSeenOnboarding => _prefs.getBool(_kOnboarded) ?? false;
@@ -148,6 +149,15 @@ class StorageService {
 
   Future<void> savePlatformSettings(PlatformSettings v) =>
       _prefs.setString(_kSettings, jsonEncode(v.toJson()));
+
+  /// The bank list the server last gave us.
+  ///
+  /// Cached so the payout screen has something to show before the call
+  /// returns, and so a customer on a bad connection is not stuck there.
+  List<String> get banks =>
+      _prefs.getStringList(_kBanks) ?? const <String>[];
+
+  Future<void> saveBanks(List<String> v) => _prefs.setStringList(_kBanks, v);
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   List<T> _decodeList<T>(String key, T Function(Map<String, dynamic>) build) {

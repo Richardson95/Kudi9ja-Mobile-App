@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/constants/banks.dart';
+import '../../../../widgets/bank_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../widgets/inputs.dart';
@@ -39,60 +39,10 @@ class _PayoutStepState extends State<PayoutStep> {
       widget.draft.payoutBank.isNotEmpty &&
       widget.draft.payoutAccountNumber.length == 10;
 
-  void _pickBank() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (_, controller) => SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Text(
-                  'Select your bank',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              const HairLine(),
-              Expanded(
-                child: ListView.builder(
-                  controller: controller,
-                  itemCount: kBanks.length,
-                  itemBuilder: (_, i) {
-                    final bank = kBanks[i];
-                    final on = widget.draft.payoutBank == bank;
-                    return ListTile(
-                      title: Text(
-                        bank,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: on ? FontWeight.w700 : FontWeight.w500,
-                          color: on ? AppColors.gold : AppColors.textPrimary,
-                        ),
-                      ),
-                      trailing: on
-                          ? Icon(
-                              Icons.check_rounded,
-                              color: AppColors.gold,
-                              size: 20,
-                            )
-                          : null,
-                      onTap: () {
-                        setState(() => widget.draft.payoutBank = bank);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  Future<void> _pickBank() async {
+    final chosen = await pickBank(context, current: widget.draft.payoutBank);
+    if (chosen == null || !mounted) return;
+    setState(() => widget.draft.payoutBank = chosen);
   }
 
   @override

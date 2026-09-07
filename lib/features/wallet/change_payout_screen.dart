@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_config.dart';
-import '../../core/constants/banks.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
+import '../../widgets/bank_picker.dart';
 import '../../widgets/code_sheet.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
@@ -146,46 +146,10 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
     );
   }
 
-  void _pickBank() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.92,
-        builder: (_, controller) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                'Select bank',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const HairLine(),
-            Expanded(
-              child: ListView.builder(
-                controller: controller,
-                itemCount: kBanks.length,
-                itemBuilder: (_, i) => ListTile(
-                  leading: IconBadge(
-                    icon: Icons.account_balance_rounded,
-                    size: 38,
-                    color: AppColors.textSecondary,
-                  ),
-                  title: Text(kBanks[i], style: const TextStyle(fontSize: 14.5)),
-                  onTap: () {
-                    setState(() => _bank = kBanks[i]);
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _pickBank() async {
+    final chosen = await pickBank(context, current: _bank);
+    if (chosen == null || !mounted) return;
+    setState(() => _bank = chosen);
   }
 
   @override

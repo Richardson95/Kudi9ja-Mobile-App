@@ -74,10 +74,7 @@ void main() {
         '11223344556',
       );
       await tester.enterText(
-        find.widgetWithText(
-          TextFormField,
-          '12 Adeola Odeku Street, Victoria Island',
-        ),
+        find.widgetWithText(TextFormField, 'Street, area and city'),
         '1 Test Street',
       );
       await tester.pump();
