@@ -150,7 +150,7 @@ class BalanceCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         user.hasPayoutAccount
-                            ? 'Pays out to ${user.payoutBank} • '
+                            ? '${user.payoutBank} • '
                                   '${user.payoutAccountNumber}'
                             : 'No payout account set',
                         maxLines: 1,

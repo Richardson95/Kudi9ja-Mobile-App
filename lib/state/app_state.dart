@@ -743,6 +743,14 @@ class AppState extends ChangeNotifier {
   /// Called when the panel is opened and after any action that changes a queue.
   /// Like [refreshFromServer] it never throws: a panel that goes blank because
   /// one list failed is less useful than one showing a queue a minute old.
+  ///
+  /// Each list is applied on its own. This was one `Future.wait` over all six
+  /// calls, which reads as concurrency and behaves as an all-or-nothing rule:
+  /// the first failure discarded the other five answers, and every field kept
+  /// its starting value. A broken audit query was enough to show an owner an
+  /// empty panel labelled Viewer — not a message about the audit log, which is
+  /// the one thing that had actually gone wrong. What one endpoint cannot
+  /// answer is now the only thing missing.
   Future<void> refreshAdminPanel() async {
     final admin = _admin;
     if (admin == null) return;
@@ -750,38 +758,77 @@ class AppState extends ChangeNotifier {
     _syncing = true;
     notifyListeners();
 
-    try {
-      final results = await Future.wait([
-        admin.whoAmI(),
-        admin.customers(size: 200),
-        admin.payIns(size: 200),
-        admin.withdrawals(size: 200),
-        admin.team(),
-        admin.audit(size: 200),
-      ]);
+    final failures = <String>[];
 
-      final me = results[0] as Map<String, dynamic>;
+    // Whether the caller still holds the panel at all, which is the one answer
+    // the rest depends on: without a grant there is nothing to show, and
+    // pretending otherwise leaves somebody on a screen whose every button
+    // fails.
+    var stillAnAdmin = true;
+    try {
+      final me = await admin.whoAmI();
       _serverAdminRole = _roleFromWire(me['role']);
       _isAdminOnServer = true;
-
-      _serverCustomers = (results[1] as Page<CustomerRecord>).items;
-      _deposits = (results[2] as Page<DepositClaim>).items;
-      _withdrawals = (results[3] as Page<WithdrawalRequest>).items;
-      _admins = results[4] as List<AdminUser>;
-      _audit = (results[5] as Page<AuditEntry>).items;
-
-      _lastError = null;
     } on ApiException catch (e) {
-      _lastError = e.message;
       if (e.code == ApiErrorCode.notAnAdmin || e.code == ApiErrorCode.forbidden) {
         // Access was revoked while the panel was open. Say so rather than
         // leaving somebody looking at a screen whose every button now fails.
         _isAdminOnServer = false;
         _serverAdminRole = null;
+        stillAnAdmin = false;
       }
-    } finally {
-      _syncing = false;
-      notifyListeners();
+      failures.add(e.message);
+    }
+
+    if (stillAnAdmin) {
+      await Future.wait([
+        _loadIntoPanel(
+            'Customers',
+            () async => _serverCustomers = (await admin.customers(size: 200)).items,
+            failures),
+        _loadIntoPanel(
+            'Pay-ins',
+            () async => _deposits = (await admin.payIns(size: 200)).items,
+            failures),
+        _loadIntoPanel(
+            'Withdrawals',
+            () async => _withdrawals = (await admin.withdrawals(size: 200)).items,
+            failures),
+        _loadIntoPanel(
+            'The team',
+            () async => _admins = await admin.team(),
+            failures),
+        _loadIntoPanel(
+            'The audit log',
+            () async => _audit = (await admin.audit(size: 200)).items,
+            failures),
+      ]);
+    }
+
+    // One line, however many failed. A stack of near-identical errors tells an
+    // admin no more than the first and buries the panel that did load.
+    _lastError = failures.isEmpty ? null : failures.first;
+
+    _syncing = false;
+    notifyListeners();
+  }
+
+  /// Runs one of the panel's loads, and never throws.
+  ///
+  /// A section that cannot be read keeps whatever it last had — a queue a
+  /// minute old is worth more than an empty one — and says so through
+  /// [failures] rather than by taking the rest of the panel down with it.
+  Future<void> _loadIntoPanel(
+    String what,
+    Future<void> Function() load,
+    List<String> failures,
+  ) async {
+    try {
+      await load();
+    } on ApiException catch (e) {
+      failures.add('$what could not be loaded. ${e.message}');
+    } catch (_) {
+      failures.add('$what could not be loaded.');
     }
   }
 
