@@ -10,10 +10,21 @@ import '../signup_draft.dart';
 import 'step_scaffold.dart';
 
 class PersonalStep extends StatefulWidget {
-  const PersonalStep({super.key, required this.draft, required this.onNext});
+  const PersonalStep({
+    super.key,
+    required this.draft,
+    required this.onNext,
+    this.busy = false,
+  });
 
   final SignupDraft draft;
   final VoidCallback onNext;
+
+  /// Whether this step is being submitted to the server.
+  ///
+  /// A button that looks idle while a request is in flight reads as a
+  /// button that did not work, and the customer taps it again.
+  final bool busy;
 
   @override
   State<PersonalStep> createState() => _PersonalStepState();
@@ -83,6 +94,7 @@ class _PersonalStepState extends State<PersonalStep> {
     return Form(
       key: _form,
       child: StepScaffold(
+        loading: widget.busy,
         headline: 'Let us start\nwith you',
         subhead:
             'Use your name exactly as it appears on your BVN. It has to match for your account to be approved.',
@@ -117,7 +129,7 @@ class _PersonalStepState extends State<PersonalStep> {
             maxLength: 11,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             validator: Validators.phone,
-            helper: 'This becomes your Kudi9ja account number',
+            helper: 'How we reach you about your money',
           ),
           KPickerField(
             label: 'Date of birth',

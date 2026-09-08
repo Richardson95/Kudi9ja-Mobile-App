@@ -277,6 +277,19 @@ class _SignupFlowState extends State<SignupFlow> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Wakes the server while the customer is still typing.
+    //
+    // The instance sleeps after fifteen idle minutes and takes the better part
+    // of a minute to come back. Left alone, that whole wait lands on the first
+    // Continue — the customer fills in five fields, taps once, and watches
+    // nothing happen. Asking for something cheap now means the instance is
+    // usually up by the time it is actually needed.
+    unawaited(context.read<AppState>().warmUp());
+  }
+
+  @override
   void dispose() {
     _pager.dispose();
     super.dispose();
@@ -308,7 +321,7 @@ class _SignupFlowState extends State<SignupFlow> {
                     controller: _pager,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      PersonalStep(draft: _draft, onNext: _next),
+                      PersonalStep(draft: _draft, onNext: _next, busy: _working),
                       OtpStep(
                         key: const ValueKey('email-otp'),
                         onNext: () {
@@ -322,8 +335,8 @@ class _SignupFlowState extends State<SignupFlow> {
                         onResend: _online ? _resendEmailCode : null,
                       ),
                       IdentityStep(draft: _draft, onNext: _next),
-                      PayoutStep(draft: _draft, onNext: _next),
-                      PasswordStep(draft: _draft, onNext: _next),
+                      PayoutStep(draft: _draft, onNext: _next, busy: _working),
+                      PasswordStep(draft: _draft, onNext: _next, busy: _working),
                       PasscodeStep(
                         key: const ValueKey('signin-passcode'),
                         mode: PasscodeMode.signIn,
@@ -340,7 +353,7 @@ class _SignupFlowState extends State<SignupFlow> {
                           _next();
                         },
                       ),
-                      ReviewStep(draft: _draft, onNext: _next),
+                      ReviewStep(draft: _draft, onNext: _next, busy: _working),
                     ],
                   ),
                 ),

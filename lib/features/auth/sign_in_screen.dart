@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -31,8 +33,13 @@ class _SignInScreenState extends State<SignInScreen> {
   void initState() {
     super.initState();
     // Pre-fill for a returning user whose session simply expired.
-    final u = context.read<AppState>().user;
+    final app = context.read<AppState>();
+    final u = app.user;
     if (u != null) _email.text = u.email;
+
+    // Wake the server while the customer is typing, so the wait does not land
+    // on the button they press.
+    unawaited(app.warmUp());
   }
 
   @override

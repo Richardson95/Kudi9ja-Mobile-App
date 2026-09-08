@@ -15,10 +15,21 @@ import 'step_scaffold.dart';
 /// disbursements and anything else a customer withdraws go to a bank account
 /// they already hold, in their own name — this step is where they name it.
 class PayoutStep extends StatefulWidget {
-  const PayoutStep({super.key, required this.draft, required this.onNext});
+  const PayoutStep({
+    super.key,
+    required this.draft,
+    required this.onNext,
+    this.busy = false,
+  });
 
   final SignupDraft draft;
   final VoidCallback onNext;
+
+  /// Whether this step is being submitted to the server.
+  ///
+  /// A button that looks idle while a request is in flight reads as a
+  /// button that did not work, and the customer taps it again.
+  final bool busy;
 
   @override
   State<PayoutStep> createState() => _PayoutStepState();
@@ -47,6 +58,7 @@ class _PayoutStepState extends State<PayoutStep> {
 
   @override
   Widget build(BuildContext context) => StepScaffold(
+        loading: widget.busy,
     headline: 'Where should we\npay you?',
     subhead:
         'Kudi9ja does not give you a new account number. Your savings '

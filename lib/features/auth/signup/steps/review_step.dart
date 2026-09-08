@@ -10,10 +10,21 @@ import '../signup_draft.dart';
 import 'step_scaffold.dart';
 
 class ReviewStep extends StatefulWidget {
-  const ReviewStep({super.key, required this.draft, required this.onNext});
+  const ReviewStep({
+    super.key,
+    required this.draft,
+    required this.onNext,
+    this.busy = false,
+  });
 
   final SignupDraft draft;
   final VoidCallback onNext;
+
+  /// Whether this step is being submitted to the server.
+  ///
+  /// A button that looks idle while a request is in flight reads as a
+  /// button that did not work, and the customer taps it again.
+  final bool busy;
 
   @override
   State<ReviewStep> createState() => _ReviewStepState();
@@ -25,6 +36,7 @@ class _ReviewStepState extends State<ReviewStep> {
     final d = widget.draft;
 
     return StepScaffold(
+        loading: widget.busy,
       headline: 'Almost there',
       subhead: 'Check everything reads correctly, then open your account.',
       actionLabel: 'Open my account',

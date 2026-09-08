@@ -935,6 +935,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Wakes the server, and pulls the bank list while it is there.
+  ///
+  /// Called when a screen is opened that will shortly need the server. The
+  /// hosting tier sleeps the instance after fifteen idle minutes and takes the
+  /// better part of a minute to bring it back; without this that entire wait
+  /// lands on whichever button the customer presses first.
+  ///
+  /// Costs one small request and never throws. Nothing waits on it.
+  Future<void> warmUp() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      await api.banks();
+    } on ApiException {
+      // The point was to wake the instance. Whether the answer arrived is not
+      // this method's business.
+    }
+    unawaited(loadBanks());
+  }
+
   /// Called whenever the app leaves the foreground.
   void lock() {
     if (_stage == AuthStage.unlocked) {

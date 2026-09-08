@@ -8,10 +8,21 @@ import '../signup_draft.dart';
 import 'step_scaffold.dart';
 
 class PasswordStep extends StatefulWidget {
-  const PasswordStep({super.key, required this.draft, required this.onNext});
+  const PasswordStep({
+    super.key,
+    required this.draft,
+    required this.onNext,
+    this.busy = false,
+  });
 
   final SignupDraft draft;
   final VoidCallback onNext;
+
+  /// Whether this step is being submitted to the server.
+  ///
+  /// A button that looks idle while a request is in flight reads as a
+  /// button that did not work, and the customer taps it again.
+  final bool busy;
 
   @override
   State<PasswordStep> createState() => _PasswordStepState();
@@ -92,6 +103,7 @@ class _PasswordStepState extends State<PasswordStep> {
     return Form(
       key: _form,
       child: StepScaffold(
+        loading: widget.busy,
         headline: 'Create your\npassword',
         subhead:
             'This is your account password — the key you use if you ever sign out completely. Day to day, you will use your passcode instead.',
