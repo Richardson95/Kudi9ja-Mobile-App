@@ -47,6 +47,19 @@ abstract final class Validators {
     return digits;
   }
 
+  /// A home address.
+  ///
+  /// The server takes 5 to 400 characters. Checking it here as well means a
+  /// customer who types "Lagos" is told on the field, not after a round trip in
+  /// a message the server wrote.
+  static String? address(String? v) {
+    final value = v?.trim() ?? '';
+    if (value.isEmpty) return 'Address is required';
+    if (value.length < 5) return 'Give your street, area and city';
+    if (value.length > 400) return 'That address is too long';
+    return null;
+  }
+
   static String? bvn(String? v) {
     if (v == null || v.trim().isEmpty) return 'BVN is required';
     if (v.replaceAll(RegExp(r'[^0-9]'), '').length != 11) {

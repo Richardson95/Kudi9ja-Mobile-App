@@ -168,7 +168,7 @@ class _IdentityStepState extends State<IdentityStep> {
             controller: _address,
             prefixIcon: Icons.home_outlined,
             textCapitalization: TextCapitalization.words,
-            validator: (v) => Validators.required(v, 'Address'),
+            validator: Validators.address,
           ),
           KPickerField(
             label: 'State of residence',
