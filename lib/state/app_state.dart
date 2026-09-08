@@ -455,8 +455,15 @@ class AppState extends ChangeNotifier {
   /// The customer lands **unlocked** rather than locked. They have just typed
   /// their passcode twice while setting it; asking for it a third time, ten
   /// seconds later, reads as the app not having noticed.
-  Future<void> completeSignupFromDraft(Kudi9jaApi api, String draftId) async {
-    final session = await api.completeSignup(draftId);
+  Future<void> completeSignupFromDraft(
+    Kudi9jaApi api,
+    String draftId, {
+    required Map<String, String> acceptedVersions,
+  }) async {
+    final session = await api.completeSignup(
+      draftId,
+      acceptedVersions: acceptedVersions,
+    );
 
     _user = session.user;
     _isAdminOnServer = session.isAdmin;

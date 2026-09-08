@@ -159,15 +159,10 @@ class _SignupFlowState extends State<SignupFlow> {
             confirmPin: _draft.transactionPin,
           );
         case 7:
-          await api.acceptAgreements(
-            _draft.draftId!,
-            // Which version was accepted matters as much as the acceptance: the
-            // Lending Agreement a customer agreed to is the one that governs
-            // their loans.
-            acceptedVersions: {
-              for (final doc in allLegalDocuments()) doc.id: doc.version,
-            },
-          );
+          // The review step submits nothing on its own. Accepting the documents
+          // is part of creating the account, so it travels with the call that
+          // creates it — see _finish.
+          break;
       }
       return null;
     } on ApiException catch (e) {
@@ -195,7 +190,13 @@ class _SignupFlowState extends State<SignupFlow> {
     final api = app.api;
     if (api != null) {
       try {
-        await app.completeSignupFromDraft(api, _draft.draftId!);
+        await app.completeSignupFromDraft(
+          api,
+          _draft.draftId!,
+          acceptedVersions: {
+            for (final doc in allLegalDocuments()) doc.id: doc.version,
+          },
+        );
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
       } on ApiException catch (e) {
         if (!mounted) return;

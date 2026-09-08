@@ -125,24 +125,36 @@ class Kudi9jaApi {
       _asMap(await _client.post('/auth/signup/$draftId/pin',
           authenticated: false, body: {'pin': pin, 'confirmPin': confirmPin}));
 
-  /// Records which versions of the agreements were accepted.
+  /// Where this sign-up has got to.
+  ///
+  /// Read-only. It reports the draft's progress and accepts nothing — the
+  /// agreements are recorded by [completeSignup], which is the call that
+  /// creates the account they bind.
+  Future<Map<String, dynamic>> signupProgress(String draftId) async =>
+      _asMap(await _client.post('/auth/signup/$draftId', authenticated: false));
+
+  /// Turns a completed draft into an account, and signs the customer in.
+  ///
+  /// The acceptance travels with this call rather than a separate one, because
+  /// the server records it against the account this call creates. Sending it
+  /// anywhere else means it is not recorded at all.
   ///
   /// The versions matter as much as the acceptance: the Lending Agreement a
   /// customer agreed to is the one that governs their loans, and "they accepted
   /// something, once" is not a record anyone can act on later.
-  Future<Map<String, dynamic>> acceptAgreements(
+  Future<Session> completeSignup(
     String draftId, {
     required Map<String, String> acceptedVersions,
-    bool accepted = true,
-  }) async =>
-      _asMap(await _client.post('/auth/signup/$draftId',
-          authenticated: false,
-          body: {'acceptedVersions': acceptedVersions, 'accepted': accepted}));
-
-  /// Turns a completed draft into an account, and signs the customer in.
-  Future<Session> completeSignup(String draftId) async {
-    final body = _asMap(await _client.post('/auth/signup/$draftId/complete',
-        authenticated: false, body: {'device': AppConfig.deviceLabel}));
+  }) async {
+    final body = _asMap(await _client.post(
+      '/auth/signup/$draftId/complete',
+      authenticated: false,
+      body: {
+        'acceptedVersions': acceptedVersions,
+        'accepted': true,
+        'device': AppConfig.deviceLabel,
+      },
+    ));
     return _storeSession(body);
   }
 
