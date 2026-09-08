@@ -29,6 +29,17 @@ class _SignInScreenState extends State<SignInScreen> {
   final _password = TextEditingController();
   bool _busy = false;
 
+  /// Whether the customer has asked for the sign-in form.
+  ///
+  /// [AppState.hasAccount] answers a narrower question than it looks: whether
+  /// this *device* remembers an account, which is left over from the build that
+  /// kept everything on the phone. On a server it is the wrong question — a
+  /// customer with a perfectly good account is a stranger to a new phone, a
+  /// reinstall, or cleared storage — and asking it turned "I already have an
+  /// account" into a dead end that told them no account existed. It exists on
+  /// the server; the phone had simply never met it.
+  bool _wantsToSignIn = false;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +79,9 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final hasAccount = context.select<AppState, bool>((s) => s.hasAccount);
+    // Remembered here, or asked for. Either way the credentials are checked by
+    // the server, which is the only thing that ever decides.
+    final signingIn = hasAccount || _wantsToSignIn;
 
     return Scaffold(
       body: Container(
@@ -85,13 +99,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     .scale(begin: const Offset(0.8, 0.8)),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  hasAccount ? 'Welcome back' : 'Money that works\nas hard as you do',
+                  signingIn ? 'Welcome back' : 'Money that works\nas hard as you do',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayMedium,
                 ).animate(delay: 100.ms).fadeIn().slideY(begin: 0.2),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  hasAccount
+                  signingIn
                       ? 'Sign in to continue to your dashboard'
                       : 'Save at ${settings.savingsRatePct.toStringAsFixed(0)}% paid upfront. Borrow up to ${settings.maxLoanAmount.asNairaFlat}.',
                   textAlign: TextAlign.center,
@@ -101,7 +115,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 ).animate(delay: 180.ms).fadeIn(),
                 const SizedBox(height: AppSpacing.huge),
 
-                if (hasAccount) ...[
+                if (signingIn) ...[
                   Form(
                     key: _form,
                     child: Column(
@@ -148,6 +162,14 @@ class _SignInScreenState extends State<SignInScreen> {
                     loading: _busy,
                     onPressed: _submit,
                   ).animate(delay: 340.ms).fadeIn().slideY(begin: 0.2),
+                  if (!hasAccount) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    GhostButton(
+                      label: 'Create an account instead',
+                      onPressed: () => Navigator.of(context)
+                          .push(slideRoute(const SignupFlow())),
+                    ).animate(delay: 380.ms).fadeIn(),
+                  ],
                 ] else ...[
                   GoldButton(
                     label: 'Create your account',
@@ -158,10 +180,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   const SizedBox(height: AppSpacing.md),
                   GhostButton(
                     label: 'I already have an account',
-                    onPressed: () => showToast(
-                      context,
-                      'No account found on this device. Create one to continue.',
-                    ),
+                    onPressed: () => setState(() => _wantsToSignIn = true),
                   ).animate(delay: 320.ms).fadeIn(),
                   const SizedBox(height: AppSpacing.huge),
                   const _TrustRow().animate(delay: 400.ms).fadeIn(),
