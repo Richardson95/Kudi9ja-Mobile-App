@@ -478,6 +478,7 @@ class AppState extends ChangeNotifier {
 
     _user = session.user;
     _isAdminOnServer = session.isAdmin;
+    _serverAdminRole = session.adminRole;
     await _store.saveUser(session.user);
     await _store.setSignedIn(true);
 
@@ -512,6 +513,7 @@ class AppState extends ChangeNotifier {
         final session = await api.signIn(email: email.trim(), password: password);
         _user = session.user;
         _isAdminOnServer = session.isAdmin;
+        _serverAdminRole = session.adminRole;
         await _store.saveUser(session.user);
         await _store.setSignedIn(true);
         _lastError = null;
@@ -669,6 +671,12 @@ class AppState extends ChangeNotifier {
       _hideBalance = profile['hideBalance'] as bool? ?? _hideBalance;
       _autoDebit = profile['autoDebit'] as bool? ?? _autoDebit;
       _isAdminOnServer = profile['admin'] as bool? ?? _isAdminOnServer;
+      // A revoked grant sends the flag false and drops the role entirely, so
+      // the previous role is only worth keeping while there is still a grant
+      // to describe.
+      _serverAdminRole = _isAdminOnServer
+          ? (adminRoleFromApi(profile['adminRole']) ?? _serverAdminRole)
+          : null;
       unawaited(_store.saveUser(_user!));
     }
 
@@ -730,6 +738,7 @@ class AppState extends ChangeNotifier {
   void handleSessionLost() {
     if (_stage == AuthStage.signedOut) return;
     _isAdminOnServer = false;
+    _serverAdminRole = null;
     _stage = AuthStage.signedOut;
     _lastError = 'Your session has ended. Please sign in again.';
     unawaited(_store.setSignedIn(false));
@@ -778,7 +787,7 @@ class AppState extends ChangeNotifier {
     var stillAnAdmin = true;
     try {
       final me = await admin.whoAmI();
-      _serverAdminRole = _roleFromWire(me['role']);
+      _serverAdminRole = adminRoleFromApi(me['role']);
       _isAdminOnServer = true;
     } on ApiException catch (e) {
       if (e.code == ApiErrorCode.notAnAdmin || e.code == ApiErrorCode.forbidden) {
@@ -841,15 +850,6 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       failures.add('$what could not be loaded.');
     }
-  }
-
-  static AdminRole? _roleFromWire(Object? value) {
-    if (value is! String) return null;
-    final wanted = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
-    for (final role in AdminRole.values) {
-      if (role.name.toLowerCase() == wanted) return role;
-    }
-    return null;
   }
 
   /// The full record behind one row in the customer list.
@@ -1044,6 +1044,7 @@ class AppState extends ChangeNotifier {
     await _store.setSignedIn(false);
     _failedAttempts = 0;
     _isAdminOnServer = false;
+    _serverAdminRole = null;
     _stage = AuthStage.signedOut;
     notifyListeners();
   }
@@ -2176,6 +2177,12 @@ class AppState extends ChangeNotifier {
   /// Online the server's answer, which is also the one enforced. The panel uses
   /// it to hide controls a person cannot use; hiding a button has never stopped
   /// anybody, which is why the server checks again on every call.
+  ///
+  /// The fallback is only reached before the server has answered at all. It
+  /// used to be reached on every sign-in — the session said whether the panel
+  /// was allowed but not what it allowed — so an owner read "Signed in as
+  /// Viewer" on their own dashboard until they had opened the panel once and
+  /// come back. The role now arrives with the session.
   AdminRole get adminRole => isOnline
       ? (_serverAdminRole ?? AdminRole.viewer)
       : (currentAdmin?.role ?? AdminRole.viewer);

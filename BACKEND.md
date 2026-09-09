@@ -269,6 +269,12 @@ The receipt is a real uploaded file server-side, not a local path. Store it
 in object storage, serve it to admins over a signed, expiring URL, and keep
 it for five years as part of the transaction record.
 
+`receiptUrl` comes back **root-relative** — `/api/v1/admin/receipts/…` — because
+the server does not know what hostname it is being reached on and should not
+guess. The app resolves it against the API base before fetching it; an absolute
+URL is passed through untouched, so a server that starts sending one needs no
+change here.
+
 ### 3.6 Withdrawal request (money out)
 
 ```json
@@ -338,6 +344,14 @@ Granting access creates **no account and no password**. It means: when
 somebody signs in with that email, the panel appears. Access is re-checked on
 every request. Access may only be granted to an email that already belongs to
 an account.
+
+The signed-in account's own grant travels on the **profile**, not just on the
+sign-in envelope: `admin` (bool) says whether the panel is drawn and `adminRole`
+says what it may show. `adminRole` is absent for an account with no grant, which
+is not the same answer as `"viewer"` — reading the two as one is what labelled
+owners "Signed in as Viewer" on their own dashboard. Both are conveniences for
+hiding controls; the role is re-read from the database and enforced again on
+every admin request.
 
 ### 3.9 Audit entry
 

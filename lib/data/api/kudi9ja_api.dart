@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
+import '../models/admin.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
 import '../models/models.dart';
@@ -760,9 +761,11 @@ class Kudi9jaApi {
       expiresInSeconds: (body['expiresInSeconds'] as num?)?.toInt() ?? 900,
       sessionId: body['sessionId'] as String?,
     );
+    final profile = _obj(body['profile']);
     return Session(
-      user: userFromApi(_obj(body['profile'])),
+      user: userFromApi(profile),
       isAdmin: body['admin'] as bool? ?? false,
+      adminRole: adminRoleFromApi(profile['adminRole']),
       sessionId: body['sessionId'] as String? ?? '',
     );
   }
@@ -787,6 +790,7 @@ class Session {
   const Session({
     required this.user,
     required this.isAdmin,
+    required this.adminRole,
     required this.sessionId,
   });
 
@@ -798,6 +802,13 @@ class Session {
   /// it only to decide whether to show the way in — it is not what grants
   /// anything.
   final bool isAdmin;
+
+  /// What that access allows, or null for an account that holds none.
+  ///
+  /// Sent with the session so the dashboard can label the panel entrance the
+  /// moment it appears. Without it the app assumed the lowest role until the
+  /// panel had been opened once, and told an owner they were a Viewer.
+  final AdminRole? adminRole;
 
   final String sessionId;
 }

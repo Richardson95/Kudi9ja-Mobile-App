@@ -32,6 +32,22 @@ abstract final class AppConfig {
     defaultValue: 'https://kudi9ja-mobile-backend.onrender.com/api/v1',
   );
 
+  /// Turns a link the server hands back into one that can actually be fetched.
+  ///
+  /// Signed receipt URLs arrive root-relative — `/api/v1/admin/receipts/...` —
+  /// because the backend does not know what hostname it is being reached on and
+  /// should not guess. `Image.network` cannot open that: there is no host to
+  /// connect to, so every receipt in the panel failed to its error builder and
+  /// read "Receipt image unavailable", and enlarging one blamed an expired
+  /// link. Resolving against the API base fixes the host without touching a URL
+  /// that was already absolute.
+  static String absoluteUrl(String url) {
+    if (url.isEmpty) return url;
+    final target = Uri.tryParse(url);
+    if (target == null || target.hasScheme) return url;
+    return Uri.parse(apiBaseUrl).resolveUri(target).toString();
+  }
+
   /// How the server labels this session in the customer's device list, so a
   /// stolen session can be recognised and signed out from the security screen.
   static const deviceLabel = 'Kudi9ja mobile';

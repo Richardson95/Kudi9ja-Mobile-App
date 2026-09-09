@@ -1,3 +1,4 @@
+import '../../core/constants/app_config.dart';
 import '../models/admin.dart';
 import '../models/deposit.dart';
 import '../models/models.dart';
@@ -118,7 +119,8 @@ class AdminApi {
   /// Privacy Policy commits to being able to say who looked at one.
   Future<String?> receiptUrl(String claimId) async {
     final body = _obj(await _client.post('/admin/payins/$claimId/receipt'));
-    return body['url'] as String? ?? body['receiptUrl'] as String?;
+    final url = body['url'] as String? ?? body['receiptUrl'] as String?;
+    return url == null ? null : AppConfig.absoluteUrl(url);
   }
 
   /// Credits the customer's wallet. This is the moment money becomes theirs.

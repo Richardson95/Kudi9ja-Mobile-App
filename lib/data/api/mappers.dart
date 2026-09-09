@@ -20,6 +20,7 @@
 /// degrade a screen, never crash one.
 library;
 
+import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../models/admin.dart';
 import '../models/app_notification.dart';
@@ -344,7 +345,7 @@ DepositClaim claimFromApi(Map<String, dynamic> j, {String customerName = '', Str
       purpose: _enum(j['purpose'], DepositPurpose.values, DepositPurpose.wallet),
       loanId: j['loanId'] as String?,
       loanPurpose: _str(j['loanPurpose']),
-      receiptUrl: _str(j['receiptUrl']),
+      receiptUrl: AppConfig.absoluteUrl(_str(j['receiptUrl'])),
       senderName: _str(j['senderName']),
       status: _enum(j['status'], DepositStatus.values, DepositStatus.pending),
       reviewedAt: _dateOrNull(j['reviewedAt']),
@@ -584,6 +585,21 @@ WithdrawalRequest adminWithdrawalFromApi(Map<String, dynamic> j) =>
       customerName: _str(j['customerName']),
       customerRef: _str(j['customerRef']),
     );
+
+/// A role name off the wire, or null when the account holds no panel grant.
+///
+/// Null and "viewer" are different answers and the difference matters: the
+/// first means there is no grant to describe, the second is the narrowest one
+/// there is. Reading a missing role as viewer is what labelled owners "Viewer"
+/// on the dashboard until they had opened the panel once.
+AdminRole? adminRoleFromApi(Object? value) {
+  if (value is! String) return null;
+  final wanted = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+  for (final role in AdminRole.values) {
+    if (role.name.toLowerCase() == wanted) return role;
+  }
+  return null;
+}
 
 AdminUser teamMemberFromApi(Map<String, dynamic> j) => AdminUser(
       id: _str(j['id']),
