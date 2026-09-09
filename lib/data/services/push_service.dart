@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../api/api_exception.dart';
 import '../api/kudi9ja_api.dart';
@@ -27,6 +28,19 @@ import '../api/kudi9ja_api.dart';
 /// sign-in and removed on sign-out, so a customer signing in on a second handset
 /// is reachable on both, and signing out of one does not silence the other.
 ///
+/// **Firebase does not draw the notification when the app is open.** A message
+/// with a `notification` block is drawn by the system only while the app is in
+/// the background; in the foreground it is handed to the app and nothing
+/// appears unless the app draws it. So the one person who never found out their
+/// money had landed was the customer watching the screen when it did. It is
+/// drawn here, on the same channel the system uses for the other case, so the
+/// two look alike.
+///
+/// **The channel has to be created by us.** The manifest names
+/// `kudi9ja-money` as the default channel, but Android does not create a
+/// channel because a manifest mentions one. Until it exists, every message
+/// lands on a fallback channel at default importance — delivered, and silent.
+///
 /// **A token can change without anybody signing in.** Firebase reissues them —
 /// on a restore, on a reinstall, occasionally for its own reasons — so
 /// [onTokenRefresh] is subscribed to and re-registers. Without that, a customer
@@ -35,6 +49,18 @@ class PushService {
   PushService(this._api);
 
   final Kudi9jaApi _api;
+
+  /// The channel the server names on every message it sends. Must match
+  /// `kudi9ja.push.android-channel-id` on the server and the
+  /// `default_notification_channel_id` meta-data in the manifest.
+  static const _channel = AndroidNotificationChannel(
+    'kudi9ja-money',
+    'Money',
+    description: 'Payments, savings, loans and security alerts.',
+    importance: Importance.high,
+  );
+
+  final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _refreshes;
@@ -87,7 +113,12 @@ class PushService {
         return;
       }
 
+      await _prepareLocalNotifications();
+
       _foreground = FirebaseMessaging.onMessage.listen((message) {
+        // Drawn here because the system will not: a foreground message is
+        // delivered to the app and shown to nobody.
+        unawaited(_show(message));
         onMessage?.call(message);
       });
       _opened = FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -105,6 +136,76 @@ class PushService {
       await _register();
     } catch (e) {
       _log('Could not start push. $e');
+    }
+  }
+
+  /// Creates the channel and readies the plugin that draws a message.
+  ///
+  /// Both halves matter. Without the channel, a message the system draws while
+  /// the app is in the background lands at default importance — no sound, no
+  /// banner — because Android silently substitutes a fallback for a channel
+  /// that was named but never created.
+  Future<void> _prepareLocalNotifications() async {
+    await _local.initialize(
+      const InitializationSettings(
+        // The launcher icon. A dedicated monochrome one would render better in
+        // the status bar, but a wrong resource name here throws at runtime and
+        // this one is always present.
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(
+          // Firebase asked already, in start(). Asking twice shows the customer
+          // two prompts for one thing.
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
+      ),
+      onDidReceiveNotificationResponse: (_) => _openedFromTray(),
+    );
+
+    await _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_channel);
+  }
+
+  /// Draws one foreground message.
+  ///
+  /// The body is whatever the server put on the message, which is deliberately
+  /// figureless — amounts are in the `data` and read after the app opens, never
+  /// on a lock screen.
+  Future<void> _show(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) return;
+    try {
+      await _local.show(
+        // Firebase's ids are strings; this only has to be unique enough that
+        // two notifications a second apart do not replace one another.
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channel.id,
+            _channel.name,
+            channelDescription: _channel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+          iOS: const DarwinNotificationDetails(),
+        ),
+      );
+    } catch (e) {
+      // A notification that will not draw is not worth an error on a money
+      // screen. It is already saved on the server and in the app's own list.
+      _log('Could not draw a notification. $e');
+    }
+  }
+
+  void _openedFromTray() {
+    final handler = onOpened;
+    if (handler != null) {
+      handler(const RemoteMessage());
     }
   }
 

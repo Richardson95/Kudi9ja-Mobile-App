@@ -30,6 +30,13 @@ dependencies:
   # moves; these are what let a handset hear it.
   firebase_core: ^3.8.0
   firebase_messaging: ^15.1.5
+  # Firebase draws a notification itself only when the app is in the background.
+  # In the foreground the message is handed to the app and nothing is shown, so
+  # a customer watching the screen was the one person who did not find out their
+  # money had landed. This draws it. It also creates the high-importance channel
+  # the manifest names — Android will not create it for us, and a message sent
+  # to a channel that does not exist arrives at default importance, silently.
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:
