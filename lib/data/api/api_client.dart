@@ -225,11 +225,12 @@ class ApiClient {
     try {
       response = await _attemptWithRetry(attempt);
     } on TimeoutException {
-      throw ApiException.offline('timed out after ${_timeout.inSeconds}s');
+      throw ApiException.offline(
+          NetworkFailure.timeout, 'timed out after ${_timeout.inSeconds}s');
     } on SocketException catch (e) {
-      throw ApiException.offline(e.message);
+      throw ApiException.offline(NetworkFailure.unreachable, e.message);
     } on http.ClientException catch (e) {
-      throw ApiException.offline(e.message);
+      throw ApiException.offline(NetworkFailure.dropped, e.message);
     }
 
     if (response.statusCode != 401 || !authenticated) {
@@ -249,9 +250,15 @@ class ApiClient {
     try {
       return _decode(await _attemptWithRetry(attempt));
     } on TimeoutException {
-      throw ApiException.offline('timed out after ${_timeout.inSeconds}s');
+      throw ApiException.offline(
+          NetworkFailure.timeout, 'timed out after ${_timeout.inSeconds}s');
     } on SocketException catch (e) {
-      throw ApiException.offline(e.message);
+      throw ApiException.offline(NetworkFailure.unreachable, e.message);
+    } on http.ClientException catch (e) {
+      // Was missing, so a connection that died on the attempt after a refresh
+      // escaped as a raw ClientException instead of an ApiException — and every
+      // caller in the app catches ApiException.
+      throw ApiException.offline(NetworkFailure.dropped, e.message);
     }
   }
 
@@ -360,13 +367,15 @@ class ApiClient {
       // application — a proxy's 502, or Render's own error while the service
       // wakes — so it is reported as unreachable rather than as a server bug.
       if (ok) return null;
-      throw ApiException.offline('server returned ${response.statusCode}');
+      throw ApiException.offline(
+          NetworkFailure.notTheApp, 'server returned ${response.statusCode}');
     }
 
     if (ok) return body;
     throw body is Map<String, dynamic>
         ? ApiException.fromBody(body, status: response.statusCode)
-        : ApiException.offline('server returned ${response.statusCode}');
+        : ApiException.offline(
+            NetworkFailure.notTheApp, 'server returned ${response.statusCode}');
   }
 
   ApiException _errorFrom(http.Response response) {

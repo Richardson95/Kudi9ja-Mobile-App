@@ -501,4 +501,36 @@ void main() {
       expect(tokens.refreshToken, isNull);
     });
   });
+
+  group('Why a request never came back', () {
+    /// The wording is the evidence.
+    ///
+    /// A request that never reached the server leaves no server log — that is
+    /// what "never reached" means — so the sentence the customer photographs is
+    /// the only record of which failure it was. One sentence for all of them
+    /// hid a dropped socket behind a diagnosis about the customer's signal, and
+    /// sent the next person looking through logs that could not contain it.
+    test('each cause says something different', () {
+      final said = <String>{};
+      for (final why in NetworkFailure.values) {
+        final e = ApiException.offline(why);
+        expect(e.code, ApiErrorCode.network);
+        expect(e.details['why'], why.name);
+        expect(said.add(e.message), isTrue,
+            reason: '${why.name} repeats a message another cause already uses');
+      }
+    });
+
+    /// Only one of the four is actually about the customer's connection.
+    /// Telling somebody to check theirs when a keep-alive socket died is a
+    /// wrong answer delivered confidently.
+    test('only an unreachable server blames the connection', () {
+      for (final why in NetworkFailure.values) {
+        final mentionsConnection =
+            ApiException.offline(why).message.toLowerCase().contains('connection');
+        expect(mentionsConnection, why != NetworkFailure.timeout && why != NetworkFailure.notTheApp,
+            reason: 'wrong advice for ${why.name}');
+      }
+    });
+  });
 }

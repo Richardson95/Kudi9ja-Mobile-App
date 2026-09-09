@@ -121,6 +121,34 @@ enum ApiErrorCode {
   }
 }
 
+/// Why a request never came back.
+///
+/// All four are the same thing to the code that catches them — no reply — and
+/// all four used to produce one sentence about the customer's connection. That
+/// sentence is a diagnosis, and three times out of four it is the wrong one: it
+/// sends whoever reads it to the server logs, where a request that never
+/// arrived has left nothing to find.
+///
+/// So the wording differs per cause. A screenshot then says which happened,
+/// which is the only evidence there is when the request never reached us.
+enum NetworkFailure {
+  /// A connection was made and the server did not answer in time.
+  timeout,
+
+  /// No connection could be opened at all. This is the one that really is the
+  /// customer's signal.
+  unreachable,
+
+  /// A connection was opened and died before the reply was complete. Usually a
+  /// socket the phone had kept alive that the other end had already closed —
+  /// nothing to do with signal, and it clears on a second attempt.
+  dropped,
+
+  /// Something answered, but it was not the application: a proxy's own page
+  /// while the instance behind it starts.
+  notTheApp,
+}
+
 /// A request the server refused, or one that never arrived.
 class ApiException implements Exception {
   ApiException({
@@ -131,14 +159,26 @@ class ApiException implements Exception {
     this.path,
   });
 
-  /// The phone could not reach the server, or gave up waiting.
+  /// The request never came back.
   ///
-  /// Deliberately worded for a customer standing in a shop with one bar of
-  /// signal, not for a developer reading a log.
-  factory ApiException.offline([String? detail]) => ApiException(
+  /// Worded for a customer standing in a shop with one bar of signal, not for a
+  /// developer reading a log — but worded *differently* per [NetworkFailure],
+  /// because the customer's next move differs too, and because the sentence on
+  /// screen is the only record of a request that never reached the server.
+  factory ApiException.offline(NetworkFailure why, [String? detail]) =>
+      ApiException(
         code: ApiErrorCode.network,
-        message: 'We could not reach Kudi9ja. Check your connection and try again.',
-        details: detail == null ? const {} : {'detail': detail},
+        message: switch (why) {
+          NetworkFailure.timeout =>
+            'Kudi9ja took too long to answer. Nothing was sent — try again.',
+          NetworkFailure.unreachable =>
+            'We could not reach Kudi9ja. Check your connection and try again.',
+          NetworkFailure.dropped =>
+            'The connection dropped before Kudi9ja finished. Try again.',
+          NetworkFailure.notTheApp =>
+            'Kudi9ja is starting up. Give it a moment and try again.',
+        },
+        details: {'why': why.name, if (detail != null) 'detail': detail},
       );
 
   /// Reads the server's error envelope.
