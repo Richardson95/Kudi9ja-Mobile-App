@@ -70,6 +70,12 @@ class _Kudi9jaAppState extends State<Kudi9jaApp> with WidgetsBindingObserver {
     }
   }
 
+  /// How large text is drawn, against the sizes written in the widgets.
+  ///
+  /// One number for the whole app, so the relationships between a heading and
+  /// the line under it stay exactly as they were designed.
+  static const _textScale = 0.9;
+
   @override
   Widget build(BuildContext context) {
     final mode = context.watch<AppState>().themeMode;
@@ -89,7 +95,20 @@ class _Kudi9jaAppState extends State<Kudi9jaApp> with WidgetsBindingObserver {
               ? kDarkPalette
               : kLightPalette,
         );
-        return MediaQuery.withNoTextScaling(child: child!);
+        return MediaQuery(
+          // Every size in the app is written as a literal, and every one of
+          // them was reading a shade too large on a real handset. Scaled in one
+          // place rather than edited in five hundred: the proportions between
+          // them were right, only the whole was big.
+          //
+          // This replaces MediaQuery.withNoTextScaling, which pinned the scale
+          // at 1.0. It still ignores the platform setting — deliberately, as
+          // before — it just settles on a smaller number.
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(_textScale),
+          ),
+          child: child!,
+        );
       },
       home: _booting ? const SplashScreen() : const _Gate(),
     );
