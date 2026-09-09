@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -113,7 +112,12 @@ class _ClaimCard extends StatelessWidget {
           // The receipt is the whole point, so it is shown, not hidden.
           if (claim.hasReceipt)
             GestureDetector(
-              onTap: () => showReceipt(context, claim.receiptPath),
+              onTap: () => showReceipt(
+                context,
+                claim.receiptPath,
+                url: claim.receiptUrl,
+                headers: context.read<AppState>().receiptHeaders,
+              ),
               child: Container(
                 height: 150,
                 width: double.infinity,
@@ -125,10 +129,11 @@ class _ClaimCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.file(
-                      File(claim.receiptPath),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => ColoredBox(
+                    ReceiptImage(
+                      path: claim.receiptPath,
+                      url: claim.receiptUrl,
+                      headers: context.read<AppState>().receiptHeaders,
+                      onError: (_) => ColoredBox(
                         color: AppColors.surfaceAlt,
                         child: Center(
                           child: Text(

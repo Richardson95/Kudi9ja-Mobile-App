@@ -413,8 +413,93 @@ class ReceiptPicker extends StatelessWidget {
   }
 }
 
+/// A receipt, from wherever this one happens to live.
+///
+/// Two sources, and both are real: a claim just attached on this handset is a
+/// file, and a claim read back from the server is a signed URL. The panel drew
+/// only the file, so every receipt an admin actually needed to see — all of
+/// them, since the queue comes from the server — rendered as a broken image
+/// under a line saying none had been attached.
+class ReceiptImage extends StatelessWidget {
+  const ReceiptImage({
+    super.key,
+    required this.path,
+    required this.url,
+    required this.headers,
+    this.fit = BoxFit.cover,
+    this.width,
+    this.height,
+    this.onError,
+  });
+
+  final String path;
+  final String url;
+  final Map<String, String> headers;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+
+  /// What to draw when there is nothing to draw. A thumbnail wants an icon and
+  /// a full-screen view wants a sentence, so the caller says.
+  final Widget Function(BuildContext)? onError;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget fallback(BuildContext c, Object _, StackTrace? _) =>
+        onError?.call(c) ??
+        ColoredBox(
+          color: AppColors.surfaceAlt,
+          child: Center(
+            child: Icon(
+              Icons.receipt_long_rounded,
+              size: 20,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        );
+
+    if (path.isNotEmpty) {
+      return Image.file(
+        File(path),
+        fit: fit,
+        width: width,
+        height: height,
+        errorBuilder: fallback,
+      );
+    }
+    if (url.isEmpty) {
+      return Builder(builder: (c) => fallback(c, 'no receipt', null));
+    }
+    return Image.network(
+      url,
+      headers: headers,
+      fit: fit,
+      width: width,
+      height: height,
+      errorBuilder: fallback,
+      loadingBuilder: (context, child, progress) => progress == null
+          ? child
+          : ColoredBox(
+              color: AppColors.surfaceAlt,
+              child: const Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
 /// Opens a receipt full-screen so an admin can read the detail on it.
-void showReceipt(BuildContext context, String path) {
+void showReceipt(
+  BuildContext context,
+  String path, {
+  String url = '',
+  Map<String, String> headers = const {},
+}) {
   showDialog<void>(
     context: context,
     builder: (dialogContext) => Dialog(
@@ -446,13 +531,16 @@ void showReceipt(BuildContext context, String path) {
           Flexible(
             child: InteractiveViewer(
               maxScale: 4,
-              child: Image.file(
-                File(path),
+              child: ReceiptImage(
+                path: path,
+                url: url,
+                headers: headers,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => Padding(
+                onError: (_) => Padding(
                   padding: EdgeInsets.all(AppSpacing.huge),
                   child: Text(
-                    'This receipt image is no longer available on the device.',
+                    'This receipt could not be opened. The link may have '
+                    'expired — close this and open the claim again.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,

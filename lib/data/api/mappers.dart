@@ -327,9 +327,12 @@ class CreditFactorRow {
 
 /// Reads a `ClaimResponse`.
 ///
-/// `receiptPath` is left empty on purpose. On the server the receipt is a
-/// private object behind a signed, expiring, audited URL — there is no path the
-/// app can hold, and `hasReceipt` is the only thing worth knowing here.
+/// `receiptPath` is left empty on purpose: on the server the receipt is a
+/// private object, not a file, so there is no path the app can hold. What comes
+/// back instead is `receiptUrl` — signed, expiring, and still refused without a
+/// live panel session — which is what an admin opens. The customer's own view
+/// of a claim carries `hasReceipt` and no URL, since a customer has no reason
+/// to be handed a link to a document they attached themselves.
 DepositClaim claimFromApi(Map<String, dynamic> j, {String customerName = '', String customerRef = ''}) =>
     DepositClaim(
       id: _str(j['id']),
@@ -341,6 +344,7 @@ DepositClaim claimFromApi(Map<String, dynamic> j, {String customerName = '', Str
       purpose: _enum(j['purpose'], DepositPurpose.values, DepositPurpose.wallet),
       loanId: j['loanId'] as String?,
       loanPurpose: _str(j['loanPurpose']),
+      receiptUrl: _str(j['receiptUrl']),
       senderName: _str(j['senderName']),
       status: _enum(j['status'], DepositStatus.values, DepositStatus.pending),
       reviewedAt: _dateOrNull(j['reviewedAt']),

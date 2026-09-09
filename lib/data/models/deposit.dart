@@ -37,6 +37,7 @@ class DepositClaim {
     this.loanId,
     this.loanPurpose = '',
     this.receiptPath = '',
+    this.receiptUrl = '',
     this.senderName = '',
     this.status = DepositStatus.pending,
     this.reviewedAt,
@@ -59,7 +60,18 @@ class DepositClaim {
   final String loanPurpose;
 
   /// Local path to the receipt screenshot the customer attached.
+  ///
+  /// Only ever set on the device that attached it. A claim read back from the
+  /// server has none: the receipt is a private object there, not a file.
   final String receiptPath;
+
+  /// A signed, expiring link to the receipt held by the server.
+  ///
+  /// This is what an admin actually opens. It carries its own signature and
+  /// still requires a live panel session, so it is not a way around anything —
+  /// it is the only route to a receipt that was uploaded rather than attached
+  /// on this handset.
+  final String receiptUrl;
 
   /// Whose bank account the money came from, if they said.
   final String senderName;
@@ -70,7 +82,12 @@ class DepositClaim {
   final String note;
 
   bool get isPending => status == DepositStatus.pending;
-  bool get hasReceipt => receiptPath.isNotEmpty;
+  /// Whether there is a receipt to look at, wherever it lives.
+  ///
+  /// This read only the local path once, which meant a claim from the server
+  /// always answered no — and the panel told the admin no receipt had been
+  /// attached to a claim that could not have been submitted without one.
+  bool get hasReceipt => receiptPath.isNotEmpty || receiptUrl.isNotEmpty;
   bool get isLoanRepayment => purpose == DepositPurpose.loanRepayment;
 
   Duration get age => DateTime.now().difference(claimedAt);
@@ -91,6 +108,7 @@ class DepositClaim {
     loanId: loanId,
     loanPurpose: loanPurpose,
     receiptPath: receiptPath,
+    receiptUrl: receiptUrl,
     senderName: senderName,
     status: status ?? this.status,
     reviewedAt: reviewedAt ?? this.reviewedAt,
@@ -109,6 +127,7 @@ class DepositClaim {
     'loanId': loanId,
     'loanPurpose': loanPurpose,
     'receiptPath': receiptPath,
+    'receiptUrl': receiptUrl,
     'senderName': senderName,
     'status': status.index,
     'reviewedAt': reviewedAt?.toIso8601String(),
@@ -127,6 +146,7 @@ class DepositClaim {
     loanId: j['loanId'] as String?,
     loanPurpose: j['loanPurpose'] as String? ?? '',
     receiptPath: j['receiptPath'] as String? ?? '',
+    receiptUrl: j['receiptUrl'] as String? ?? '',
     senderName: j['senderName'] as String? ?? '',
     status: DepositStatus.values[j['status'] as int],
     reviewedAt: j['reviewedAt'] == null

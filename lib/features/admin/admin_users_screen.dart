@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -6,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
-import 'dart:io';
 
 import '../../data/models/admin.dart';
 import '../../data/models/deposit.dart';
@@ -262,10 +263,33 @@ class _AdminCustomerDetailScreenState
     extends State<AdminCustomerDetailScreen> {
   TxFilter _txFilter = TxFilter.all;
 
+  /// The full record, once it arrives.
+  ///
+  /// The row this screen is opened from comes out of the customer list, which
+  /// carries a name, an email and a balance and nothing else — identity numbers
+  /// and totals are deliberately not sent for two hundred people because
+  /// somebody scrolled. So the row alone renders a record with no date of
+  /// birth, no address and no BVN, which reads as "we never asked" rather than
+  /// "not fetched yet". This asks for the rest.
+  CustomerRecord? _full;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final detail = await context.read<AppState>().loadCustomer(widget.customer.id);
+    if (mounted && detail != null) setState(() => _full = detail);
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final c = widget.customer;
+    // The row until the full record lands, so the screen opens immediately with
+    // the name and balance rather than on a spinner.
+    final c = _full ?? widget.customer;
     final ledger = app.transactionsFor(c);
     final filtered = ledger.where(_txFilter.matches).toList();
 
@@ -668,21 +692,22 @@ class _PayInRow extends StatelessWidget {
         // only from the payments queue.
         if (claim.hasReceipt)
           GestureDetector(
-            onTap: () => showReceipt(context, claim.receiptPath),
+            onTap: () => showReceipt(
+              context,
+              claim.receiptPath,
+              url: claim.receiptUrl,
+              headers: context.read<AppState>().receiptHeaders,
+            ),
             child: Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.xs),
-                  child: Image.file(
-                    File(claim.receiptPath),
+                  child: ReceiptImage(
+                    path: claim.receiptPath,
+                    url: claim.receiptUrl,
+                    headers: context.read<AppState>().receiptHeaders,
                     width: 38,
                     height: 38,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Icon(
-                      Icons.receipt_long_rounded,
-                      size: 20,
-                      color: AppColors.textTertiary,
-                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),

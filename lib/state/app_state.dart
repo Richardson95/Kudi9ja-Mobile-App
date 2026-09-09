@@ -176,6 +176,17 @@ class AppState extends ChangeNotifier {
   int get failedAttempts => _failedAttempts;
   int get attemptsLeft => settings.maxPasscodeAttempts - _failedAttempts;
   bool get hasAccount => _user != null;
+
+  /// The headers a receipt image has to be fetched with.
+  ///
+  /// The signed URL proves the link was minted for that receipt and has not
+  /// expired. The bearer proves the person opening it still holds the panel —
+  /// the server checks both, deliberately, so a link that leaks is not a key to
+  /// somebody's bank details. An Image.network without these is a 401.
+  Map<String, String> get receiptHeaders {
+    final token = _api?.client.tokens.accessToken;
+    return token == null ? const {} : {'Authorization': 'Bearer $token'};
+  }
   bool get biometricsEnabled => _user?.biometricsEnabled ?? false;
 
   List<SavingsPlan> get plans =>
