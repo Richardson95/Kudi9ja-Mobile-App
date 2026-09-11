@@ -118,6 +118,54 @@ class ApiClient {
     return _withRefresh(attempt);
   }
 
+  /// A multipart upload carrying several files and a JSON part.
+  ///
+  /// A loan application is four files — a bank statement and three photographs
+  /// of the business — alongside a form with two guarantors nested in it. The
+  /// form goes as one `application/json` part rather than as loose fields:
+  /// flattening a repeated structure into `guarantor1Bvn`, `guarantor2Bvn`
+  /// turns the shape into a naming convention both sides have to remember.
+  Future<dynamic> uploadFiles(
+    String path, {
+    required List<UploadPart> files,
+    Map<String, Object?> jsonParts = const {},
+    Map<String, String> fields = const {},
+    String? idempotencyKey,
+  }) async {
+    Future<http.Response> attempt() async {
+      final request = http.MultipartRequest('POST', _uri(path, null))
+        ..fields.addAll(fields);
+
+      jsonParts.forEach((name, value) {
+        request.files.add(http.MultipartFile.fromString(
+          name,
+          jsonEncode(value),
+          filename: '$name.json',
+          contentType: MediaType('application', 'json'),
+        ));
+      });
+
+      for (final part in files) {
+        request.files.add(http.MultipartFile.fromBytes(
+          part.field,
+          part.bytes,
+          filename: part.filename,
+          contentType: _mediaType(part.contentType),
+        ));
+      }
+
+      request.headers.addAll(await _headers(
+        json: false,
+        idempotencyKey: idempotencyKey,
+        authenticated: true,
+      ));
+      final streamed = await _http.send(request).timeout(_timeout);
+      return http.Response.fromStream(streamed);
+    }
+
+    return _withRefresh(attempt);
+  }
+
   void close() => _http.close();
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -407,4 +455,22 @@ class ApiClient {
       return null;
     }
   }
+}
+
+/// One file on its way up, named by the form field it belongs to.
+///
+/// Several parts can share a field name — the three business photographs all
+/// arrive as `businessPhotos`, which is how a list of files is sent.
+class UploadPart {
+  const UploadPart({
+    required this.field,
+    required this.filename,
+    required this.bytes,
+    this.contentType,
+  });
+
+  final String field;
+  final String filename;
+  final List<int> bytes;
+  final String? contentType;
 }

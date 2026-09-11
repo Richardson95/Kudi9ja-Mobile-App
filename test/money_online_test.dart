@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,7 @@ import 'package:kudi9ja/data/models/models.dart';
 import 'package:kudi9ja/data/models/thrift.dart';
 import 'package:kudi9ja/data/services/storage_service.dart';
 import 'package:kudi9ja/state/app_state.dart';
+import 'package:kudi9ja/data/models/loan_application.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Savings, lending, circles and pay-ins, against a server.
@@ -173,36 +175,51 @@ void main() {
   });
 
   group('Lending', () {
-    test('the loan the server issues is the one recorded', () async {
+    /// Four files and a form, and a balance that does not move.
+    ///
+    /// The second half is the point. Borrowing used to end with money in the
+    /// wallet on the same call; it now ends with a row somebody has to read.
+    test('applying sends the evidence and credits nothing', () async {
       final state = await app((request) async {
-        if (request.url.path.endsWith('/loans') && request.method == 'POST') {
+        if (request.url.path.endsWith('/loans/applications') &&
+            request.method == 'POST') {
           return json({
-            'id': 'l-1',
-            'principal': 200000,
+            'id': 'app-1',
+            'amount': 200000,
             'tenureMonths': 6,
-            'flatRate': 0.45,
-            'processingFee': 5000,
             'purpose': 'Stock',
+            'businessName': 'Test Provisions',
             'status': 'PENDING',
-            'requestedAt': '2026-09-06T00:00:00Z',
-          });
+            'submittedAt': '2026-09-06T00:00:00Z',
+            'documentsAttached': 4,
+          }, status: 201);
         }
         return pass();
       });
 
-      final loan = await state.requestLoan(
-          principal: 200000, months: 6, purpose: 'Stock', pin: '1234');
+      final before = state.balance;
+      final application = await _apply(state);
 
-      expect(loan.status, LoanStatus.pending,
-          reason: 'a new loan is under review, not active');
-      expect(bodyOf('/loans')['pin'], '1234');
+      expect(application.status, LoanApplicationStatus.pending,
+          reason: 'an application is read by a person, not granted');
+      expect(application.documentsAttached, 4);
+      expect(state.balance, before, reason: 'applying moves no money');
+
+      // The form and all four files went in one request.
+      final body = _rawBody(sent, '/loans/applications');
+      expect(body, contains('name="form"'));
+      expect(body, contains('name="bankStatement"'));
+      expect('businessPhotos'.allMatches(body).length, greaterThanOrEqualTo(3));
+      expect(body, contains('22222222222'), reason: "a guarantor's BVN travels");
+      expect(body, contains('"pin":"5271"'));
     });
 
-    /// Being refused a loan is normal and must reach the customer with the
-    /// server's explanation, which names the amount they can actually borrow.
-    test('an ineligible request surfaces the reason', () async {
+    /// Being refused is normal and must reach the customer with the server's
+    /// own words, which say what to fix.
+    test('a refused application surfaces the reason', () async {
       final state = await app((request) async {
-        if (request.url.path.endsWith('/loans') && request.method == 'POST') {
+        if (request.url.path.endsWith('/loans/applications') &&
+            request.method == 'POST') {
           return refusal('OFFER_EXCEEDED',
               'The most you can borrow right now is 120,000.');
         }
@@ -210,8 +227,7 @@ void main() {
       });
 
       await expectLater(
-        state.requestLoan(
-            principal: 5000000, months: 6, purpose: 'x', pin: '1234'),
+        _apply(state),
         throwsA(isA<ApiException>().having(
             (e) => e.message, 'message', contains('120,000'))),
       );
@@ -361,3 +377,54 @@ void main() {
     });
   });
 }
+
+/// Applies with a complete, well-formed application.
+///
+/// The files are real temporary ones because the upload reads them off the
+/// disk — there is no point pretending a path is a file when the thing under
+/// test is that the bytes arrive.
+Future<LoanApplication> _apply(AppState state) async {
+  final dir = await Directory.systemTemp.createTemp('k9-apply');
+  Future<String> file(String name) async {
+    final f = File('${dir.path}/$name');
+    await f.writeAsBytes(List<int>.filled(16, 7));
+    return f.path;
+  }
+
+  return state.submitLoanApplication(
+    principal: 200000,
+    months: 6,
+    purpose: 'Stock',
+    businessName: 'Test Provisions',
+    businessAddress: '14 Adeola Odeku Street, Lagos',
+    monthlyIncome: 450000,
+    guarantors: const [
+      Guarantor(
+        fullName: 'Adaeze Nwosu',
+        phone: '08031234567',
+        address: '22 Awolowo Road, Ikoyi',
+        relationship: 'Business partner',
+        bvn: '22222222222',
+      ),
+      Guarantor(
+        fullName: 'Tunde Bakare',
+        phone: '08061234567',
+        address: '9 Bode Thomas, Surulere',
+        relationship: 'Landlord',
+        bvn: '33333333333',
+      ),
+    ],
+    bankStatementPath: await file('statement.jpg'),
+    businessPhotoPaths: [
+      await file('front.jpg'),
+      await file('inside.jpg'),
+      await file('stock.jpg'),
+    ],
+    pin: '5271',
+  );
+}
+
+/// The multipart body as it went out. Not JSON, so it is read as text.
+String _rawBody(List<http.Request> sent, String pathEnd) => sent
+    .firstWhere((r) => r.url.path.endsWith(pathEnd) && r.method == 'POST')
+    .body;

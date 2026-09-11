@@ -1,6 +1,7 @@
 import '../../core/constants/app_config.dart';
 import '../models/admin.dart';
 import '../models/deposit.dart';
+import '../models/loan_application.dart';
 import '../models/models.dart';
 import '../models/withdrawal.dart';
 import 'api_client.dart';
@@ -122,6 +123,45 @@ class AdminApi {
     final url = body['url'] as String? ?? body['receiptUrl'] as String?;
     return url == null ? null : AppConfig.absoluteUrl(url);
   }
+
+  // -- Borrowing ------------------------------------------------------------
+
+  /// The application queue. `status` null means every application ever made.
+  Future<Page<LoanApplication>> loanApplications({
+    LoanApplicationStatus? status,
+    int page = 0,
+    int size = 50,
+  }) async =>
+      Page.fromApi(
+        await _client.get('/admin/loan-applications', query: {
+          if (status != null) 'status': status.name.toUpperCase(),
+          'page': page,
+          'size': size,
+        }),
+        loanApplicationFromApi,
+      );
+
+  /// One application in full, with signed links to every document on it.
+  ///
+  /// The links expire, and opening one is written to the audit log — a bank
+  /// statement says more about somebody than anything else they send us.
+  Future<LoanApplication> loanApplication(String id) async =>
+      loanApplicationFromApi(
+          _obj(await _client.get('/admin/loan-applications/$id')));
+
+  /// Approves and disburses. The money reaches the wallet on this call.
+  Future<LoanApplication> approveLoanApplication(String id, {String? note}) async =>
+      loanApplicationFromApi(_obj(await _client.post(
+        '/admin/loan-applications/$id/approve',
+        body: {if (note != null && note.isNotEmpty) 'note': note},
+      )));
+
+  /// Declines, with a reason the customer is shown word for word.
+  Future<LoanApplication> rejectLoanApplication(String id, String reason) async =>
+      loanApplicationFromApi(_obj(await _client.post(
+        '/admin/loan-applications/$id/reject',
+        body: {'reason': reason},
+      )));
 
   /// Credits the customer's wallet. This is the moment money becomes theirs.
   Future<DepositClaim> confirmPayIn(String claimId, {String? note}) async =>

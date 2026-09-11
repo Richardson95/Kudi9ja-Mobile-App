@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
+import '../../data/models/loan_application.dart';
 import '../../state/app_state.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
@@ -41,6 +42,21 @@ class LoansScreen extends StatelessWidget {
           ),
           SliverToBoxAdapter(child: _CreditCard(app: app)),
           const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+
+          // What happened to the last application, before anything else. A
+          // customer waiting on a decision, or holding a refusal they could
+          // act on, should not have to go looking for either.
+          if (app.pendingLoanApplication != null) ...[
+            SliverToBoxAdapter(
+              child: _ApplicationBanner(application: app.pendingLoanApplication!),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+          ] else if (app.lastDeclinedApplication != null) ...[
+            SliverToBoxAdapter(
+              child: _ApplicationBanner(application: app.lastDeclinedApplication!),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+          ],
 
           if (app.nextRepayment != null) ...[
             SliverToBoxAdapter(child: _NextDueCard(app: app)),
@@ -524,5 +540,74 @@ class _NextDueCard extends StatelessWidget {
         ),
       ),
     ).animate(delay: 80.ms).fadeIn().slideY(begin: 0.1);
+  }
+}
+
+/// What became of an application, on the screen where they asked for it.
+///
+/// Two states worth showing. One waiting says so plainly and repeats that
+/// nothing has moved — a customer who thinks the money is coming today and
+/// finds it is not has been misled by silence. One declined leads with the
+/// reason, because the reason is the thing they can act on; everything else
+/// about a refusal is noise.
+class _ApplicationBanner extends StatelessWidget {
+  const _ApplicationBanner({required this.application});
+
+  final LoanApplication application;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = application.isPending;
+    final accent = pending ? AppColors.gold : AppColors.danger;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: KCard(
+        borderColor: accent.withValues(alpha: 0.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  pending ? Icons.hourglass_top_rounded : Icons.info_outline_rounded,
+                  size: 16,
+                  color: accent,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    pending
+                        ? 'Your ${application.amount.asNaira} application is with our team'
+                        : 'Your ${application.amount.asNaira} application was declined',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              pending
+                  ? 'We read the statement, the pictures and both guarantors '
+                      'before deciding. Nothing has been added to your wallet yet.'
+                  : application.rejectionReason,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.5,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (!pending) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Sort that out and you are welcome to apply again.',
+                style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

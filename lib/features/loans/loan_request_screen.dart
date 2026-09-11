@@ -6,14 +6,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
-import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
-import '../../widgets/pin_sheet.dart';
 import '../legal/legal_screen.dart';
+import 'loan_application_screen.dart';
 import 'tenure_slider.dart';
 import '../../widgets/primitives.dart';
-import '../../widgets/result_screen.dart';
 import '../../data/models/platform_settings.dart';
 
 const _purposes = <(IconData, String)>[
@@ -36,7 +34,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   final _amount = TextEditingController();
   int _tenure = 3;
   String _purpose = 'Business';
-  bool _busy = false;
 
   double get _principal => parseAmount(_amount.text);
   double get _fee => Finance.processingFee(_principal);
@@ -64,61 +61,21 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  /// Moves on to the evidence, rather than to a disbursement.
+  ///
+  /// This used to confirm with a PIN and come back with money in the wallet.
+  /// It cannot any more: the amount and the tenure are only half of what the
+  /// decision rests on, and the other half — the statement, the business, the
+  /// guarantors — is collected on the screen after this one and read by a
+  /// person before anything moves.
+  void _continue() {
     FocusScope.of(context).unfocus();
-
-    final pin = await confirmWithPin(
-      context,
-      title: 'Confirm your loan',
-      amountLabel: 'You will receive',
-      amount: _net,
-      details: [
-        ('You requested', _principal.asNaira),
-        ('Processing fee', '-${_fee.asNaira}'),
-        ('Credited to wallet', _net.asNaira),
-        ('Monthly repayment', _monthly.asNaira),
-        ('Total repayable', _total.asNaira),
-      ],
-    );
-    if (pin == null || !mounted) return;
-
-    setState(() => _busy = true);
-    // Stands in for the underwriting decision.
-    await Future<void>.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-
-    final Loan loan;
-    try {
-      loan = await context.read<AppState>().requestLoan(
-        principal: _principal,
-        months: _tenure,
-        purpose: _purpose,
-        pin: pin,
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      // NOT_ELIGIBLE and OFFER_EXCEEDED both come back with the figure the
-      // customer can actually borrow, which is the useful part.
-      showToast(context, e.message, error: true);
-      return;
-    }
-    if (!mounted) return;
-
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ResultScreen(
-          title: 'Loan approved',
-          message:
-              '${Finance.netDisbursed(loan.principal).asNaira} is in your wallet — your ${loan.principal.asNaira} loan less the ${loan.processingFee.asNaira} processing fee. Your first repayment is due ${Finance.addMonths(DateTime.now(), 1).asDay}.',
-          details: [
-            ('Loan amount', loan.principal.asNaira),
-            ('Processing fee deducted', '-${loan.processingFee.asNaira}'),
-            ('Credited to your wallet', Finance.netDisbursed(loan.principal).asNaira),
-            ('Monthly repayment', loan.monthlyRepayment.asNaira),
-            ('Total repayable', loan.totalRepayable.asNaira),
-            ('Final due date', loan.dueDate.asDay),
-          ],
+        builder: (_) => LoanApplicationScreen(
+          principal: _principal,
+          months: _tenure,
+          purpose: _purpose,
         ),
       ),
     );
@@ -129,8 +86,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     final app = context.watch<AppState>();
     final limit = app.eligibleLoanAmount;
     final error = _error(app);
-    final canSubmit =
-        _principal >= settings.minLoanAmount && error == null && !_busy;
+    final canSubmit = _principal >= settings.minLoanAmount && error == null;
 
     if (limit < settings.minLoanAmount) {
       return Scaffold(
@@ -304,13 +260,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                       ),
                     ),
                     GoldButton(
-                      label: _busy
-                          ? 'Reviewing...'
-                          : (canSubmit
-                                ? 'Borrow and receive ${_net.asNairaFlat}'
-                                : 'Request loan'),
-                      loading: _busy,
-                      onPressed: canSubmit ? _submit : null,
+                      // Not "Borrow and receive X" any more: this button no
+                      // longer produces money, it moves on to the documents.
+                      // A label that promises a disbursement two screens before
+                      // a person has read the file is the cruellest kind of
+                      // wrong.
+                      label: 'Continue to your documents',
+                      onPressed: canSubmit ? _continue : null,
                     ),
                   ],
                 ),
@@ -552,7 +508,7 @@ class _Breakdown extends StatelessWidget {
           'Processing fee (${Finance.processingFeeBasis(principal).toLowerCase()})',
           '-${fee.asNaira}',
         ),
-        _Line('Lands in your wallet', net.asNaira, highlight: true),
+        _Line('Lands in your wallet if approved', net.asNaira, highlight: true),
         _Line(
           'Interest rate',
           '${settings.loanRateLabelFor(tenure)} flat over '
@@ -630,7 +586,7 @@ class _NetBanner extends StatelessWidget {
             ),
             const SizedBox(width: 7),
             Text(
-              'You receive ${net.asNaira}',
+              'If approved, you receive ${net.asNaira}',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,

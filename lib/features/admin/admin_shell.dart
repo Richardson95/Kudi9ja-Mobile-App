@@ -158,7 +158,8 @@ class _AdminShellState extends State<AdminShell> {
                                     ? AppColors.gold
                                     : AppColors.textTertiary,
                               ),
-                              if (i == 2 && app.pendingPaymentCount > 0)
+                              if ((i == 2 && app.pendingPaymentCount > 0)
+                                  || (i == 3 && app.pendingLoanApplicationCount > 0))
                                 Positioned(
                                   right: -7,
                                   top: -5,
@@ -176,7 +177,9 @@ class _AdminShellState extends State<AdminShell> {
                                       ),
                                     ),
                                     child: Text(
-                                      '${app.pendingPaymentCount}',
+                                      i == 2
+                                          ? '${app.pendingPaymentCount}'
+                                          : '${app.pendingLoanApplicationCount}',
                                       style: const TextStyle(
                                         fontSize: 8.5,
                                         fontWeight: FontWeight.w800,

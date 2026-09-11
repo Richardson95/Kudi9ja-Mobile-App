@@ -10,12 +10,14 @@ import '../core/theme/app_colors.dart';
 import '../data/models/admin.dart';
 import '../data/models/app_notification.dart';
 import '../data/models/deposit.dart';
+import '../data/models/loan_application.dart';
 import '../data/models/models.dart';
 import '../data/models/thrift.dart';
 import '../data/models/withdrawal.dart';
 import '../data/services/push_service.dart';
 import '../data/services/security_service.dart';
 import '../data/api/admin_api.dart';
+import '../data/api/api_client.dart';
 import '../data/api/api_exception.dart';
 import '../data/api/kudi9ja_api.dart';
 import '../data/api/mappers.dart';
@@ -95,6 +97,13 @@ class AppState extends ChangeNotifier {
   /// because notifications are written on the server either way and appear the
   /// moment Kudi9ja is opened.
   final PushService? _push;
+
+  /// This customer's own applications to borrow, newest first.
+  List<LoanApplication> _applications = [];
+
+  /// The queue the panel reads. Separate from [_applications] because they are
+  /// different sets of rows — everybody's, against this customer's own.
+  List<LoanApplication> _adminApplications = [];
 
   /// Whether this handset is currently reachable by push.
   bool get pushActive => _push?.isActive ?? false;
@@ -188,6 +197,31 @@ class AppState extends ChangeNotifier {
     return token == null ? const {} : {'Authorization': 'Bearer $token'};
   }
   bool get biometricsEnabled => _user?.biometricsEnabled ?? false;
+
+  List<LoanApplication> get loanApplications =>
+      List.unmodifiable(_applications);
+
+  /// The one waiting on a decision, if there is one. At most one can be open.
+  LoanApplication? get pendingLoanApplication {
+    for (final a in _applications) {
+      if (a.isPending) return a;
+    }
+    return null;
+  }
+
+  /// The most recent refusal, so the borrow screen can lead with what to fix.
+  LoanApplication? get lastDeclinedApplication {
+    for (final a in _applications) {
+      if (a.wasDeclined) return a;
+    }
+    return null;
+  }
+
+  List<LoanApplication> get adminLoanApplications =>
+      List.unmodifiable(_adminApplications);
+
+  int get pendingLoanApplicationCount =>
+      _adminApplications.where((a) => a.isPending).length;
 
   List<SavingsPlan> get plans =>
       List.unmodifiable(_plans..sort((a, b) => b.startDate.compareTo(a.startDate)));
@@ -641,6 +675,10 @@ class AppState extends ChangeNotifier {
         api.loans(),
         api.circles(),
         api.notifications(size: 100),
+        // Pulled with everything else so the borrow screen can lead with what
+        // happened to the last one. A refusal the customer has to go looking
+        // for is a refusal they will read as silence.
+        api.loanApplications(),
       ]);
 
       _applyDashboard(results[0] as Map<String, dynamic>);
@@ -649,6 +687,7 @@ class AppState extends ChangeNotifier {
       _loans = results[3] as List<Loan>;
       _circles = results[4] as List<ThriftCircle>;
       _notifications = (results[5] as Page<AppNotification>).items;
+      _applications = results[6] as List<LoanApplication>;
 
       // Kept on the device so the next cold start has something to draw before
       // the first response arrives. It is a cache, never the source of truth.
@@ -821,6 +860,11 @@ class AppState extends ChangeNotifier {
         _loadIntoPanel(
             'The audit log',
             () async => _audit = (await admin.audit(size: 200)).items,
+            failures),
+        _loadIntoPanel(
+            'Loan applications',
+            () async =>
+                _adminApplications = (await admin.loanApplications(size: 200)).items,
             failures),
       ]);
     }
@@ -1778,67 +1822,131 @@ class AppState extends ChangeNotifier {
     return p.principal;
   }
 
-  // ── Loans ───────────────────────────────────────────────────────────────
-  Future<Loan> requestLoan({
+  // -- Borrowing -----------------------------------------------------------
+
+  /// Applies to borrow.
+  ///
+  /// This used to be `requestLoan`, and it used to end with money in the
+  /// wallet. It no longer does, and that is the whole change: an application
+  /// carries a bank statement, three photographs of the business and two
+  /// guarantors, and a person reads all of it before anything moves. What comes
+  /// back is a pending row, not a loan.
+  Future<LoanApplication> submitLoanApplication({
     required double principal,
     required int months,
     required String purpose,
-    String? pin,
+    required String businessName,
+    required String businessAddress,
+    required double monthlyIncome,
+    required List<Guarantor> guarantors,
+    required String bankStatementPath,
+    required List<String> businessPhotoPaths,
+    required String pin,
   }) async {
     final api = _api;
     if (api != null) {
-      final loan = await api.requestLoan(
+      final application = await api.applyForLoan(
         amount: principal,
         months: months,
         purpose: purpose,
-        pin: pin ?? '',
+        businessName: businessName,
+        businessAddress: businessAddress,
+        monthlyIncome: monthlyIncome,
+        guarantors: guarantors,
+        bankStatement: await _part('bankStatement', bankStatementPath),
+        businessPhotos: [
+          for (final path in businessPhotoPaths)
+            await _part('businessPhotos', path),
+        ],
+        pin: pin,
       );
-      _loans = [loan, ..._loans.where((l) => l.id != loan.id)];
-      await _store.saveLoans(_loans);
-      await _refreshWallet();
+
+      _applications = [application, ..._applications];
       _lastError = null;
       notifyListeners();
-      return loan;
+      // Deliberately no wallet refresh: applying moves no money.
+      return application;
     }
-    final now = DateTime.now();
-    final fee = Finance.processingFee(principal);
-    final loan = Loan(
+
+    final application = LoanApplication(
       id: _uuid.v4(),
-      principal: principal,
+      amount: principal,
       tenureMonths: months,
-      flatRate: settings.loanRateFor(months),
-      processingFee: fee,
       purpose: purpose,
-      disbursedAt: now,
-      dueDate: Finance.addMonths(now, months),
+      status: LoanApplicationStatus.pending,
+      submittedAt: DateTime.now(),
+      businessName: businessName,
+      businessAddress: businessAddress,
+      monthlyIncome: monthlyIncome,
+      guarantors: guarantors,
+      documentsAttached: 1 + businessPhotoPaths.length,
+      customerName: _user?.fullName ?? 'Customer',
+      customerRef: _user?.customerRef ?? '',
     );
-
-    _loans.insert(0, loan);
-    await _store.saveLoans(_loans);
-
-    // Booked gross then netted, so the ledger shows both the loan and the
-    // fee that came out of it rather than one blended figure.
-    await _credit(
-      principal,
-      TxKind.loanDisbursement,
-      'Loan disbursed - $purpose',
-      counterparty: 'Kudi9ja Credit',
-    );
-    await _debit(
-      fee,
-      TxKind.fee,
-      'Processing fee deducted from loan',
-      counterparty: 'Kudi9ja Credit',
-    );
+    _applications.insert(0, application);
+    // On a device with no server the same person is both sides of this, as
+    // they are for a pay-in claim. The panel reads the same row.
+    _adminApplications.insert(0, application);
     await _notify(
       NotifyKind.general,
-      'Loan disbursed',
-      '${Finance.netDisbursed(principal).toStringAsFixed(0)} reached your wallet after the ${fee.toStringAsFixed(0)} processing fee.',
-      amount: Finance.netDisbursed(principal),
+      'Application received',
+      'Your application to borrow ${principal.toStringAsFixed(0)} is with our team. '
+          'Nothing has been added to your wallet yet.',
     );
-
     notifyListeners();
-    return loan;
+    return application;
+  }
+
+  /// Reads one file off the handset for upload.
+  Future<UploadPart> _part(String field, String path) async {
+    final bytes = await File(path).readAsBytes();
+    return UploadPart(
+      field: field,
+      filename: path.split(RegExp(r'[/\\]')).last,
+      bytes: bytes,
+      contentType: _contentTypeFor(path),
+    );
+  }
+
+  /// Every application this customer has made. Never throws: the borrow screen
+  /// is still usable without the history above it.
+  Future<void> refreshLoanApplications() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      _applications = await api.loanApplications();
+      notifyListeners();
+    } on ApiException {
+      // Left as it was. An application list a minute old beats an empty one.
+    }
+  }
+
+  Future<void> withdrawLoanApplication(String id) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final updated = await api.withdrawLoanApplication(id);
+        _applications = [
+          for (final a in _applications) if (a.id == id) updated else a,
+        ];
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+      }
+      notifyListeners();
+      return;
+    }
+    _applications = [
+      for (final a in _applications)
+        if (a.id == id)
+          a.copyWith(
+            status: LoanApplicationStatus.cancelled,
+            reviewedAt: DateTime.now(),
+          )
+        else
+          a,
+    ];
+    notifyListeners();
   }
 
   Future<void> repayLoan(String loanId, double amount, {String? pin}) async {
@@ -1868,6 +1976,186 @@ class AppState extends ChangeNotifier {
     await _store.saveLoans(_loans);
     await _debit(paid, TxKind.loanRepayment, 'Loan repayment');
     notifyListeners();
+  }
+
+  // -- Deciding an application ---------------------------------------------
+
+  /// Approves and disburses. The money reaches the customer on this call.
+  ///
+  /// The whole panel is reloaded afterwards rather than only this row: a
+  /// disbursement changes the book, the overview and the customer's balance,
+  /// and a queue that ticks down while the figures beside it do not is how an
+  /// admin ends up approving the same loan twice.
+  Future<bool> approveLoanApplication(String id, {String? note}) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.approveLoanApplication(id, note: note);
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return false;
+      }
+      await refreshAdminPanel();
+      return true;
+    }
+
+    final approved = _adminApplications.firstWhere(
+      (a) => a.id == id,
+      orElse: () => throw StateError('No application $id'),
+    );
+    final loan = await _disburseLocally(
+      principal: approved.amount,
+      months: approved.tenureMonths,
+      purpose: approved.purpose,
+    );
+    _adminApplications = [
+      for (final a in _adminApplications)
+        if (a.id == id)
+          a.copyWith(
+            status: LoanApplicationStatus.approved,
+            reviewedAt: DateTime.now(),
+            reviewedBy: currentAdmin?.name ?? 'Admin',
+            loanId: loan.id,
+          )
+        else
+          a,
+    ];
+    _applications = [
+      for (final a in _applications)
+        if (a.id == id)
+          a.copyWith(
+            status: LoanApplicationStatus.approved,
+            reviewedAt: DateTime.now(),
+            loanId: loan.id,
+          )
+        else
+          a,
+    ];
+    notifyListeners();
+    return true;
+  }
+
+  /// Writes and disburses a loan on the device.
+  ///
+  /// Only reached with no server behind the app. On a deployment this is the
+  /// backend's job and happens inside the approval — which is why it is private
+  /// and why nothing but [approveLoanApplication] calls it: a loan that can be
+  /// created from anywhere is a loan that will be.
+  Future<Loan> _disburseLocally({
+    required double principal,
+    required int months,
+    required String purpose,
+  }) async {
+    final now = DateTime.now();
+    final fee = Finance.processingFee(principal);
+    final loan = Loan(
+      id: _uuid.v4(),
+      principal: principal,
+      tenureMonths: months,
+      flatRate: settings.loanRateFor(months),
+      processingFee: fee,
+      purpose: purpose,
+      disbursedAt: now,
+      dueDate: Finance.addMonths(now, months),
+    );
+
+    _loans.insert(0, loan);
+    await _store.saveLoans(_loans);
+
+    // Booked gross then netted, so the ledger shows both the loan and the fee
+    // that came out of it rather than one blended figure.
+    await _credit(
+      principal,
+      TxKind.loanDisbursement,
+      'Loan disbursed - $purpose',
+      counterparty: 'Kudi9ja Credit',
+    );
+    await _debit(
+      fee,
+      TxKind.fee,
+      'Processing fee deducted from loan',
+      counterparty: 'Kudi9ja Credit',
+    );
+    await _notify(
+      NotifyKind.general,
+      'Loan disbursed',
+      '${Finance.netDisbursed(principal).toStringAsFixed(0)} reached your wallet '
+          'after the ${fee.toStringAsFixed(0)} processing fee.',
+      amount: Finance.netDisbursed(principal),
+    );
+    return loan;
+  }
+
+  /// Declines, with a reason the customer is shown word for word.
+  Future<bool> rejectLoanApplication(String id, String reason) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        await admin.rejectLoanApplication(id, reason);
+        _lastError = null;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return false;
+      }
+      await refreshAdminPanel();
+      return true;
+    }
+
+    _adminApplications = [
+      for (final a in _adminApplications)
+        if (a.id == id)
+          a.copyWith(
+            status: LoanApplicationStatus.rejected,
+            reviewedAt: DateTime.now(),
+            reviewedBy: currentAdmin?.name ?? 'Admin',
+            rejectionReason: reason,
+          )
+        else
+          a,
+    ];
+    _applications = [
+      for (final a in _applications)
+        if (a.id == id)
+          a.copyWith(
+            status: LoanApplicationStatus.rejected,
+            reviewedAt: DateTime.now(),
+            rejectionReason: reason,
+          )
+        else
+          a,
+    ];
+    await _notify(
+      NotifyKind.general,
+      'Loan application declined',
+      'We could not approve your application. $reason',
+    );
+    notifyListeners();
+    return true;
+  }
+
+  /// One application in full, with signed links to its documents.
+  ///
+  /// Fetched on demand rather than with the queue: signing a link to every
+  /// customer's bank statement because somebody scrolled past their row is
+  /// exactly what the signing is meant to prevent.
+  Future<LoanApplication?> loadLoanApplication(String id) async {
+    final admin = _admin;
+    if (admin == null) {
+      for (final a in _adminApplications) {
+        if (a.id == id) return a;
+      }
+      return null;
+    }
+    try {
+      return await admin.loanApplication(id);
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return null;
+    }
   }
 
   // ── Notifications ───────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../models/admin.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
+import '../models/loan_application.dart';
 import '../models/models.dart';
 import '../models/thrift.dart';
 import '../models/withdrawal.dart';
@@ -580,17 +581,46 @@ class Kudi9jaApi {
       _asMap(await _client.get('/loans/quote',
           query: {'amount': amount, 'months': months}));
 
-  Future<Loan> requestLoan({
+  /// Applies to borrow.
+  ///
+  /// Four files and a form in one request. Nothing is credited by this call —
+  /// an admin reads the statement, the photographs and both guarantors, and
+  /// the money arrives only if they approve.
+  Future<LoanApplication> applyForLoan({
     required double amount,
     required int months,
     required String purpose,
+    required String businessName,
+    required String businessAddress,
+    required double monthlyIncome,
+    required List<Guarantor> guarantors,
+    required UploadPart bankStatement,
+    required List<UploadPart> businessPhotos,
     required String pin,
   }) async =>
-      loanFromApi(_asMap(await _client.post(
-        '/loans',
-        idempotencyKey: newKey(),
-        body: {'amount': amount, 'months': months, 'purpose': purpose, 'pin': pin},
+      loanApplicationFromApi(_asMap(await _client.uploadFiles(
+        '/loans/applications',
+        jsonParts: {
+          'form': {
+            'amount': amount,
+            'months': months,
+            'purpose': purpose,
+            'businessName': businessName,
+            'businessAddress': businessAddress,
+            'monthlyIncome': monthlyIncome,
+            'guarantors': guarantors.map((g) => g.toApi()).toList(),
+            'pin': pin,
+          },
+        },
+        files: [bankStatement, ...businessPhotos],
       )));
+
+  Future<List<LoanApplication>> loanApplications() async =>
+      loanApplicationsFromApi(await _client.get('/loans/applications'));
+
+  Future<LoanApplication> withdrawLoanApplication(String id) async =>
+      loanApplicationFromApi(
+          _asMap(await _client.post('/loans/applications/$id/withdraw')));
 
   Future<Map<String, dynamic>> repayLoan(String id,
           {required double amount, required String pin}) async =>

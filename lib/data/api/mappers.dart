@@ -25,6 +25,7 @@ import '../../core/theme/app_colors.dart';
 import '../models/admin.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
+import '../models/loan_application.dart';
 import '../models/models.dart';
 import '../models/thrift.dart';
 import '../models/withdrawal.dart';
@@ -600,6 +601,66 @@ AdminRole? adminRoleFromApi(Object? value) {
   }
   return null;
 }
+
+/// An application to borrow.
+///
+/// One reader for both views of it. The customer's carries `rejectionReason`
+/// and no documents; the admin's carries the documents and the customer's name.
+/// Absent fields read as empty rather than as a different shape.
+LoanApplication loanApplicationFromApi(Map<String, dynamic> j) => LoanApplication(
+      id: _str(j['id']),
+      amount: _money(j['amount']),
+      tenureMonths: _int(j['tenureMonths']),
+      purpose: _str(j['purpose']),
+      status: _enum(j['status'], LoanApplicationStatus.values,
+          LoanApplicationStatus.pending),
+      submittedAt: _date(j['submittedAt']),
+      businessName: _str(j['businessName']),
+      businessAddress: _str(j['businessAddress']),
+      monthlyIncome: _money(j['monthlyIncome']),
+      guarantors: _list(j['guarantors']).map(guarantorFromApi).toList(),
+      documentsAttached: _int(j['documentsAttached']),
+      reviewedAt: _dateOrNull(j['reviewedAt']),
+      reviewedBy: _str(j['reviewedBy']),
+      rejectionReason: _str(j['rejectionReason']),
+      loanId: _str(j['loanId']),
+      userId: _str(j['userId']),
+      customerName: _str(j['customerName']),
+      customerRef: _str(j['customerRef']),
+      scoreAtSubmission:
+          j['scoreAtSubmission'] == null ? null : _int(j['scoreAtSubmission']),
+      bankStatement: j['bankStatement'] == null
+          ? null
+          : applicationDocumentFromApi(
+              (j['bankStatement'] as Map).cast<String, dynamic>()),
+      businessPhotos:
+          _list(j['businessPhotos']).map(applicationDocumentFromApi).toList(),
+    );
+
+Guarantor guarantorFromApi(Map<String, dynamic> j) => Guarantor(
+      fullName: _str(j['fullName']),
+      phone: _str(j['phone']),
+      address: _str(j['address']),
+      relationship: _str(j['relationship']),
+      bvn: _str(j['bvn']),
+      occupation: _str(j['occupation']),
+      email: _str(j['email']),
+    );
+
+/// A signed link to one document, resolved to something fetchable.
+///
+/// The server sends the path without a host, for the same reason a receipt
+/// arrives that way — see [AppConfig.absoluteUrl].
+ApplicationDocument applicationDocumentFromApi(Map<String, dynamic> j) =>
+    ApplicationDocument(
+      label: _str(j['label']),
+      url: AppConfig.absoluteUrl(_str(j['url'])),
+      contentType: _str(j['contentType']),
+      sizeBytes: _int(j['sizeBytes']),
+    );
+
+List<LoanApplication> loanApplicationsFromApi(Object? value) =>
+    _list(value).map(loanApplicationFromApi).toList();
 
 AdminUser teamMemberFromApi(Map<String, dynamic> j) => AdminUser(
       id: _str(j['id']),

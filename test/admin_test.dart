@@ -4,6 +4,7 @@ import 'package:kudi9ja/core/constants/app_config.dart';
 import 'package:kudi9ja/data/models/models.dart';
 import 'package:kudi9ja/data/models/platform_settings.dart';
 import 'package:kudi9ja/data/services/storage_service.dart';
+import 'package:kudi9ja/data/models/loan_application.dart';
 import 'package:kudi9ja/state/app_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -479,11 +480,7 @@ void main() {
     test('existing loans keep the terms they were opened on', () async {
       final app = await _account();
       await app.fundWallet(600000, 'Test');
-      final loan = await app.requestLoan(
-        principal: 100000,
-        months: 3,
-        purpose: 'Business',
-      );
+      final loan = await _borrowLocally(app, principal: 100000, months: 3);
       final agreedTotal = loan.totalRepayable;
       expect(agreedTotal, closeTo(125000, 0.01));
 
@@ -553,4 +550,47 @@ void main() {
       );
     });
   });
+}
+
+/// A disbursed loan on a device with no server: apply, then approve.
+///
+/// Borrowing is two steps now — an application with evidence, and a person
+/// deciding it — so a test that merely needs a loan on the books has to walk
+/// both. The paths are not read in this mode; nothing uploads.
+Future<Loan> _borrowLocally(
+  AppState app, {
+  required double principal,
+  required int months,
+  String purpose = 'Business',
+}) async {
+  final application = await app.submitLoanApplication(
+    principal: principal,
+    months: months,
+    purpose: purpose,
+    businessName: 'Test Provisions',
+    businessAddress: '14 Adeola Odeku Street, Lagos',
+    monthlyIncome: 450000,
+    guarantors: const [
+      Guarantor(
+        fullName: 'Adaeze Nwosu',
+        phone: '08031234567',
+        address: '22 Awolowo Road, Ikoyi',
+        relationship: 'Business partner',
+        bvn: '22222222222',
+      ),
+      Guarantor(
+        fullName: 'Tunde Bakare',
+        phone: '08061234567',
+        address: '9 Bode Thomas, Surulere',
+        relationship: 'Landlord',
+        bvn: '33333333333',
+      ),
+    ],
+    bankStatementPath: '',
+    businessPhotoPaths: const ['', '', ''],
+    pin: '5271',
+  );
+  await app.approveLoanApplication(application.id);
+  return app.loans.firstWhere((l) => l.id == application.loanId,
+      orElse: () => app.loans.first);
 }

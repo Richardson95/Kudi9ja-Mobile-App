@@ -11,6 +11,7 @@ import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 import '../loans/loan_detail_screen.dart';
+import 'admin_loan_applications_section.dart';
 import 'admin_shell.dart';
 
 /// The lending book: exposure, performance and every live loan.
@@ -48,6 +49,9 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
+        // Above the book, deliberately: this is the part with somebody waiting
+        // on it. The book below is a record, and records can wait.
+        const AdminLoanApplicationsSection(),
         if (!settings.lendingEnabled) ...[
           KCard(
             borderColor: AppColors.danger.withValues(alpha: 0.4),
