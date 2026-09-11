@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/theme/app_colors.dart';
@@ -409,6 +410,144 @@ class ReceiptPicker extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Picks a document, whatever the bank happened to send.
+///
+/// Separate from [ReceiptPicker], which opens the camera and the gallery. A
+/// pay-in receipt really is a photograph of a banking app; a bank statement is
+/// a file — a PDF most of the time, sometimes a spreadsheet or a Word document.
+/// Offering only the gallery for one of those means asking somebody to
+/// photograph their own screen to get past us, and then asking an admin to
+/// read it.
+///
+/// Pictures are still allowed, because a screenshot of the app is a perfectly
+/// good statement for a customer who has no other copy.
+class DocumentPicker extends StatelessWidget {
+  const DocumentPicker({
+    super.key,
+    required this.path,
+    required this.onPicked,
+    this.label = 'Attach your bank statement',
+  });
+
+  final String path;
+  final ValueChanged<String> onPicked;
+  final String label;
+
+  /// The extensions worth offering. Narrower than what the server accepts, on
+  /// purpose: a customer choosing from a list of everything on their phone is
+  /// a customer about to attach the wrong thing.
+  static const _extensions = [
+    'pdf', 'doc', 'docx', 'odt', 'csv', 'xls', 'xlsx',
+    'jpg', 'jpeg', 'png', 'webp', 'heic',
+  ];
+
+  Future<void> _pick(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _extensions,
+        withData: false,
+      );
+      final picked = result?.files.singleOrNull?.path;
+      if (picked != null) onPicked(picked);
+    } catch (_) {
+      if (context.mounted) {
+        showToast(context, 'Could not open that file. Try another.', error: true);
+      }
+    }
+  }
+
+  String get _name => path.isEmpty ? '' : path.split(RegExp(r'[/\\]')).last;
+
+  bool get _isImage {
+    final lower = _name.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.heic');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chosen = path.isNotEmpty;
+
+    return InkWell(
+      onTap: () => _pick(context),
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: chosen
+                ? AppColors.gold.withValues(alpha: 0.5)
+                : AppColors.stroke,
+          ),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 46,
+                height: 46,
+                child: chosen && _isImage
+                    // A picture can show itself; a PDF cannot, and a broken
+                    // thumbnail over a perfectly good file reads as an error.
+                    ? Image.file(File(path), fit: BoxFit.cover)
+                    : ColoredBox(
+                        color: AppColors.surfaceHigh,
+                        child: Icon(
+                          chosen
+                              ? Icons.description_rounded
+                              : Icons.upload_file_outlined,
+                          size: 20,
+                          color: chosen ? AppColors.gold : AppColors.textTertiary,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    chosen ? _name : label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    chosen
+                        ? 'Tap to choose a different file'
+                        : 'PDF, Word, Excel or a screenshot',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              chosen ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+              size: 18,
+              color: chosen ? AppColors.success : AppColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

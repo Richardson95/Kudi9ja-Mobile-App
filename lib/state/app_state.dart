@@ -1006,6 +1006,18 @@ class AppState extends ChangeNotifier {
     if (lower.endsWith('.heic')) return 'image/heic';
     if (lower.endsWith('.webp')) return 'image/webp';
     if (lower.endsWith('.pdf')) return 'application/pdf';
+    // A bank statement is whatever the bank sent. Named here so it is stored
+    // and served as itself rather than as an opaque download.
+    if (lower.endsWith('.doc')) return 'application/msword';
+    if (lower.endsWith('.docx')) {
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    if (lower.endsWith('.odt')) return 'application/vnd.oasis.opendocument.text';
+    if (lower.endsWith('.csv')) return 'text/csv';
+    if (lower.endsWith('.xls')) return 'application/vnd.ms-excel';
+    if (lower.endsWith('.xlsx')) {
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
     return null;
   }
 

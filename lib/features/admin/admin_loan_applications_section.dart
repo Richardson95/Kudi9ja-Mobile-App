@@ -351,18 +351,19 @@ class _DocumentTile extends StatelessWidget {
               child: SizedBox(
                 width: 54,
                 height: 54,
-                // A PDF has no thumbnail to draw, so it gets an icon rather
-                // than a broken image under a document that is perfectly fine.
-                child: document.isPdf
-                    ? ColoredBox(
-                        color: AppColors.surfaceAlt,
-                        child: Icon(Icons.picture_as_pdf_outlined,
-                            color: AppColors.textTertiary),
-                      )
-                    : ReceiptImage(
+                // Only a picture has a thumbnail to draw. A PDF or a
+                // spreadsheet gets an icon rather than a broken image under a
+                // document that is perfectly fine.
+                child: document.isImage
+                    ? ReceiptImage(
                         path: '',
                         url: document.url,
                         headers: headers,
+                      )
+                    : ColoredBox(
+                        color: AppColors.surfaceAlt,
+                        child: Icon(Icons.description_rounded,
+                            color: AppColors.textTertiary),
                       ),
               ),
             ),
@@ -378,7 +379,9 @@ class _DocumentTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Tap to open',
+                    document.isImage
+                        ? 'Tap to open'
+                        : 'Tap to open — ${_typeName(document.contentType)}',
                     style:
                         TextStyle(fontSize: 11, color: AppColors.textTertiary),
                   ),
@@ -391,6 +394,17 @@ class _DocumentTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A short name for a content type, for the line under a document.
+String _typeName(String contentType) {
+  final type = contentType.toLowerCase();
+  if (type.contains('pdf')) return 'PDF';
+  if (type.contains('word') || type.contains('msword')) return 'Word document';
+  if (type.contains('sheet') || type.contains('excel')) return 'spreadsheet';
+  if (type.contains('csv')) return 'CSV';
+  if (type.contains('opendocument')) return 'document';
+  return 'file';
 }
 
 class _GuarantorCard extends StatelessWidget {

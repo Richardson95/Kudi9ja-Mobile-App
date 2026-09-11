@@ -93,7 +93,13 @@ class ApplicationDocument {
   final String contentType;
   final int sizeBytes;
 
-  bool get isPdf => contentType.toLowerCase().contains('pdf');
+  /// Whether the panel can draw this, as against having to open it.
+  ///
+  /// Asked this way round on purpose. A statement can be a PDF, a spreadsheet
+  /// or a Word file, and listing the ones that are not pictures means the list
+  /// goes stale the first time a bank sends something new — whereas the set of
+  /// things that render as an image does not grow.
+  bool get isImage => contentType.toLowerCase().startsWith('image/');
 }
 
 /// An application, from either side of it.

@@ -20,6 +20,11 @@ dependencies:
   uuid: ^4.5.1
   crypto: ^3.0.7
   image_picker: ^1.2.3
+  # A bank statement is whatever the bank sent — usually a PDF, sometimes a
+  # spreadsheet or a Word file. image_picker cannot see any of those, so asking
+  # for a statement with it means asking somebody to photograph their own
+  # screen to get past us.
+  file_picker: ^8.1.7
   # Talking to the Kudi9ja server.
   http: ^1.2.2
   http_parser: ^4.0.2

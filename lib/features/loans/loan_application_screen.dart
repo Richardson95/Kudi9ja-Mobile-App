@@ -244,7 +244,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             label: 'Monthly income',
             controller: _income,
             keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            // Grouped as it is typed. Nobody can read 1000000 at a glance, and
+            // an applicant who cannot see what they have entered is one who
+            // enters the wrong figure.
+            inputFormatters: [ThousandsFormatter()],
             prefixIcon: Icons.trending_up_rounded,
             helper: 'What the business takes in a typical month, before expenses.',
             onChanged: (_) => setState(() {}),
@@ -258,18 +261,20 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _Explainer(
-            'A recent bank statement and three pictures of your business. '
-            'A clear screenshot of your banking app is fine for the statement.',
+            'A recent bank statement and three pictures of your business.',
           ),
           const SizedBox(height: AppSpacing.lg),
           const SectionHeader(title: 'Bank statement'),
           const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 150,
-            child: ReceiptPicker(
-              path: _statementPath,
-              onPicked: (p) => setState(() => _statementPath = p),
-            ),
+          Text(
+            'The file your bank sent — a PDF, a spreadsheet, or a Word '
+            'document. A screenshot of your banking app works too.',
+            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          DocumentPicker(
+            path: _statementPath,
+            onPicked: (p) => setState(() => _statementPath = p),
           ),
           const SizedBox(height: AppSpacing.xl),
           const SectionHeader(title: 'Your business premises'),

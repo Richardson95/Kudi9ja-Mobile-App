@@ -1634,11 +1634,14 @@ Future<double?> editNumber(
   double? min,
   double? max,
   bool integer = false,
+  bool money = false,
 }) async {
   final controller = TextEditingController(
-    text: integer
-        ? value.round().toString()
-        : _trimZeros(value.toStringAsFixed(4)),
+    text: money
+        ? value.round().asPlain
+        : integer
+            ? value.round().toString()
+            : _trimZeros(value.toStringAsFixed(4)),
   );
 
   final result = await showModalBottomSheet<double>(
@@ -1650,7 +1653,9 @@ Future<double?> editNumber(
       return StatefulBuilder(
         builder: (context, setSheetState) {
           void save() {
-            final typed = double.tryParse(controller.text.trim());
+            // The separators the field inserts are not part of the number.
+            final typed = double.tryParse(
+                controller.text.trim().replaceAll(',', ''));
             if (typed == null) {
               setSheetState(() => error = 'Type a number.');
               return;
@@ -1697,9 +1702,14 @@ Future<double?> editNumber(
                     decimal: !integer,
                   ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]'),
-                    ),
+                    // An amount is grouped as it is typed; a rate of 0.45 and a
+                    // tenure of 12 are not amounts and would read worse for it.
+                    if (money)
+                      ThousandsFormatter()
+                    else
+                      FilteringTextInputFormatter.allow(
+                        integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]'),
+                      ),
                   ],
                   style: const TextStyle(
                     fontSize: 24,
@@ -1928,6 +1938,7 @@ class _AmountCard extends StatelessWidget {
                     value: value,
                     unit: ' naira',
                     integer: true,
+                    money: true,
                     min: 0,
                   );
                   if (typed != null) onChanged(typed);
