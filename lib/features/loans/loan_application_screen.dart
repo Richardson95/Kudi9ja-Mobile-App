@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -54,6 +57,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   // Step two — the evidence.
   String _statementPath = '';
   final List<String> _photos = ['', '', ''];
+  static const _photoLabels = ['Front', 'Inside', 'Stock'];
 
   // Step three — the guarantors.
   final List<_GuarantorFields> _guarantors = [
@@ -284,16 +288,26 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
           ),
           const SizedBox(height: AppSpacing.md),
-          for (var i = 0; i < _photos.length; i++) ...[
-            SizedBox(
-              height: 150,
-              child: ReceiptPicker(
-                path: _photos[i],
-                onPicked: (p) => setState(() => _photos[i] = p),
-              ),
-            ),
-            if (i < _photos.length - 1) const SizedBox(height: AppSpacing.md),
-          ],
+          // Three tiles across, not three full-width pickers stacked. Stacked
+          // they were two screens of scrolling for three photographs, and —
+          // because ReceiptPicker is taller than the box it was put in — they
+          // overflowed and painted over everything under them.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < _photos.length; i++) ...[
+                Expanded(
+                  child: _PhotoSlot(
+                    label: _photoLabels[i],
+                    path: _photos[i],
+                    onPicked: (p) => setState(() => _photos[i] = p),
+                  ),
+                ),
+                if (i < _photos.length - 1)
+                  const SizedBox(width: AppSpacing.sm),
+              ],
+            ],
+          ),
         ],
       );
 
@@ -413,6 +427,162 @@ class _GuarantorForm extends StatelessWidget {
           textCapitalization: TextCapitalization.words,
           prefixIcon: Icons.work_outline,
           onChanged: (_) => onChanged(),
+        ),
+      ],
+    );
+  }
+}
+
+/// One of the three business photographs.
+///
+/// Small and portrait on purpose: three fit across a phone, so the step is one
+/// glance instead of a scroll and what is still missing is obvious without
+/// reading anything.
+class _PhotoSlot extends StatelessWidget {
+  const _PhotoSlot({
+    required this.label,
+    required this.path,
+    required this.onPicked,
+  });
+
+  final String label;
+  final String path;
+  final ValueChanged<String> onPicked;
+
+  Future<void> _pick(BuildContext context, ImageSource source) async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1400,
+      );
+      if (file != null) onPicked(file.path);
+    } catch (_) {
+      if (context.mounted) {
+        showToast(context, 'Could not open that. Try the other option.',
+            error: true);
+      }
+    }
+  }
+
+  void _choose(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_camera_outlined, color: AppColors.gold),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pick(context, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading:
+                  Icon(Icons.photo_library_outlined, color: AppColors.gold),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pick(context, ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final has = path.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () => _choose(context),
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: has ? AppColors.success : AppColors.stroke,
+                  width: has ? 1.4 : 1,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: has
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          File(path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Center(
+                            child: Icon(Icons.broken_image_outlined,
+                                size: 18, color: AppColors.textTertiary),
+                          ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.black.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.edit_rounded,
+                                size: 12, color: AppColors.gold),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo_outlined,
+                            size: 20, color: AppColors.textTertiary),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Add',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(
+          children: [
+            if (has) ...[
+              Icon(Icons.check_circle_rounded,
+                  size: 11, color: AppColors.success),
+              const SizedBox(width: 3),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: has ? AppColors.success : AppColors.textTertiary,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
