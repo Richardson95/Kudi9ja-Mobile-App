@@ -29,6 +29,9 @@ class Guarantor {
     required this.fullName,
     required this.phone,
     required this.address,
+    required this.state,
+    required this.localGovernment,
+    required this.landmark,
     required this.relationship,
     required this.bvn,
     this.occupation = '',
@@ -38,6 +41,13 @@ class Guarantor {
   final String fullName;
   final String phone;
   final String address;
+
+  /// Where the address actually is, in the terms somebody would use to go
+  /// there. Street numbering is irregular and streets share names across a
+  /// city; the landmark is how anybody finds the place.
+  final String state;
+  final String localGovernment;
+  final String landmark;
 
   /// What they are to the borrower: a sister, an employer, a landlord.
   final String relationship;
@@ -49,6 +59,9 @@ class Guarantor {
       fullName.trim().isNotEmpty &&
       phone.trim().length == 11 &&
       address.trim().isNotEmpty &&
+      state.trim().isNotEmpty &&
+      localGovernment.trim().isNotEmpty &&
+      landmark.trim().isNotEmpty &&
       relationship.trim().isNotEmpty &&
       bvn.trim().length == 11;
 
@@ -56,6 +69,9 @@ class Guarantor {
         'fullName': fullName.trim(),
         'phone': phone.trim(),
         'address': address.trim(),
+        'state': state.trim(),
+        'localGovernment': localGovernment.trim(),
+        'landmark': landmark.trim(),
         'relationship': relationship.trim(),
         'bvn': bvn.trim(),
         'occupation': occupation.trim(),
@@ -68,6 +84,9 @@ class Guarantor {
         fullName: j['fullName'] as String? ?? '',
         phone: j['phone'] as String? ?? '',
         address: j['address'] as String? ?? '',
+        state: j['state'] as String? ?? '',
+        localGovernment: j['localGovernment'] as String? ?? '',
+        landmark: j['landmark'] as String? ?? '',
         relationship: j['relationship'] as String? ?? '',
         bvn: j['bvn'] as String? ?? '',
         occupation: j['occupation'] as String? ?? '',

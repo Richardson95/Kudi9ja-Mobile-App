@@ -16,6 +16,7 @@ import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
+import '../auth/signup/signup_draft.dart';
 
 /// The second half of asking to borrow: the evidence.
 ///
@@ -362,6 +363,11 @@ class _GuarantorFields {
   final name = TextEditingController();
   final phone = TextEditingController();
   final address = TextEditingController();
+
+  /// Picked from the list, not typed: a state has one spelling.
+  String state = '';
+  final localGovernment = TextEditingController();
+  final landmark = TextEditingController();
   final relationship = TextEditingController();
   final bvn = TextEditingController();
   final occupation = TextEditingController();
@@ -370,6 +376,9 @@ class _GuarantorFields {
         fullName: name.text,
         phone: phone.text,
         address: address.text,
+        state: state,
+        localGovernment: localGovernment.text,
+        landmark: landmark.text,
         relationship: relationship.text,
         bvn: bvn.text,
         occupation: occupation.text,
@@ -379,6 +388,8 @@ class _GuarantorFields {
     name.dispose();
     phone.dispose();
     address.dispose();
+    localGovernment.dispose();
+    landmark.dispose();
     relationship.dispose();
     bvn.dispose();
     occupation.dispose();
@@ -390,6 +401,60 @@ class _GuarantorForm extends StatelessWidget {
 
   final _GuarantorFields fields;
   final VoidCallback onChanged;
+
+  /// The same list sign-up uses, so a guarantor's state and a customer's are
+  /// spelled the same way in the database.
+  void _pickState(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        builder: (_, controller) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                'Their state',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            const HairLine(),
+            Expanded(
+              child: ListView.builder(
+                controller: controller,
+                itemCount: kNigerianStates.length,
+                itemBuilder: (_, i) {
+                  final s = kNigerianStates[i];
+                  final on = fields.state == s;
+                  return ListTile(
+                    title: Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                        color: on ? AppColors.gold : AppColors.textPrimary,
+                      ),
+                    ),
+                    trailing: on
+                        ? Icon(Icons.check_rounded,
+                            color: AppColors.gold, size: 20)
+                        : null,
+                    onTap: () {
+                      fields.state = s;
+                      onChanged();
+                      Navigator.pop(sheetContext);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -418,6 +483,35 @@ class _GuarantorForm extends StatelessWidget {
           controller: fields.address,
           textCapitalization: TextCapitalization.words,
           prefixIcon: Icons.location_on_outlined,
+          onChanged: (_) => onChanged(),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        KPickerField(
+          label: 'State',
+          icon: Icons.map_outlined,
+          value: fields.state.isEmpty ? null : fields.state,
+          hint: 'Select their state',
+          onTap: () => _pickState(context),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        KField(
+          label: 'Local government',
+          hint: 'Eti-Osa, Ikeja, Owerri North',
+          controller: fields.localGovernment,
+          textCapitalization: TextCapitalization.words,
+          prefixIcon: Icons.location_city_outlined,
+          onChanged: (_) => onChanged(),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        KField(
+          label: 'Landmark',
+          hint: 'Opposite the Total filling station',
+          controller: fields.landmark,
+          textCapitalization: TextCapitalization.sentences,
+          prefixIcon: Icons.flag_outlined,
+          // Said, because it is the field people leave vague. A street
+          // address alone is often not enough to find anyone here.
+          helper: 'Something anybody could find the address from.',
           onChanged: (_) => onChanged(),
         ),
         const SizedBox(height: AppSpacing.md),

@@ -485,6 +485,9 @@ class _GuarantorCard extends StatelessWidget {
           _Row('Phone', guarantor.phone),
           _Row('Relationship', guarantor.relationship),
           _Row('Address', guarantor.address),
+          _Row('State', guarantor.state),
+          _Row('Local government', guarantor.localGovernment),
+          _Row('Landmark', guarantor.landmark),
           if (guarantor.occupation.isNotEmpty)
             _Row('Occupation', guarantor.occupation),
           // Recorded as given, never checked against the issuer — we have no
