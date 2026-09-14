@@ -76,6 +76,7 @@ void main() {
     await completeBusinessStep(tester);
 
     expect(find.text('Bank statement'), findsOneWidget);
+    expect(find.text('A photo of you'), findsOneWidget);
     expect(find.text('Your business premises'), findsOneWidget);
     // Three slots across the width rather than three stacked pickers, which is
     // what stopped them running off the bottom of the step.

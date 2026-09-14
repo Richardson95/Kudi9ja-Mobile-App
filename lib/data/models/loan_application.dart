@@ -130,6 +130,7 @@ class LoanApplication {
     this.customerRef = '',
     this.scoreAtSubmission,
     this.bankStatement,
+    this.selfie,
     this.businessPhotos = const [],
   });
 
@@ -162,6 +163,9 @@ class LoanApplication {
   final String customerRef;
   final int? scoreAtSubmission;
   final ApplicationDocument? bankStatement;
+
+  /// The applicant's face, taken at application time.
+  final ApplicationDocument? selfie;
   final List<ApplicationDocument> businessPhotos;
 
   bool get isPending => status == LoanApplicationStatus.pending;
@@ -170,6 +174,7 @@ class LoanApplication {
   /// Every document on it, the statement first. Empty on a customer's view.
   List<ApplicationDocument> get documents => [
         if (bankStatement != null) bankStatement!,
+        if (selfie != null) selfie!,
         ...businessPhotos,
       ];
 
@@ -201,6 +206,7 @@ class LoanApplication {
         customerRef: customerRef,
         scoreAtSubmission: scoreAtSubmission,
         bankStatement: bankStatement,
+        selfie: selfie,
         businessPhotos: businessPhotos,
       );
 

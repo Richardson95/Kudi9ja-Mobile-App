@@ -1852,6 +1852,7 @@ class AppState extends ChangeNotifier {
     required double monthlyIncome,
     required List<Guarantor> guarantors,
     required String bankStatementPath,
+    required String selfiePath,
     required List<String> businessPhotoPaths,
     required String pin,
   }) async {
@@ -1866,6 +1867,7 @@ class AppState extends ChangeNotifier {
         monthlyIncome: monthlyIncome,
         guarantors: guarantors,
         bankStatement: await _part('bankStatement', bankStatementPath),
+        selfie: await _part('selfie', selfiePath),
         businessPhotos: [
           for (final path in businessPhotoPaths)
             await _part('businessPhotos', path),
@@ -1891,7 +1893,7 @@ class AppState extends ChangeNotifier {
       businessAddress: businessAddress,
       monthlyIncome: monthlyIncome,
       guarantors: guarantors,
-      documentsAttached: 1 + businessPhotoPaths.length,
+      documentsAttached: 2 + businessPhotoPaths.length,
       customerName: _user?.fullName ?? 'Customer',
       customerRef: _user?.customerRef ?? '',
     );

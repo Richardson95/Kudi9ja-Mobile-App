@@ -580,6 +580,7 @@ Future<Loan> _borrowLocally(
       ),
     ],
     bankStatementPath: '',
+    selfiePath: '',
     businessPhotoPaths: const ['', '', ''],
     pin: '5271',
   );

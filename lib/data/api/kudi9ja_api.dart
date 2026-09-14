@@ -595,6 +595,7 @@ class Kudi9jaApi {
     required double monthlyIncome,
     required List<Guarantor> guarantors,
     required UploadPart bankStatement,
+    required UploadPart selfie,
     required List<UploadPart> businessPhotos,
     required String pin,
   }) async =>
@@ -612,7 +613,7 @@ class Kudi9jaApi {
             'pin': pin,
           },
         },
-        files: [bankStatement, ...businessPhotos],
+        files: [bankStatement, selfie, ...businessPhotos],
       )));
 
   Future<List<LoanApplication>> loanApplications() async =>

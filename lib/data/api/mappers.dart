@@ -633,6 +633,10 @@ LoanApplication loanApplicationFromApi(Map<String, dynamic> j) => LoanApplicatio
           ? null
           : applicationDocumentFromApi(
               (j['bankStatement'] as Map).cast<String, dynamic>()),
+      selfie: j['selfie'] == null
+          ? null
+          : applicationDocumentFromApi(
+              (j['selfie'] as Map).cast<String, dynamic>()),
       businessPhotos:
           _list(j['businessPhotos']).map(applicationDocumentFromApi).toList(),
     );

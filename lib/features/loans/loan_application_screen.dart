@@ -56,6 +56,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   // Step two — the evidence.
   String _statementPath = '';
+  String _selfiePath = '';
   final List<String> _photos = ['', '', ''];
   static const _photoLabels = ['Front', 'Inside', 'Stock'];
 
@@ -80,7 +81,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       parseAmount(_income.text) > 0;
 
   bool get _evidenceDone =>
-      _statementPath.isNotEmpty && _photos.every((p) => p.isNotEmpty);
+      _statementPath.isNotEmpty &&
+      _selfiePath.isNotEmpty &&
+      _photos.every((p) => p.isNotEmpty);
 
   bool get _guarantorsDone => _guarantors.every((g) => g.toGuarantor().isComplete);
 
@@ -101,7 +104,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       details: [
         ('Over', '${widget.months} ${widget.months == 1 ? 'month' : 'months'}'),
         ('Purpose', widget.purpose),
-        ('Documents attached', '4'),
+        ('Documents attached', '5'),
         ('Guarantor', '1'),
       ],
     );
@@ -120,6 +123,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             monthlyIncome: parseAmount(_income.text),
             guarantors: [for (final g in _guarantors) g.toGuarantor()],
             bankStatementPath: _statementPath,
+            selfiePath: _selfiePath,
             businessPhotoPaths: _photos,
             pin: pin,
           );
@@ -263,7 +267,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _Explainer(
-            'A recent bank statement and three pictures of your business.',
+            'A recent bank statement, a photo of you, and three pictures of '
+            'your business.',
           ),
           const SizedBox(height: AppSpacing.lg),
           const SectionHeader(title: 'Bank statement'),
@@ -277,6 +282,30 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           DocumentPicker(
             path: _statementPath,
             onPicked: (p) => setState(() => _statementPath = p),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const SectionHeader(title: 'A photo of you'),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'A clear selfie or passport photograph, taken now. Face the '
+            'camera, good light, nothing covering your face.',
+            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // One slot, the same size as a premises tile, so the row of three
+          // under it reads as the same kind of thing.
+          Row(
+            children: [
+              Expanded(
+                child: _PhotoSlot(
+                  label: 'You',
+                  path: _selfiePath,
+                  preferFront: true,
+                  onPicked: (p) => setState(() => _selfiePath = p),
+                ),
+              ),
+              const Expanded(flex: 2, child: SizedBox.shrink()),
+            ],
           ),
           const SizedBox(height: AppSpacing.xl),
           const SectionHeader(title: 'Your business premises'),
@@ -437,11 +466,16 @@ class _PhotoSlot extends StatelessWidget {
     required this.label,
     required this.path,
     required this.onPicked,
+    this.preferFront = false,
   });
 
   final String label;
   final String path;
   final ValueChanged<String> onPicked;
+
+  /// Open the front camera first. For a selfie the back camera is the wrong
+  /// one nine times in ten, and turning it round is a step to get wrong.
+  final bool preferFront;
 
   Future<void> _pick(BuildContext context, ImageSource source) async {
     try {
@@ -449,6 +483,8 @@ class _PhotoSlot extends StatelessWidget {
         source: source,
         imageQuality: 70,
         maxWidth: 1400,
+        preferredCameraDevice:
+            preferFront ? CameraDevice.front : CameraDevice.rear,
       );
       if (file != null) onPicked(file.path);
     } catch (_) {

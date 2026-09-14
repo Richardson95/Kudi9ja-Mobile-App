@@ -239,8 +239,64 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
                 const SizedBox(height: AppSpacing.md),
                 const HairLine(),
                 const SizedBox(height: AppSpacing.md),
-                _Row('Customer', _a.customerName),
-                _Row('Account', _a.customerRef),
+                // The face beside the name, at the top, where the admin looks
+                // first — not the fourth item in a list of documents. This is
+                // who the money goes to.
+                if (_a.selfie != null) ...[
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => showReceipt(
+                          context,
+                          '',
+                          url: _a.selfie!.url,
+                          headers: headers,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: SizedBox(
+                            width: 72,
+                            height: 72,
+                            child: ReceiptImage(
+                              path: '',
+                              url: _a.selfie!.url,
+                              headers: headers,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _a.customerName,
+                              style: const TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _a.customerRef,
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Tap the photo to enlarge',
+                              style: TextStyle(
+                                  fontSize: 10.5, color: AppColors.textTertiary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ] else ...[
+                  _Row('Customer', _a.customerName),
+                  _Row('Account', _a.customerRef),
+                ],
                 _Row('Submitted', _a.submittedAt.asDay),
                 if (_a.scoreAtSubmission != null)
                   // Advice, not a verdict. The score is one input beside the
@@ -273,10 +329,13 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
             style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
           ),
           const SizedBox(height: AppSpacing.sm),
-          for (final document in _a.documents) ...[
-            _DocumentTile(document: document, headers: headers),
-            const SizedBox(height: AppSpacing.sm),
-          ],
+          // The selfie is drawn at the top beside the name, so it is left out
+          // here rather than shown twice.
+          for (final document in _a.documents)
+            if (document != _a.selfie) ...[
+              _DocumentTile(document: document, headers: headers),
+              const SizedBox(height: AppSpacing.sm),
+            ],
           const SizedBox(height: AppSpacing.md),
 
           SectionHeader(title: _a.guarantors.length == 1 ? 'Guarantor' : 'Guarantors'),

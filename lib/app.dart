@@ -74,7 +74,7 @@ class _Kudi9jaAppState extends State<Kudi9jaApp> with WidgetsBindingObserver {
   ///
   /// One number for the whole app, so the relationships between a heading and
   /// the line under it stay exactly as they were designed.
-  static const _textScale = 0.9;
+  static const _textScale = 0.85;
 
   @override
   Widget build(BuildContext context) {

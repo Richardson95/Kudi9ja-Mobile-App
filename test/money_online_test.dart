@@ -191,7 +191,7 @@ void main() {
             'businessName': 'Test Provisions',
             'status': 'PENDING',
             'submittedAt': '2026-09-06T00:00:00Z',
-            'documentsAttached': 4,
+            'documentsAttached': 5,
           }, status: 201);
         }
         return pass();
@@ -202,13 +202,14 @@ void main() {
 
       expect(application.status, LoanApplicationStatus.pending,
           reason: 'an application is read by a person, not granted');
-      expect(application.documentsAttached, 4);
+      expect(application.documentsAttached, 5);
       expect(state.balance, before, reason: 'applying moves no money');
 
       // The form and all four files went in one request.
       final body = _rawBody(sent, '/loans/applications');
       expect(body, contains('name="form"'));
       expect(body, contains('name="bankStatement"'));
+      expect(body, contains('name="selfie"'));
       expect('businessPhotos'.allMatches(body).length, greaterThanOrEqualTo(3));
       expect(body, contains('22222222222'), reason: "a guarantor's BVN travels");
       expect(body, contains('"pin":"5271"'));
@@ -408,6 +409,7 @@ Future<LoanApplication> _apply(AppState state) async {
       ),
     ],
     bankStatementPath: await file('statement.jpg'),
+    selfiePath: await file('me.jpg'),
     businessPhotoPaths: [
       await file('front.jpg'),
       await file('inside.jpg'),
