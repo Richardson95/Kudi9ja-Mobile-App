@@ -279,10 +279,10 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
           ],
           const SizedBox(height: AppSpacing.md),
 
-          const SectionHeader(title: 'Guarantors'),
+          SectionHeader(title: _a.guarantors.length == 1 ? 'Guarantor' : 'Guarantors'),
           const SizedBox(height: AppSpacing.sm),
-          for (var i = 0; i < _a.guarantors.length; i++) ...[
-            _GuarantorCard(index: i + 1, guarantor: _a.guarantors[i]),
+          for (final guarantor in _a.guarantors) ...[
+            _GuarantorCard(guarantor: guarantor),
             const SizedBox(height: AppSpacing.sm),
           ],
           const SizedBox(height: AppSpacing.xl),
@@ -408,9 +408,8 @@ String _typeName(String contentType) {
 }
 
 class _GuarantorCard extends StatelessWidget {
-  const _GuarantorCard({required this.index, required this.guarantor});
+  const _GuarantorCard({required this.guarantor});
 
-  final int index;
   final Guarantor guarantor;
 
   @override
@@ -420,7 +419,7 @@ class _GuarantorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Guarantor $index — ${guarantor.fullName}',
+            guarantor.fullName,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.sm),

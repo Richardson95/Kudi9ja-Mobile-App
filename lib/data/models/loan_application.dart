@@ -2,7 +2,7 @@
 ///
 /// Borrowing used to be a button: the server priced the loan and the money
 /// appeared. It is now an application carrying a bank statement, three
-/// photographs of the business and two guarantors, and a person decides it.
+/// photographs of the business and a guarantor, and a person decides it.
 /// Nothing reaches the wallet until they do.
 library;
 
@@ -21,7 +21,7 @@ extension LoanApplicationStatusX on LoanApplicationStatus {
 
 /// Somebody who vouches for the borrower.
 ///
-/// Two are needed. Their BVN is recorded, never verified — asking the issuer
+/// One is needed. Their BVN is recorded, never verified — asking the issuer
 /// about a person means having that person's consent, and the borrower's word
 /// that a guarantor agreed is not the guarantor's.
 class Guarantor {

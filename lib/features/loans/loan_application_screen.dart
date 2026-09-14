@@ -22,7 +22,7 @@ import '../../widgets/result_screen.dart';
 /// The amount and the tenure were settled on the screen before this one, where
 /// the pricing is. What this collects is everything a person needs in order to
 /// decide: where the business is and what it takes, a bank statement, three
-/// photographs of the premises, and two guarantors in full.
+/// photographs of the premises, and a guarantor in full.
 ///
 /// It is deliberately not a single scroll of thirty fields. Three steps, each
 /// of which can be finished in a sitting, and the customer can see how far
@@ -59,11 +59,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final List<String> _photos = ['', '', ''];
   static const _photoLabels = ['Front', 'Inside', 'Stock'];
 
-  // Step three — the guarantors.
-  final List<_GuarantorFields> _guarantors = [
-    _GuarantorFields(),
-    _GuarantorFields(),
-  ];
+  // Step three — the guarantor. A list of one, so the form and the model do
+  // not have to change shape if it becomes two.
+  final List<_GuarantorFields> _guarantors = [_GuarantorFields()];
 
   @override
   void dispose() {
@@ -104,7 +102,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ('Over', '${widget.months} ${widget.months == 1 ? 'month' : 'months'}'),
         ('Purpose', widget.purpose),
         ('Documents attached', '4'),
-        ('Guarantors', '2'),
+        ('Guarantor', '1'),
       ],
     );
     if (pin == null || !mounted) return;
@@ -140,7 +138,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           // The one thing they must not misread. Nothing has moved.
           message:
               'Your application to borrow ${application.amount.asNaira} is with our team. '
-              'We read the statement, the pictures and both guarantors before deciding, '
+              'We read the statement, the pictures and your guarantor before deciding, '
               'so this is not instant. Nothing has been added to your wallet yet — '
               'we will let you know either way.',
           details: [
@@ -162,7 +160,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         title: Text(switch (_step) {
           0 => 'Your business',
           1 => 'Your documents',
-          _ => 'Your guarantors',
+          _ => 'Your guarantor',
         }),
       ),
       body: Column(
@@ -317,19 +315,15 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _Explainer(
-            'Two people who will vouch for you. Tell them you have named them '
+            'Somebody who will vouch for you. Tell them you have named them — '
             'we may call to check.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          for (var i = 0; i < _guarantors.length; i++) ...[
-            SectionHeader(title: 'Guarantor ${i + 1}'),
-            const SizedBox(height: AppSpacing.sm),
+          for (final fields in _guarantors)
             _GuarantorForm(
-              fields: _guarantors[i],
+              fields: fields,
               onChanged: () => setState(() {}),
             ),
-            if (i < _guarantors.length - 1) const SizedBox(height: AppSpacing.xl),
-          ],
         ],
       );
 }

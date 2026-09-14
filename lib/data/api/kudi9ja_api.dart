@@ -584,7 +584,7 @@ class Kudi9jaApi {
   /// Applies to borrow.
   ///
   /// Four files and a form in one request. Nothing is credited by this call —
-  /// an admin reads the statement, the photographs and both guarantors, and
+  /// an admin reads the statement, the photographs and the guarantor, and
   /// the money arrives only if they approve.
   Future<LoanApplication> applyForLoan({
     required double amount,

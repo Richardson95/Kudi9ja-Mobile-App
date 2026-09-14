@@ -406,13 +406,6 @@ Future<LoanApplication> _apply(AppState state) async {
         relationship: 'Business partner',
         bvn: '22222222222',
       ),
-      Guarantor(
-        fullName: 'Tunde Bakare',
-        phone: '08061234567',
-        address: '9 Bode Thomas, Surulere',
-        relationship: 'Landlord',
-        bvn: '33333333333',
-      ),
     ],
     bankStatementPath: await file('statement.jpg'),
     businessPhotoPaths: [

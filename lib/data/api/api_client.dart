@@ -121,7 +121,7 @@ class ApiClient {
   /// A multipart upload carrying several files and a JSON part.
   ///
   /// A loan application is four files — a bank statement and three photographs
-  /// of the business — alongside a form with two guarantors nested in it. The
+  /// of the business — alongside a form with a guarantor nested in it. The
   /// form goes as one `application/json` part rather than as loose fields:
   /// flattening a repeated structure into `guarantor1Bvn`, `guarantor2Bvn`
   /// turns the shape into a naming convention both sides have to remember.

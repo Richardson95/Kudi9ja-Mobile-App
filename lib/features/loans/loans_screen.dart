@@ -589,7 +589,7 @@ class _ApplicationBanner extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               pending
-                  ? 'We read the statement, the pictures and both guarantors '
+                  ? 'We read the statement, the pictures and your guarantor '
                       'before deciding. Nothing has been added to your wallet yet.'
                   : application.rejectionReason,
               style: TextStyle(
