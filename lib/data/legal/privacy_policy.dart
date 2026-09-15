@@ -15,8 +15,8 @@ LegalDocument privacyPolicy() => LegalDocument(
       'What personal data Kudi9ja collects, why we are allowed to hold it, '
       'who we share it with, how long we keep it, and the rights you have '
       'over it.',
-  version: '1.0',
-  effective: DateTime(2026, 9, 4),
+  version: '1.1',
+  effective: DateTime(2026, 9, 15),
   readMinutes: 14,
   sections: [
     LegalSection('Who is responsible for your data', [
@@ -90,8 +90,8 @@ LegalDocument privacyPolicy() => LegalDocument(
         (
           'Financial data',
           'Your wallet balance, savings plans, target goals, thrift circle '
-              'membership and contributions, loans, repayments, credit score '
-              'and the full history of your transactions.',
+              'membership and contributions, loans, repayments and the full '
+              'history of your transactions.',
         ),
         (
           'Payment evidence',
@@ -226,30 +226,28 @@ LegalDocument privacyPolicy() => LegalDocument(
       ),
     ]),
 
-    LegalSection('Credit scoring and automated decisions', [
+    LegalSection('How we decide on a loan', [
       const LegalText(
-        'When you apply for a loan we score your application using information '
-        'we already hold — your repayment history with us, your savings '
-        'behaviour, how long you have been a customer, how complete your '
-        'verification is — together with data from licensed credit bureaux.',
+        'When you apply for a loan, a member of our team reads your '
+        'application: the amount you asked for, your bank statement, the '
+        'business you described and photographed, and your guarantor. They '
+        'approve it or decline it, and if they decline it they tell you why.',
       ),
       const LegalText(
-        'Part of that assessment is automated. It can result in a smaller '
-        'limit, a shorter tenure, or a decline.',
+        'There is no credit score in Kudi9ja and no automated lending '
+        'decision. Nothing about how much you have saved with us, how long '
+        'you have been a customer or how you have repaid before sets a limit '
+        'on what you may ask for. Every application within our published '
+        'minimum and maximum is read by a person.',
       ),
       const LegalNote(
-        'If an automated decision goes against you, you have the right to be '
-        'told the main reasons, to ask a member of our team to look at it '
-        'again, to give us more information, and to contest the outcome. Write '
-        'to ${AppConfig.privacyEmail} or ${AppConfig.supportEmail} and a human '
-        'being will review it.',
-        title: 'Your right to a human review',
+        'If a decision goes against you, you have the right to be told the '
+        'main reasons, to give us more information, and to ask for somebody '
+        'who was not involved in the decision to look at it again. Write to '
+        '${AppConfig.privacyEmail} or ${AppConfig.supportEmail} and a '
+        'person will review it.',
+        title: 'Your right to a second look',
         tone: LegalTone.positive,
-      ),
-      const LegalText(
-        'Your credit score in the app is our own view, built for your benefit. '
-        'It is not the score a credit bureau holds on you, and it is not a '
-        'promise that we will lend.',
       ),
     ]),
 
@@ -449,8 +447,8 @@ LegalDocument privacyPolicy() => LegalDocument(
         ),
         (
           'Human review',
-          'To ask a person to review a decision made about you by automated '
-              'means.',
+          'To ask for a decision about you to be looked at again by '
+              'somebody who was not involved in it.',
         ),
         (
           'Complain',

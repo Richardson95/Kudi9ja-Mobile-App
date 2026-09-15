@@ -354,6 +354,15 @@ class Kudi9jaApi {
   Future<List<Map<String, dynamic>>> outstandingAgreements() async =>
       _asList(await _client.get('/me/legal/outstanding'));
 
+  /// Records that the customer read and accepted one document, by version.
+  /// The server refuses a version that is no longer the one in force.
+  Future<Map<String, dynamic>> acceptAgreement({
+    required String document,
+    required String version,
+  }) async =>
+      _asMap(await _client.post('/me/legal/accept',
+          body: {'document': document, 'version': version}));
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Wallet and ledger
   // ═══════════════════════════════════════════════════════════════════════════

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../state/app_state.dart';
+import '../../widgets/agreement_update_sheet.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../loans/loans_screen.dart';
 import '../profile/profile_screen.dart';
@@ -18,6 +21,22 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+
+  /// Whether the agreements sheet has been offered this session. Once: a
+  /// customer who tapped "Not now" is not chased on every refresh.
+  bool _askedAboutAgreements = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notices = context.watch<AppState>().outstandingAgreements;
+    if (notices.isNotEmpty && !_askedAboutAgreements) {
+      _askedAboutAgreements = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showAgreementUpdates(context);
+      });
+    }
+  }
 
   static const _tabs = [
     (Icons.grid_view_rounded, Icons.grid_view_outlined, 'Home'),

@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_config.dart';
 import '../core/theme/app_colors.dart';
+import '../data/legal/legal_documents.dart';
 import '../data/models/admin.dart';
 import '../data/models/app_notification.dart';
 import '../data/models/deposit.dart';
@@ -26,6 +27,29 @@ import '../data/models/platform_settings.dart';
 
 const _uuid = Uuid();
 final _random = Random.secure();
+
+/// One agreement the server says this customer has not yet accepted.
+class AgreementNotice {
+  const AgreementNotice({
+    required this.id,
+    required this.title,
+    required this.version,
+    required this.changeSummary,
+  });
+
+  /// 'terms', 'privacy' or 'lending' — the same id the shipped copies use.
+  final String id;
+  final String title;
+  final String version;
+  final String changeSummary;
+
+  static AgreementNotice fromApi(Map<String, dynamic> j) => AgreementNotice(
+        id: (j['id'] as String? ?? '').toLowerCase(),
+        title: j['title'] as String? ?? 'Agreement',
+        version: j['version'] as String? ?? '',
+        changeSummary: j['changeSummary'] as String? ?? '',
+      );
+}
 
 enum AuthStage {
   /// First run — show onboarding.
@@ -169,6 +193,12 @@ class AppState extends ChangeNotifier {
   bool _autoDebit = false;
   List<AdminUser> _admins = [];
   List<AuditEntry> _audit = [];
+
+  /// Agreements published since this customer last accepted, as the server
+  /// reports them. The app asks on the next open; it never blocks.
+  List<AgreementNotice> _outstandingAgreements = [];
+  List<AgreementNotice> get outstandingAgreements =>
+      List.unmodifiable(_outstandingAgreements);
   List<WithdrawalRequest> _withdrawals = [];
   List<DepositClaim> _deposits = [];
   int _failedAttempts = 0;
@@ -645,6 +675,9 @@ class AppState extends ChangeNotifier {
         // only place the server says whether this account holds the panel.
         // Without it a killed-and-reopened app never learned it was an admin.
         api.profile(),
+        // Anything the company has changed the terms of since this customer
+        // agreed to them. Fetched here so the ask lands on the next open.
+        api.outstandingAgreements(),
       ]);
 
       _applyDashboard(results[0] as Map<String, dynamic>);
@@ -655,6 +688,12 @@ class AppState extends ChangeNotifier {
       _notifications = (results[5] as Page<AppNotification>).items;
       _applications = results[6] as List<LoanApplication>;
       _applyProfile(results[7] as Map<String, dynamic>);
+      _outstandingAgreements = (results[8] as List<Map<String, dynamic>>)
+          .map(AgreementNotice.fromApi)
+          // Only documents this build carries a copy of can be read and
+          // accepted here; anything newer waits for the build that has it.
+          .where((n) => allLegalDocuments().any((d) => d.id == n.id))
+          .toList();
 
       // Kept on the device so the next cold start has something to draw before
       // the first response arrives. It is a cache, never the source of truth.
@@ -666,6 +705,29 @@ class AppState extends ChangeNotifier {
       _syncing = false;
       notifyListeners();
     }
+  }
+
+  /// Accepts every outstanding agreement, each by the version the server
+  /// named. Returns null on success, or a message to show.
+  ///
+  /// One at a time rather than all-or-nothing on purpose: if the second is
+  /// refused because a newer version landed in between, the first is still
+  /// recorded, and the next refresh asks only about what is left.
+  Future<String?> acceptOutstandingAgreements() async {
+    final api = _api;
+    if (api == null) return 'You are offline. Try again when connected.';
+    for (final notice in List.of(_outstandingAgreements)) {
+      try {
+        await api.acceptAgreement(document: notice.id, version: notice.version);
+        _outstandingAgreements =
+            _outstandingAgreements.where((n) => n.id != notice.id).toList();
+        notifyListeners();
+      } on ApiException catch (e) {
+        unawaited(refreshFromServer());
+        return e.message;
+      }
+    }
+    return null;
   }
 
   /// Reads the profile into the account fields and the panel entrance.

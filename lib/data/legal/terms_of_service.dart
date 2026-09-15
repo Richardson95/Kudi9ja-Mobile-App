@@ -16,8 +16,8 @@ LegalDocument termsOfService() {
     summary:
         'The agreement that governs your Kudi9ja account, your wallet, your '
         'savings and everything else you do in the app.',
-    version: '1.0',
-    effective: DateTime(2026, 9, 4),
+    version: '1.1',
+    effective: DateTime(2026, 9, 15),
     readMinutes: 18,
     sections: [
       LegalSection('Who you are agreeing with', [
@@ -562,10 +562,10 @@ LegalDocument termsOfService() {
           'to continue.',
         ),
         const LegalText(
-          'Calculators, projections, credit scores and insights in the app are '
-          'estimates to help you plan. They are not financial advice and they '
-          'are not a promise of any outcome. If you need advice on your own '
-          'situation, speak to a licensed adviser.',
+          'Calculators, projections and insights in the app are estimates to '
+          'help you plan. They are not financial advice and they are not a '
+          'promise of any outcome. If you need advice on your own situation, '
+          'speak to a licensed adviser.',
         ),
       ]),
 

@@ -168,7 +168,10 @@ void main() {
         'never sell your personal data',
         'Nigeria Data Protection Act 2023',
         '72 hours',
-        'human',
+        // Version 1.1: no score and no automated decision. A person reads
+        // every application, and a person looks again if asked.
+        'no credit score',
+        'a person will review it',
       ]) {
         expect(body, contains(promise), reason: promise);
       }
