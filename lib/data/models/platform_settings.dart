@@ -32,22 +32,6 @@ class PlatformSettings {
     this.targetTierLong = AppConfig.targetTierLong,
     this.daysPerSavingsMonth = AppConfig.daysPerSavingsMonth,
     this.earlyPayoffRebateShare = AppConfig.earlyPayoffRebateShare,
-    this.loanBaseCap = AppConfig.loanBaseCap,
-    this.loanSavingsMultiple = AppConfig.loanSavingsMultiple,
-    this.loanScoreBaseline = AppConfig.loanScoreBaseline,
-    this.loanScorePerPoint = AppConfig.loanScorePerPoint,
-    this.loanOfferRounding = AppConfig.loanOfferRounding,
-    this.creditBaseScore = AppConfig.creditBaseScore,
-    this.creditPointsPerPlan = AppConfig.creditPointsPerPlan,
-    this.creditPlanPointsCap = AppConfig.creditPlanPointsCap,
-    this.creditNairaPerSavingsPoint = AppConfig.creditNairaPerSavingsPoint,
-    this.creditSavingsPointsCap = AppConfig.creditSavingsPointsCap,
-    this.creditPointsPerRepaidLoan = AppConfig.creditPointsPerRepaidLoan,
-    this.creditRepaidPointsCap = AppConfig.creditRepaidPointsCap,
-    this.creditOverduePenalty = AppConfig.creditOverduePenalty,
-    this.creditVerifiedBonus = AppConfig.creditVerifiedBonus,
-    this.creditScoreFloor = AppConfig.creditScoreFloor,
-    this.creditScoreCeiling = AppConfig.creditScoreCeiling,
     this.maxPasscodeAttempts = AppConfig.maxPasscodeAttempts,
     this.lockTimeoutMinutes = AppConfig.lockTimeoutMinutes,
     this.minDepositAmount = AppConfig.minDepositAmount,
@@ -108,24 +92,7 @@ class PlatformSettings {
   final double earlyPayoffRebateShare;
 
   /// How a customer's offer is built, before [maxLoanAmount] caps it.
-  final double loanBaseCap;
-  final double loanSavingsMultiple;
-  final int loanScoreBaseline;
-  final double loanScorePerPoint;
-  final double loanOfferRounding;
 
-  // Credit score -----------------------------------------------------------
-  final int creditBaseScore;
-  final int creditPointsPerPlan;
-  final int creditPlanPointsCap;
-  final double creditNairaPerSavingsPoint;
-  final int creditSavingsPointsCap;
-  final int creditPointsPerRepaidLoan;
-  final int creditRepaidPointsCap;
-  final int creditOverduePenalty;
-  final int creditVerifiedBonus;
-  final int creditScoreFloor;
-  final int creditScoreCeiling;
 
   // Security ---------------------------------------------------------------
   final int maxPasscodeAttempts;
@@ -273,22 +240,6 @@ class PlatformSettings {
     int? targetTierLong,
     int? daysPerSavingsMonth,
     double? earlyPayoffRebateShare,
-    double? loanBaseCap,
-    double? loanSavingsMultiple,
-    int? loanScoreBaseline,
-    double? loanScorePerPoint,
-    double? loanOfferRounding,
-    int? creditBaseScore,
-    int? creditPointsPerPlan,
-    int? creditPlanPointsCap,
-    double? creditNairaPerSavingsPoint,
-    int? creditSavingsPointsCap,
-    int? creditPointsPerRepaidLoan,
-    int? creditRepaidPointsCap,
-    int? creditOverduePenalty,
-    int? creditVerifiedBonus,
-    int? creditScoreFloor,
-    int? creditScoreCeiling,
     int? maxPasscodeAttempts,
     int? lockTimeoutMinutes,
     double? minDepositAmount,
@@ -328,22 +279,6 @@ class PlatformSettings {
     targetTierLong: targetTierLong ?? this.targetTierLong,
     daysPerSavingsMonth: daysPerSavingsMonth ?? this.daysPerSavingsMonth,
     earlyPayoffRebateShare: earlyPayoffRebateShare ?? this.earlyPayoffRebateShare,
-    loanBaseCap: loanBaseCap ?? this.loanBaseCap,
-    loanSavingsMultiple: loanSavingsMultiple ?? this.loanSavingsMultiple,
-    loanScoreBaseline: loanScoreBaseline ?? this.loanScoreBaseline,
-    loanScorePerPoint: loanScorePerPoint ?? this.loanScorePerPoint,
-    loanOfferRounding: loanOfferRounding ?? this.loanOfferRounding,
-    creditBaseScore: creditBaseScore ?? this.creditBaseScore,
-    creditPointsPerPlan: creditPointsPerPlan ?? this.creditPointsPerPlan,
-    creditPlanPointsCap: creditPlanPointsCap ?? this.creditPlanPointsCap,
-    creditNairaPerSavingsPoint: creditNairaPerSavingsPoint ?? this.creditNairaPerSavingsPoint,
-    creditSavingsPointsCap: creditSavingsPointsCap ?? this.creditSavingsPointsCap,
-    creditPointsPerRepaidLoan: creditPointsPerRepaidLoan ?? this.creditPointsPerRepaidLoan,
-    creditRepaidPointsCap: creditRepaidPointsCap ?? this.creditRepaidPointsCap,
-    creditOverduePenalty: creditOverduePenalty ?? this.creditOverduePenalty,
-    creditVerifiedBonus: creditVerifiedBonus ?? this.creditVerifiedBonus,
-    creditScoreFloor: creditScoreFloor ?? this.creditScoreFloor,
-    creditScoreCeiling: creditScoreCeiling ?? this.creditScoreCeiling,
     maxPasscodeAttempts: maxPasscodeAttempts ?? this.maxPasscodeAttempts,
     lockTimeoutMinutes: lockTimeoutMinutes ?? this.lockTimeoutMinutes,
     minDepositAmount: minDepositAmount ?? this.minDepositAmount,
@@ -386,22 +321,6 @@ class PlatformSettings {
     'targetTierLong': targetTierLong,
     'daysPerSavingsMonth': daysPerSavingsMonth,
     'earlyPayoffRebateShare': earlyPayoffRebateShare,
-    'loanBaseCap': loanBaseCap,
-    'loanSavingsMultiple': loanSavingsMultiple,
-    'loanScoreBaseline': loanScoreBaseline,
-    'loanScorePerPoint': loanScorePerPoint,
-    'loanOfferRounding': loanOfferRounding,
-    'creditBaseScore': creditBaseScore,
-    'creditPointsPerPlan': creditPointsPerPlan,
-    'creditPlanPointsCap': creditPlanPointsCap,
-    'creditNairaPerSavingsPoint': creditNairaPerSavingsPoint,
-    'creditSavingsPointsCap': creditSavingsPointsCap,
-    'creditPointsPerRepaidLoan': creditPointsPerRepaidLoan,
-    'creditRepaidPointsCap': creditRepaidPointsCap,
-    'creditOverduePenalty': creditOverduePenalty,
-    'creditVerifiedBonus': creditVerifiedBonus,
-    'creditScoreFloor': creditScoreFloor,
-    'creditScoreCeiling': creditScoreCeiling,
     'maxPasscodeAttempts': maxPasscodeAttempts,
     'lockTimeoutMinutes': lockTimeoutMinutes,
     'minDepositAmount': minDepositAmount,
@@ -467,27 +386,6 @@ class PlatformSettings {
     daysPerSavingsMonth: j['daysPerSavingsMonth'] as int? ?? AppConfig.daysPerSavingsMonth,
     earlyPayoffRebateShare:
         (j['earlyPayoffRebateShare'] as num?)?.toDouble() ?? AppConfig.earlyPayoffRebateShare,
-    loanBaseCap:
-        (j['loanBaseCap'] as num?)?.toDouble() ?? AppConfig.loanBaseCap,
-    loanSavingsMultiple:
-        (j['loanSavingsMultiple'] as num?)?.toDouble() ?? AppConfig.loanSavingsMultiple,
-    loanScoreBaseline: j['loanScoreBaseline'] as int? ?? AppConfig.loanScoreBaseline,
-    loanScorePerPoint:
-        (j['loanScorePerPoint'] as num?)?.toDouble() ?? AppConfig.loanScorePerPoint,
-    loanOfferRounding:
-        (j['loanOfferRounding'] as num?)?.toDouble() ?? AppConfig.loanOfferRounding,
-    creditBaseScore: j['creditBaseScore'] as int? ?? AppConfig.creditBaseScore,
-    creditPointsPerPlan: j['creditPointsPerPlan'] as int? ?? AppConfig.creditPointsPerPlan,
-    creditPlanPointsCap: j['creditPlanPointsCap'] as int? ?? AppConfig.creditPlanPointsCap,
-    creditNairaPerSavingsPoint:
-        (j['creditNairaPerSavingsPoint'] as num?)?.toDouble() ?? AppConfig.creditNairaPerSavingsPoint,
-    creditSavingsPointsCap: j['creditSavingsPointsCap'] as int? ?? AppConfig.creditSavingsPointsCap,
-    creditPointsPerRepaidLoan: j['creditPointsPerRepaidLoan'] as int? ?? AppConfig.creditPointsPerRepaidLoan,
-    creditRepaidPointsCap: j['creditRepaidPointsCap'] as int? ?? AppConfig.creditRepaidPointsCap,
-    creditOverduePenalty: j['creditOverduePenalty'] as int? ?? AppConfig.creditOverduePenalty,
-    creditVerifiedBonus: j['creditVerifiedBonus'] as int? ?? AppConfig.creditVerifiedBonus,
-    creditScoreFloor: j['creditScoreFloor'] as int? ?? AppConfig.creditScoreFloor,
-    creditScoreCeiling: j['creditScoreCeiling'] as int? ?? AppConfig.creditScoreCeiling,
     maxPasscodeAttempts: j['maxPasscodeAttempts'] as int? ?? AppConfig.maxPasscodeAttempts,
     lockTimeoutMinutes: j['lockTimeoutMinutes'] as int? ?? AppConfig.lockTimeoutMinutes,
     minDepositAmount:

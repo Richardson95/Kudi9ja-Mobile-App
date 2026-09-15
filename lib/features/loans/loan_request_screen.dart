@@ -49,9 +49,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     if (_principal > settings.maxLoanAmount) {
       return 'Maximum loan is ${settings.maxLoanAmount.asNairaFlat}';
     }
-    if (_principal > app.eligibleLoanAmount) {
-      return 'Your current limit is ${app.eligibleLoanAmount.asNairaFlat}';
-    }
     return null;
   }
 
@@ -84,28 +81,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final limit = app.eligibleLoanAmount;
     final error = _error(app);
     final canSubmit = _principal >= settings.minLoanAmount && error == null;
-
-    if (limit < settings.minLoanAmount) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Borrow')),
-        body: EmptyState(
-          icon: Icons.lock_clock_outlined,
-          title: 'No headroom right now',
-          message:
-              'You have reached your ${settings.maxLoanAmount.asShortNaira} limit. Repay an active loan to free up credit.',
-          action: SizedBox(
-            width: 200,
-            child: GhostButton(
-              label: 'Go back',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Request a loan')),
@@ -124,7 +101,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     AppSpacing.xl,
                   ),
                   children: [
-                    _LimitCard(app: app).animate().fadeIn().slideY(begin: 0.1),
+                    const _RangeCard().animate().fadeIn().slideY(begin: 0.1),
                     const SizedBox(height: AppSpacing.xxl),
                     Center(
                       child: Column(
@@ -167,7 +144,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                               50000,
                               100000,
                               250000,
-                              if (limit >= 500000) 500000,
+                              500000,
+                              1000000,
                             ],
                             onPick: (a) => setState(
                               () => _amount.text = a.toInt().asPlain,
@@ -279,9 +257,15 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 }
 
-class _LimitCard extends StatelessWidget {
-  const _LimitCard({required this.app});
-  final AppState app;
+/// The range a customer may ask within, and who decides.
+///
+/// This was a "pre-approved" card with a limit worked out from a score and
+/// savings, and a progress bar towards the ceiling. There is no such limit:
+/// a customer asks for what they need and a person reads the application.
+/// Saying "pre-approved" over a figure the customer had not asked for was
+/// also a promise nobody had made.
+class _RangeCard extends StatelessWidget {
+  const _RangeCard();
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -291,33 +275,13 @@ class _LimitCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            StatusPill(
-              label: 'PRE-APPROVED',
-              color: AppColors.success,
-              icon: Icons.verified_rounded,
-              dense: true,
-            ),
-            const Spacer(),
-            Text(
-              '${app.creditScore} • ${app.creditBand}',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
         Text(
-          'Available to borrow',
+          'Borrow from',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         Text(
-          app.eligibleLoanAmount.asNaira,
+          '${settings.minLoanAmount.asShortNaira} to ${settings.maxLoanAmount.asShortNaira}',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
@@ -325,19 +289,10 @@ class _LimitCard extends StatelessWidget {
             color: AppColors.gold,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: LinearProgressIndicator(
-            value: app.eligibleLoanAmount / settings.maxLoanAmount,
-            minHeight: 5,
-            backgroundColor: AppColors.surfaceHigh,
-            valueColor: AlwaysStoppedAnimation(AppColors.gold),
-          ),
-        ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Of a ${settings.maxLoanAmount.asShortNaira} ceiling. Save more to raise your limit.',
+          'Ask for what your business needs. Our team reads your bank '
+          'statement, your business and your guarantor, and decides.',
           style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
         ),
       ],

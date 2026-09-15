@@ -147,7 +147,6 @@ class LoanApplication {
     this.userId = '',
     this.customerName = '',
     this.customerRef = '',
-    this.scoreAtSubmission,
     this.bankStatement,
     this.statementPassword = '',
     this.selfie,
@@ -181,7 +180,6 @@ class LoanApplication {
   final String userId;
   final String customerName;
   final String customerRef;
-  final int? scoreAtSubmission;
   final ApplicationDocument? bankStatement;
 
   /// What opens the statement, if the bank locked it. Banks send PDF
@@ -230,7 +228,6 @@ class LoanApplication {
         userId: userId,
         customerName: customerName,
         customerRef: customerRef,
-        scoreAtSubmission: scoreAtSubmission,
         bankStatement: bankStatement,
         statementPassword: statementPassword,
         selfie: selfie,

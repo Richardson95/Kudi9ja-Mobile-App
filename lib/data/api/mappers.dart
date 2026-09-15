@@ -251,75 +251,30 @@ Loan loanFromApi(Map<String, dynamic> j) {
 
 List<Loan> loansFromApi(Object? value) => _list(value).map(loanFromApi).toList();
 
-/// What the server offers this customer, and why.
+/// Whether this customer may apply, and the range they may ask within.
 ///
-/// The app used to work this out from local savings and a local credit score.
-/// It is the server's decision — the app asks and displays the answer, so the
-/// figure a customer is shown is the figure they can actually borrow.
+/// There is no offer and no score. The server says whether an application
+/// can be made at all — identity verified, account not frozen, lending open
+/// — and the smallest and largest loan the company writes. Everything
+/// between is the customer's to ask for and a person's to decide.
 class LoanEligibility {
   const LoanEligibility({
-    required this.offer,
-    required this.headroom,
-    required this.creditScore,
-    required this.band,
     required this.eligible,
+    required this.minAmount,
+    required this.maxAmount,
     this.reason = '',
   });
 
-  final double offer;
-  final double headroom;
-  final int creditScore;
-  final String band;
   final bool eligible;
+  final double minAmount;
+  final double maxAmount;
   final String reason;
 
   static LoanEligibility fromApi(Map<String, dynamic> j) => LoanEligibility(
-        offer: _money(j['offer']),
-        headroom: _money(j['headroom']),
-        creditScore: _int(j['creditScore']),
-        band: _str(j['band']),
         eligible: _bool(j['eligible'], true),
+        minAmount: _money(j['minAmount']),
+        maxAmount: _money(j['maxAmount']),
         reason: _str(j['reason']),
-      );
-}
-
-class CreditScoreSnapshot {
-  const CreditScoreSnapshot({
-    required this.score,
-    required this.band,
-    required this.factors,
-  });
-
-  final int score;
-  final String band;
-  final List<CreditFactorRow> factors;
-
-  static CreditScoreSnapshot fromApi(Map<String, dynamic> j) =>
-      CreditScoreSnapshot(
-        score: _int(j['score']),
-        band: _str(j['band']),
-        factors: _list(j['factors']).map(CreditFactorRow.fromApi).toList(),
-      );
-}
-
-class CreditFactorRow {
-  const CreditFactorRow({
-    required this.label,
-    required this.detail,
-    required this.points,
-    required this.maxPoints,
-  });
-
-  final String label;
-  final String detail;
-  final int points;
-  final int maxPoints;
-
-  static CreditFactorRow fromApi(Map<String, dynamic> j) => CreditFactorRow(
-        label: _str(j['label']),
-        detail: _str(j['detail']),
-        points: _int(j['points']),
-        maxPoints: _int(j['maxPoints']),
       );
 }
 
@@ -534,7 +489,6 @@ CustomerRecord customerRowFromApi(Map<String, dynamic> j) => CustomerRecord(
       totalSaved: 0,
       totalOwed: 0,
       interestPaid: 0,
-      creditScore: 0,
       plansCount: 0,
       loansCount: 0,
       verified: _str(j['kycTier']) != 'TIER0',
@@ -555,7 +509,6 @@ CustomerRecord customerDetailFromApi(Map<String, dynamic> j) {
     totalSaved: _money(money['totalSaved']),
     totalOwed: _money(money['totalOwed']),
     interestPaid: _money(money['totalInterestEarned']),
-    creditScore: _int(money['creditScore']),
     plansCount: _int(money['totalPlans']),
     loansCount: _int(money['totalLoans']),
     state: _str(j['state']),
@@ -627,8 +580,6 @@ LoanApplication loanApplicationFromApi(Map<String, dynamic> j) => LoanApplicatio
       userId: _str(j['userId']),
       customerName: _str(j['customerName']),
       customerRef: _str(j['customerRef']),
-      scoreAtSubmission:
-          j['scoreAtSubmission'] == null ? null : _int(j['scoreAtSubmission']),
       bankStatement: j['bankStatement'] == null
           ? null
           : applicationDocumentFromApi(

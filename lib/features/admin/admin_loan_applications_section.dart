@@ -299,11 +299,6 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
                   _Row('Account', _a.customerRef),
                 ],
                 _Row('Submitted', _a.submittedAt.asDay),
-                if (_a.scoreAtSubmission != null)
-                  // Advice, not a verdict. The score is one input beside the
-                  // statement and the guarantors, and an admin who has read the
-                  // file may reasonably disagree with it.
-                  _Row('Credit score then', '${_a.scoreAtSubmission}'),
               ],
             ),
           ),

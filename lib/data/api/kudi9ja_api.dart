@@ -662,9 +662,6 @@ class Kudi9jaApi {
         body: {'pin': pin},
       ));
 
-  Future<CreditScoreSnapshot> creditScore() async =>
-      CreditScoreSnapshot.fromApi(_asMap(await _client.get('/credit-score')));
-
   // ═══════════════════════════════════════════════════════════════════════════
   // Thrift circles
   // ═══════════════════════════════════════════════════════════════════════════

@@ -18,7 +18,6 @@ import '../shell/home_shell.dart';
 import '../admin/admin_shell.dart';
 import '../insights/insights_screen.dart';
 import '../legal/legal_screen.dart';
-import '../loans/credit_score_screen.dart';
 import '../notifications/notifications_screen.dart';
 import 'security_screen.dart';
 import '../../data/models/platform_settings.dart';
@@ -103,14 +102,6 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => Navigator.of(
                   context,
                 ).push(slideRoute(const InsightsScreen())),
-              ),
-              _Row(
-                icon: Icons.speed_rounded,
-                label: 'Credit score',
-                sublabel: '${app.creditScore} - ${app.creditBand}',
-                onTap: () => Navigator.of(
-                  context,
-                ).push(slideRoute(const CreditScoreScreen())),
               ),
               _Row(
                 icon: Icons.notifications_none_rounded,

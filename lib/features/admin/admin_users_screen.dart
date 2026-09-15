@@ -385,12 +385,7 @@ class _AdminCustomerDetailScreenState
                 child: Column(
                   children: [
                     _Detail('Savings plans', '${c.plansCount}'),
-                    _Detail('Loans taken', '${c.loansCount}'),
-                    _Detail(
-                      'Credit score',
-                      '${c.creditScore} out of 850',
-                      last: true,
-                    ),
+                    _Detail('Loans taken', '${c.loansCount}', last: true),
                   ],
                 ),
               ),

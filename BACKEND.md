@@ -28,7 +28,7 @@ behind that seam has to do.
 Two consequences to keep in front of you:
 
 1. **The client is not the source of truth and must stop behaving as if it
-   is.** Balances, interest, credit scores and loan pricing are all computed
+   is.** Balances, interest and loan pricing are all computed
    client-side today. Every one of those calculations must move to the server
    and the client must display what the server returns. The formulas here are
    the specification; the Dart is the current reference implementation.
@@ -500,38 +500,16 @@ capped at the outstanding balance. No early-settlement charge.
 to this in writing: *"Even in default, the amount you owe does not increase."*
 Do not add one without changing that document first.
 
-**What a customer is offered** (before the hard maximum):
+**There is no offer and no credit score.** A customer asks for any amount
+from `minLoanAmount` to `maxLoanAmount` (₦50,000 to ₦5,000,000). The only
+automated refusals are the ones no application could change — identity not
+verified, account frozen, lending switched off, a tenure with no rate. Within
+those, the application goes to the admin queue with the bank statement, the
+business and the guarantor, and a person approves or declines with a reason.
+Nothing is computed from savings history or repayment history to cap what may
+be asked for.
 
-```
-offer = loanBaseCap                              (₦100,000)
-      + totalSaved × loanSavingsMultiple         (× 1.5)
-      + (creditScore − loanScoreBaseline) × loanScorePerPoint   (× ₦400)
-offer = min(offer, headroom, maxLoanAmount)
-offer = floor(offer ÷ loanOfferRounding) × loanOfferRounding    (₦5,000)
-if offer < minLoanAmount → not eligible
-```
-
-`headroom = maxLoanAmount − principal of all open loans`.
-
-### 4.4 Credit score
-
-A score out of 850, built only from what the customer has done with Kudi9ja.
-
-```
-score  = creditBaseScore                         (560)
-       + min(plans × 18, 90)
-       + min(floor(totalSaved ÷ 25,000), 100)
-       + min(loansRepaid × 30, 120)
-       − 90  if any loan is overdue
-       + 40  if fully verified
-score  = clamp(score, 300, 850)
-```
-
-Every coefficient is admin-settable. This is **Kudi9ja's own view**, not a
-credit-bureau score — the Privacy Policy says so, and says the customer may
-demand a human review of any automated decision that goes against them.
-
-### 4.5 Wallet limits
+### 4.4 Wallet limits
 
 - **Daily transfer limit:** ₦1,000,000.
 - **Minimum pay-in:** ₦100. **Minimum withdrawal:** ₦500.
@@ -550,8 +528,6 @@ loan**. The server must expose them as a single versioned document.
 | **Savings** | `savingsAnnualRate` `minLockDays` `maxLockDays` `daysPerYear` `minSavingsAmount` `maxSavingsAmount` `targetRateShort` `targetRateMedium` `targetRateLong` `targetTierMedium` `targetTierLong` `minTargetMonths` `daysPerSavingsMonth` |
 | **Lending** | `loanRates` (map: tenure → rate) `maxLoanTenureMonths` `minLoanAmount` `maxLoanAmount` `earlyPayoffRebateShare` |
 | **Management fee** | `flatProcessingFee` `processingFeeThreshold` `loanProcessingFeeRate` |
-| **Loan offer** | `loanBaseCap` `loanSavingsMultiple` `loanScoreBaseline` `loanScorePerPoint` `loanOfferRounding` |
-| **Credit score** | `creditBaseScore` `creditPointsPerPlan` `creditPlanPointsCap` `creditNairaPerSavingsPoint` `creditSavingsPointsCap` `creditPointsPerRepaidLoan` `creditRepaidPointsCap` `creditOverduePenalty` `creditVerifiedBonus` `creditScoreFloor` `creditScoreCeiling` |
 | **Security** | `maxPasscodeAttempts` `lockTimeoutMinutes` `otpResendSeconds` |
 | **Wallet** | `dailyTransferLimit` `minDepositAmount` `minWithdrawalAmount` |
 | **Thrift** | `minCircleContribution` `minCircleMembers` `maxCircleMembers` |
@@ -564,7 +540,6 @@ who already has one.
 
 **Validation the server must enforce:** `minLockDays < maxLockDays` ·
 `minLoanAmount < maxLoanAmount` · `savingsAnnualRate > 0` ·
-`creditScoreFloor < creditScoreCeiling` ·
 `targetTierMedium < targetTierLong` · a rate for every selectable tenure.
 
 ---
@@ -645,7 +620,7 @@ customer's own name.
 
 ```
 Request (amount, tenure, purpose)
-   → affordability + eligibility checked server-side
+   → hard limits checked server-side (verified, not frozen, amount in range)
    → approved: loan created with the rate for THAT tenure, frozen
    → wallet credited with the principal, then debited the fee
      (booked gross then netted, so the ledger shows both)
@@ -729,12 +704,11 @@ the semantics are not.
 | Method | Path |
 |---|---|
 | `GET` | `/loans` · `/loans/{id}` |
-| `GET` | `/loans/eligibility` — offer, headroom, score |
+| `GET` | `/loans/eligibility` — may apply?, min/max amount, tenures, rate card |
 | `GET` | `/loans/quote?amount&months` — fee, net, interest, total, schedule |
 | `POST` | `/loans` — request |
 | `POST` | `/loans/{id}/repay` |
 | `POST` | `/loans/{id}/settle` — early payoff with rebate |
-| `GET` | `/credit-score` — score, band, factor breakdown |
 
 ### Thrift
 
@@ -859,7 +833,7 @@ migration checklist.
 | **BVN/NIN check** — 1.5s delay, always passes | Real verification provider; name and DOB must match |
 | **OTP** — generated on device and shown on screen | Server-issued, emailed, never returned to the client |
 | **Balance and interest** | Server-computed; the client displays only |
-| **Credit score and eligibility** | Server-computed |
+| **Eligibility** | Server-checked: hard limits only, no score |
 | **Loan pricing** | Server-quoted; the client never prices a loan |
 | **Admin role** — from the device's account list | Server-side claim, checked per request |
 | **First account = owner** | Deliberate seeding |

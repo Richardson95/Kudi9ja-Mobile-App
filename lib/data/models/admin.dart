@@ -230,7 +230,6 @@ class CustomerRecord {
     required this.totalSaved,
     required this.totalOwed,
     required this.interestPaid,
-    required this.creditScore,
     required this.plansCount,
     required this.loansCount,
     this.state = '',
@@ -254,7 +253,6 @@ class CustomerRecord {
   final double totalSaved;
   final double totalOwed;
   final double interestPaid;
-  final int creditScore;
   final int plansCount;
   final int loansCount;
   final String state;

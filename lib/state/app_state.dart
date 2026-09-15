@@ -27,26 +27,6 @@ import '../data/models/platform_settings.dart';
 const _uuid = Uuid();
 final _random = Random.secure();
 
-/// One contributor to the credit score, shown on the breakdown screen.
-class CreditFactor {
-  const CreditFactor({
-    required this.label,
-    required this.detail,
-    required this.points,
-    required this.maxPoints,
-    this.negative = false,
-  });
-
-  final String label;
-  final String detail;
-  final int points;
-  final int maxPoints;
-  final bool negative;
-
-  double get fill => maxPoints <= 0 ? 0 : (points / maxPoints).clamp(0.0, 1.0);
-  bool get isMaxed => maxPoints > 0 && points >= maxPoints;
-}
-
 enum AuthStage {
   /// First run — show onboarding.
   onboarding,
@@ -314,44 +294,6 @@ class AppState extends ChangeNotifier {
 
   /// Wallet + locked savings — the headline net worth figure.
   double get netWorth => _balance + totalSaved;
-
-  /// How much more this user may borrow right now.
-  double get loanHeadroom {
-    final used = activeLoans.fold(0.0, (s, l) => s + l.principal);
-    final left = settings.maxLoanAmount - used;
-    return left < 0 ? 0 : left;
-  }
-
-  /// A simple, explainable credit score out of 850.
-  int get creditScore {
-    var score = settings.creditBaseScore;
-    score += (_plans.length * settings.creditPointsPerPlan).clamp(
-      0,
-      settings.creditPlanPointsCap,
-    );
-    score += (totalSaved / settings.creditNairaPerSavingsPoint)
-        .floor()
-        .clamp(0, settings.creditSavingsPointsCap);
-    final repaid = _loans.where((l) => l.status == LoanStatus.repaid).length;
-    score += (repaid * settings.creditPointsPerRepaidLoan).clamp(
-      0,
-      settings.creditRepaidPointsCap,
-    );
-    if (_loans.any((l) => l.status == LoanStatus.overdue)) {
-      score -= settings.creditOverduePenalty;
-    }
-    if (_user?.kycTier == KycTier.tier2) score += settings.creditVerifiedBonus;
-    return score.clamp(settings.creditScoreFloor, settings.creditScoreCeiling);
-  }
-
-  String get creditBand {
-    final s = creditScore;
-    if (s >= 750) return 'Excellent';
-    if (s >= 680) return 'Very good';
-    if (s >= 600) return 'Good';
-    if (s >= 500) return 'Fair';
-    return 'Building';
-  }
 
   // ── Hydration ───────────────────────────────────────────────────────────
   void _hydrate() {
@@ -2856,7 +2798,6 @@ class AppState extends ChangeNotifier {
       totalSaved: totalSaved,
       totalOwed: totalOwed,
       interestPaid: totalInterestEarned,
-      creditScore: creditScore,
       plansCount: _plans.length,
       loansCount: _loans.length,
       state: u.state,
@@ -3321,62 +3262,4 @@ class AppState extends ChangeNotifier {
   /// standing invitation to act on one by mistake.
   List<Transaction> transactionsFor(CustomerRecord customer) =>
       customer.isThisDevice ? transactions : const <Transaction>[];
-
-  /// The factors behind the credit score, and what each is worth.
-  List<CreditFactor> get creditFactors {
-    final repaidLoans =
-        _loans.where((l) => l.status == LoanStatus.repaid).length;
-    final overdue = _loans.any((l) => l.status == LoanStatus.overdue);
-
-    return [
-      CreditFactor(
-        label: 'Identity verified',
-        detail: user?.kycTier == KycTier.tier2
-            ? 'BVN and NIN confirmed'
-            : 'Complete your KYC',
-        points: user?.kycTier == KycTier.tier2 ? 40 : 0,
-        maxPoints: 40,
-      ),
-      CreditFactor(
-        label: 'Savings habit',
-        detail: '${_plans.length} ${_plans.length == 1 ? 'plan' : 'plans'} opened',
-        points: (_plans.length * 18).clamp(0, 90),
-        maxPoints: 90,
-      ),
-      CreditFactor(
-        label: 'Amount saved',
-        detail: '${totalSaved.toStringAsFixed(0)} locked away',
-        points: (totalSaved / 25000).floor().clamp(0, 100),
-        maxPoints: 100,
-      ),
-      CreditFactor(
-        label: 'Repayment history',
-        detail: repaidLoans == 0
-            ? 'No loans repaid yet'
-            : '$repaidLoans ${repaidLoans == 1 ? 'loan' : 'loans'} repaid in full',
-        points: (repaidLoans * 30).clamp(0, 120),
-        maxPoints: 120,
-      ),
-      CreditFactor(
-        label: 'Nothing overdue',
-        detail: overdue ? 'You have an overdue loan' : 'All repayments on time',
-        points: overdue ? -90 : 0,
-        maxPoints: 0,
-        negative: overdue,
-      ),
-    ];
-  }
-
-  /// Eligibility ceiling: headroom, tempered by savings history and score.
-  double get eligibleLoanAmount {
-    if (loanHeadroom <= 0) return 0;
-    var cap = settings.loanBaseCap;
-    cap += totalSaved * settings.loanSavingsMultiple;
-    cap += (creditScore - settings.loanScoreBaseline) * settings.loanScorePerPoint;
-    if (cap > loanHeadroom) cap = loanHeadroom;
-    if (cap > settings.maxLoanAmount) cap = settings.maxLoanAmount;
-    if (cap < settings.minLoanAmount) return 0;
-    return (cap / settings.loanOfferRounding).floor() *
-        settings.loanOfferRounding;
-  }
 }

@@ -13,7 +13,6 @@ import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../shell/home_shell.dart';
-import 'credit_score_screen.dart';
 import 'loan_calculator_screen.dart';
 import '../wallet/pay_in_screen.dart';
 import 'loan_detail_screen.dart';
@@ -135,9 +134,6 @@ class _CreditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final score = app.creditScore;
-    final pct = ((score - 300) / 550).clamp(0.0, 1.0);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: KCard(
@@ -145,44 +141,33 @@ class _CreditCard extends StatelessWidget {
         borderColor: AppColors.gold.withValues(alpha: 0.22),
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Available credit',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        app.eligibleLoanAmount.asNaira,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1.1,
-                          color: AppColors.gold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.of(
-                    context,
-                  ).push(slideRoute(const CreditScoreScreen())),
-                  child: _ScoreRing(
-                    score: score,
-                    pct: pct,
-                    band: app.creditBand,
-                  ),
-                ),
-              ],
+            Text(
+              'Borrow for your business',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // The range, not an offer. There is no score and no limit worked
+            // out from savings: a customer asks for what they need and a
+            // person reads the application and decides.
+            Text(
+              '${settings.minLoanAmount.asShortNaira} – ${settings.maxLoanAmount.asShortNaira}',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1.1,
+                color: AppColors.gold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Tell us what you need and show us the business. '
+              'Our team reads every application and decides.',
+              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
             const SizedBox(height: AppSpacing.xl),
             Row(
@@ -214,61 +199,6 @@ class _CreditCard extends StatelessWidget {
       ),
     ).animate().fadeIn().slideY(begin: 0.1);
   }
-}
-
-class _ScoreRing extends StatelessWidget {
-  const _ScoreRing({
-    required this.score,
-    required this.pct,
-    required this.band,
-  });
-
-  final int score;
-  final double pct;
-  final String band;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 78,
-    height: 78,
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(
-          width: 78,
-          height: 78,
-          child: CircularProgressIndicator(
-            value: pct,
-            strokeWidth: 6,
-            strokeCap: StrokeCap.round,
-            backgroundColor: AppColors.surfaceHigh,
-            valueColor: AlwaysStoppedAnimation(AppColors.success),
-          ),
-        ),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$score',
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.6,
-              ),
-            ),
-            Text(
-              band,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
 }
 
 class _ActiveLoanCard extends StatelessWidget {

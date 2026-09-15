@@ -447,17 +447,4 @@ void main() {
       expect(app.unreadCount, 0);
     });
   });
-
-  group('Credit factors', () {
-    test('sum to the published score', () async {
-      final app = await _funded(300000);
-      await app.createFixedPlan(
-        title: 'Lock',
-        principal: 100000,
-        days: 365,
-      );
-      final sum = app.creditFactors.fold(0, (s, f) => s + f.points);
-      expect(app.creditScore, (560 + sum).clamp(300, 850));
-    });
-  });
 }

@@ -570,7 +570,7 @@ class _CreditSection extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'You are pre-approved',
+                          'Need a loan for your business?',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -578,7 +578,7 @@ class _CreditSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Up to ${app.eligibleLoanAmount.asShortNaira} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
+                          '${settings.minLoanAmount.asShortNaira} to ${settings.maxLoanAmount.asShortNaira} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiary,

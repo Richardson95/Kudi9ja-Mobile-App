@@ -170,33 +170,6 @@ abstract final class AppConfig {
   /// Idle minutes before the app demands the passcode again.
   static const lockTimeoutMinutes = 2;
 
-  // Loan eligibility --------------------------------------------------------
-  /// What a customer may be offered, before [maxLoanAmount] caps it:
-  ///   [loanBaseCap]
-  ///   + everything they have saved x [loanSavingsMultiple]
-  ///   + every credit-score point above [loanScoreBaseline] x
-  ///     [loanScorePerPoint]
-  /// rounded down to the nearest [loanOfferRounding].
-  static const loanBaseCap = 100000.0;
-  static const loanSavingsMultiple = 1.5;
-  static const loanScoreBaseline = 500;
-  static const loanScorePerPoint = 400.0;
-  static const loanOfferRounding = 5000.0;
-
-  // Credit score ------------------------------------------------------------
-  /// A score out of 850, built from what a customer has actually done.
-  static const creditBaseScore = 560;
-  static const creditPointsPerPlan = 18;
-  static const creditPlanPointsCap = 90;
-  static const creditNairaPerSavingsPoint = 25000.0;
-  static const creditSavingsPointsCap = 100;
-  static const creditPointsPerRepaidLoan = 30;
-  static const creditRepaidPointsCap = 120;
-  static const creditOverduePenalty = 90;
-  static const creditVerifiedBonus = 40;
-  static const creditScoreFloor = 300;
-  static const creditScoreCeiling = 850;
-
   // Pay-in, payout and thrift ----------------------------------------------
   /// The smallest pay-in we will match against the bank statement, and the
   /// smallest payout worth a bank transfer.

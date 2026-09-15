@@ -201,15 +201,16 @@ void main() {
   });
 
   group('Dashboard balance card', () {
-    test('the credit score is not a wallet figure and is off the card', () {
+    test('the card shows what the customer has earned, not a score', () {
       final card = File('lib/features/dashboard/balance_card.dart')
           .readAsStringSync();
 
-      // It belongs with borrowing — the Loans tab and Profile still show it.
+      // There is no credit score anywhere in the product: a person reads
+      // each application and decides. Nothing on the card may suggest one.
       expect(card.contains('creditScore'), isFalse);
       expect(card.contains('creditBand'), isFalse);
 
-      // What replaced it is money the customer has actually been paid.
+      // What is there is money the customer has actually been paid.
       expect(card.contains('Earned so far'), isTrue);
       expect(card.contains('totalInterestEarned'), isTrue);
 
@@ -220,14 +221,16 @@ void main() {
         reason: 'earnings must be masked when balances are hidden',
       );
 
+      // Nor may the screens that used to carry it.
       for (final path in const [
         'lib/features/loans/loans_screen.dart',
+        'lib/features/loans/loan_request_screen.dart',
         'lib/features/profile/profile_screen.dart',
       ]) {
         expect(
           File(path).readAsStringSync().contains('creditScore'),
-          isTrue,
-          reason: '$path should still surface the score',
+          isFalse,
+          reason: '$path must not show a credit score',
         );
       }
     });
