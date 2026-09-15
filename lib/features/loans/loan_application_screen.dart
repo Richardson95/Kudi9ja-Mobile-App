@@ -54,6 +54,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final _businessName = TextEditingController();
   final _businessAddress = TextEditingController();
   final _income = TextEditingController();
+  final _statementPassword = TextEditingController();
 
   // Step two — the evidence.
   String _statementPath = '';
@@ -70,6 +71,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     _businessName.dispose();
     _businessAddress.dispose();
     _income.dispose();
+    _statementPassword.dispose();
     for (final g in _guarantors) {
       g.dispose();
     }
@@ -80,6 +82,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       _businessName.text.trim().isNotEmpty &&
       _businessAddress.text.trim().isNotEmpty &&
       parseAmount(_income.text) > 0;
+
+  bool get _statementIsPdf => _statementPath.toLowerCase().endsWith('.pdf');
 
   bool get _evidenceDone =>
       _statementPath.isNotEmpty &&
@@ -124,6 +128,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             monthlyIncome: parseAmount(_income.text),
             guarantors: [for (final g in _guarantors) g.toGuarantor()],
             bankStatementPath: _statementPath,
+            statementPassword: _statementPassword.text,
             selfiePath: _selfiePath,
             businessPhotoPaths: _photos,
             pin: pin,
@@ -284,6 +289,23 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             path: _statementPath,
             onPicked: (p) => setState(() => _statementPath = p),
           ),
+          // Banks lock the PDFs they email, usually with a date of birth or
+          // a phone number. The file is kept exactly as sent, so whoever
+          // reads it needs the password — and the customer knows it now,
+          // with the file in front of them, rather than in a week when we
+          // would otherwise have to ring and ask. Only a PDF can be locked,
+          // so the field only appears for one.
+          if (_statementIsPdf) ...[
+            const SizedBox(height: AppSpacing.md),
+            KField(
+              label: 'Statement password (if the PDF is locked)',
+              controller: _statementPassword,
+              prefixIcon: Icons.lock_open_rounded,
+              maxLength: 64,
+              helper: 'Banks usually lock statements with your date of birth '
+                  'or phone number. Leave this empty if yours opens without one.',
+            ),
+          ],
           const SizedBox(height: AppSpacing.xl),
           const SectionHeader(title: 'A photo of you'),
           const SizedBox(height: AppSpacing.sm),

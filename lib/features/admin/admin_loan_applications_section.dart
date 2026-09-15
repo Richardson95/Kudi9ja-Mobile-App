@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -333,7 +334,13 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
           // here rather than shown twice.
           for (final document in _a.documents)
             if (document != _a.selfie) ...[
-              _DocumentTile(document: document, headers: headers),
+              _DocumentTile(
+                document: document,
+                headers: headers,
+                password: document == _a.bankStatement
+                    ? _a.statementPassword
+                    : '',
+              ),
               const SizedBox(height: AppSpacing.sm),
             ],
           const SizedBox(height: AppSpacing.md),
@@ -388,10 +395,19 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
 }
 
 class _DocumentTile extends StatelessWidget {
-  const _DocumentTile({required this.document, required this.headers});
+  const _DocumentTile({
+    required this.document,
+    required this.headers,
+    this.password = '',
+  });
 
   final ApplicationDocument document;
   final Map<String, String> headers;
+
+  /// What opens the file, when the bank locked it. Shown under the tile and
+  /// copied on a tap, because the admin is about to be asked for it by the
+  /// PDF viewer and a date of birth is easy to mistype.
+  final String password;
 
   @override
   Widget build(BuildContext context) {
@@ -403,7 +419,53 @@ class _DocumentTile extends StatelessWidget {
           url: document.url,
           headers: headers,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _row(),
+            if (password.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              InkWell(
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: password));
+                  if (context.mounted) {
+                    showToast(context, 'Password copied.');
+                  }
+                },
+                child: Row(
+                  children: [
+                    Icon(Icons.key_rounded, size: 14, color: AppColors.gold),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Opens with  ',
+                      style: TextStyle(
+                          fontSize: 11, color: AppColors.textTertiary),
+                    ),
+                    Text(
+                      password,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Tap to copy',
+                      style: TextStyle(fontSize: 11, color: AppColors.gold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row() {
+    return Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -449,9 +511,7 @@ class _DocumentTile extends StatelessWidget {
             ),
             Icon(Icons.zoom_in_rounded, size: 18, color: AppColors.gold),
           ],
-        ),
-      ),
-    );
+        );
   }
 }
 

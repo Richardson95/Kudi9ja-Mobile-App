@@ -605,6 +605,7 @@ class Kudi9jaApi {
     required double monthlyIncome,
     required List<Guarantor> guarantors,
     required UploadPart bankStatement,
+    String statementPassword = '',
     required UploadPart selfie,
     required List<UploadPart> businessPhotos,
     required String pin,
@@ -620,6 +621,10 @@ class Kudi9jaApi {
             'businessAddress': businessAddress,
             'monthlyIncome': monthlyIncome,
             'guarantors': guarantors.map((g) => g.toApi()).toList(),
+            // Only when the bank locked the file. The admin needs it to
+            // open the statement; the server keeps it beside the file.
+            if (statementPassword.trim().isNotEmpty)
+              'statementPassword': statementPassword.trim(),
             'pin': pin,
           },
         },

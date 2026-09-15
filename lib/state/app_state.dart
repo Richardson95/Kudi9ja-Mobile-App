@@ -1882,6 +1882,7 @@ class AppState extends ChangeNotifier {
     required double monthlyIncome,
     required List<Guarantor> guarantors,
     required String bankStatementPath,
+    String statementPassword = '',
     required String selfiePath,
     required List<String> businessPhotoPaths,
     required String pin,
@@ -1897,6 +1898,7 @@ class AppState extends ChangeNotifier {
         monthlyIncome: monthlyIncome,
         guarantors: guarantors,
         bankStatement: await _part('bankStatement', bankStatementPath),
+        statementPassword: statementPassword,
         selfie: await _part('selfie', selfiePath),
         businessPhotos: [
           for (final path in businessPhotoPaths)
@@ -2606,8 +2608,6 @@ class AppState extends ChangeNotifier {
     if (clean.isEmpty) {
       return (ok: false, message: 'That account has no email address.');
     }
-    if (_admins.any((a) => a.email.toLowerCase() == clean)) {
-      return (ok: false, message: 'That email already has panel access.');
 
     // Online the grant is the server's to make, and only the server's: it is
     // what the panel entrance is checked against at that person's next
@@ -2633,6 +2633,8 @@ class AppState extends ChangeNotifier {
       }
     }
 
+    if (_admins.any((a) => a.email.toLowerCase() == clean)) {
+      return (ok: false, message: 'That email already has panel access.');
     }
     if (!adminRole.canManageTeam) {
       return (ok: false, message: 'Only an owner can add admins.');

@@ -633,6 +633,7 @@ LoanApplication loanApplicationFromApi(Map<String, dynamic> j) => LoanApplicatio
           ? null
           : applicationDocumentFromApi(
               (j['bankStatement'] as Map).cast<String, dynamic>()),
+      statementPassword: _str(j['statementPassword']),
       selfie: j['selfie'] == null
           ? null
           : applicationDocumentFromApi(

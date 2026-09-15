@@ -149,6 +149,7 @@ class LoanApplication {
     this.customerRef = '',
     this.scoreAtSubmission,
     this.bankStatement,
+    this.statementPassword = '',
     this.selfie,
     this.businessPhotos = const [],
   });
@@ -182,6 +183,12 @@ class LoanApplication {
   final String customerRef;
   final int? scoreAtSubmission;
   final ApplicationDocument? bankStatement;
+
+  /// What opens the statement, if the bank locked it. Banks send PDF
+  /// statements locked with the customer's date of birth or phone number,
+  /// and the file is kept as sent. Empty when there is no lock, and always
+  /// empty on the customer's own view — it is theirs, and they know it.
+  final String statementPassword;
 
   /// The applicant's face, taken at application time.
   final ApplicationDocument? selfie;
@@ -225,6 +232,7 @@ class LoanApplication {
         customerRef: customerRef,
         scoreAtSubmission: scoreAtSubmission,
         bankStatement: bankStatement,
+        statementPassword: statementPassword,
         selfie: selfie,
         businessPhotos: businessPhotos,
       );
