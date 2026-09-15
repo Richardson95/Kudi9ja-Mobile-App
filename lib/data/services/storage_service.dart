@@ -31,6 +31,7 @@ class StorageService {
   static const _kTxns = 'k9.txns';
   static const _kOnboarded = 'k9.onboarded';
   static const _kSignedIn = 'k9.signedIn';
+  static const _kPanelRole = 'k9.panelRole';
   static const _kHideBalance = 'k9.hideBalance';
   static const _kThemeMode = 'k9.themeMode';
   static const _kCircles = 'k9.circles';
@@ -50,6 +51,14 @@ class StorageService {
   // ── Session ─────────────────────────────────────────────────────────────
   bool get isSignedIn => _prefs.getBool(_kSignedIn) ?? false;
   Future<void> setSignedIn(bool v) => _prefs.setBool(_kSignedIn, v);
+
+  /// What the server last said about panel access, kept so a cold start can
+  /// draw the entrance before the first response arrives. A hint and nothing
+  /// more: the server decides again on every admin request.
+  String? get panelRole => _prefs.getString(_kPanelRole);
+  Future<void> setPanelRole(String? role) => role == null
+      ? _prefs.remove(_kPanelRole)
+      : _prefs.setString(_kPanelRole, role);
 
   bool get hideBalance => _prefs.getBool(_kHideBalance) ?? false;
   Future<void> setHideBalance(bool v) => _prefs.setBool(_kHideBalance, v);
@@ -187,6 +196,7 @@ class StorageService {
       _kLoans,
       _kTxns,
       _kSignedIn,
+      _kPanelRole,
       _kHideBalance,
       _kCircles,
       _kNotifications,

@@ -121,6 +121,22 @@ class AppState extends ChangeNotifier {
   /// assumed from a locally stored role.
   AdminRole? _serverAdminRole;
 
+  /// Records the server's latest word on panel access.
+  ///
+  /// Every path that learns it — sign-in, sign-up, the profile refresh, the
+  /// panel's own "who am I" — goes through here, so the flag and the role
+  /// cannot disagree, and so the answer survives the app being killed. Before
+  /// this only sign-in set the flag: a cold start came up with it false and
+  /// nothing ever set it true again, so the panel entrance vanished until the
+  /// owner signed out and back in. The stored copy is a hint for the first
+  /// frame; the server decides again on every admin request.
+  void _setPanelAccess({required bool admin, required AdminRole? role}) {
+    _isAdminOnServer = admin;
+    _serverAdminRole = admin ? role : null;
+    unawaited(_store.setPanelRole(
+        admin ? (role ?? AdminRole.viewer).name : null));
+  }
+
   /// The customer list, the queues and the team, as the server reports them.
   List<CustomerRecord> _serverCustomers = [];
 
@@ -354,6 +370,12 @@ class AppState extends ChangeNotifier {
         ? AppThemeMode.dark
         : AppThemeMode.values[saved.clamp(0, AppThemeMode.values.length - 1)];
     _autoDebit = _store.autoDebit;
+    // The server's last word on the panel, so the entrance is drawn on the
+    // first frame rather than after the first round trip. Corrected by the
+    // profile refresh that follows, and by every admin request after that.
+    final panelRole = _store.panelRole;
+    _isAdminOnServer = panelRole != null;
+    _serverAdminRole = adminRoleFromApi(panelRole);
     _admins = _store.admins;
     _audit = _store.audit;
     _withdrawals = _store.withdrawals;
@@ -511,8 +533,7 @@ class AppState extends ChangeNotifier {
     );
 
     _user = session.user;
-    _isAdminOnServer = session.isAdmin;
-    _serverAdminRole = session.adminRole;
+    _setPanelAccess(admin: session.isAdmin, role: session.adminRole);
     await _store.saveUser(session.user);
     await _store.setSignedIn(true);
 
@@ -546,8 +567,7 @@ class AppState extends ChangeNotifier {
       try {
         final session = await api.signIn(email: email.trim(), password: password);
         _user = session.user;
-        _isAdminOnServer = session.isAdmin;
-        _serverAdminRole = session.adminRole;
+        _setPanelAccess(admin: session.isAdmin, role: session.adminRole);
         await _store.saveUser(session.user);
         await _store.setSignedIn(true);
         _lastError = null;
@@ -679,6 +699,10 @@ class AppState extends ChangeNotifier {
         // happened to the last one. A refusal the customer has to go looking
         // for is a refusal they will read as silence.
         api.loanApplications(),
+        // The profile is not part of the dashboard payload, and it is the
+        // only place the server says whether this account holds the panel.
+        // Without it a killed-and-reopened app never learned it was an admin.
+        api.profile(),
       ]);
 
       _applyDashboard(results[0] as Map<String, dynamic>);
@@ -688,6 +712,7 @@ class AppState extends ChangeNotifier {
       _circles = results[4] as List<ThriftCircle>;
       _notifications = (results[5] as Page<AppNotification>).items;
       _applications = results[6] as List<LoanApplication>;
+      _applyProfile(results[7] as Map<String, dynamic>);
 
       // Kept on the device so the next cold start has something to draw before
       // the first response arrives. It is a cache, never the source of truth.
@@ -701,24 +726,33 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Reads the profile into the account fields and the panel entrance.
+  ///
+  /// This used to look for a `profile` object inside the dashboard payload,
+  /// which the server never sends, so none of it ever ran: the account, the
+  /// theme and — the one that was noticed — the admin flag stayed at whatever
+  /// sign-in left them.
+  void _applyProfile(Map<String, dynamic> profile) {
+    if (profile.isEmpty) return;
+    _user = userFromApi(profile);
+    _themeMode = themeModeFromApi(profile['themeMode']);
+    _hideBalance = profile['hideBalance'] as bool? ?? _hideBalance;
+    _autoDebit = profile['autoDebit'] as bool? ?? _autoDebit;
+    // A revoked grant sends the flag false and drops the role entirely, so
+    // the previous role is only worth keeping while there is still a grant
+    // to describe.
+    final admin = profile['admin'] as bool? ?? _isAdminOnServer;
+    _setPanelAccess(
+      admin: admin,
+      role: admin
+          ? (adminRoleFromApi(profile['adminRole']) ?? _serverAdminRole)
+          : null,
+    );
+    unawaited(_store.saveUser(_user!));
+  }
+
   /// Reads the dashboard payload into the figures the screens show.
   void _applyDashboard(Map<String, dynamic> body) {
-    final profile = body['profile'];
-    if (profile is Map) {
-      _user = userFromApi(profile.cast<String, dynamic>());
-      _themeMode = themeModeFromApi(profile['themeMode']);
-      _hideBalance = profile['hideBalance'] as bool? ?? _hideBalance;
-      _autoDebit = profile['autoDebit'] as bool? ?? _autoDebit;
-      _isAdminOnServer = profile['admin'] as bool? ?? _isAdminOnServer;
-      // A revoked grant sends the flag false and drops the role entirely, so
-      // the previous role is only worth keeping while there is still a grant
-      // to describe.
-      _serverAdminRole = _isAdminOnServer
-          ? (adminRoleFromApi(profile['adminRole']) ?? _serverAdminRole)
-          : null;
-      unawaited(_store.saveUser(_user!));
-    }
-
     final wallet = body['wallet'];
     if (wallet is Map) {
       _balance = WalletSnapshot.fromApi(wallet.cast<String, dynamic>()).balance;
@@ -776,8 +810,7 @@ class AppState extends ChangeNotifier {
   /// that empties itself because a token ran out.
   void handleSessionLost() {
     if (_stage == AuthStage.signedOut) return;
-    _isAdminOnServer = false;
-    _serverAdminRole = null;
+    _setPanelAccess(admin: false, role: null);
     _stage = AuthStage.signedOut;
     _lastError = 'Your session has ended. Please sign in again.';
     unawaited(_store.setSignedIn(false));
@@ -826,14 +859,12 @@ class AppState extends ChangeNotifier {
     var stillAnAdmin = true;
     try {
       final me = await admin.whoAmI();
-      _serverAdminRole = adminRoleFromApi(me['role']);
-      _isAdminOnServer = true;
+      _setPanelAccess(admin: true, role: adminRoleFromApi(me['role']));
     } on ApiException catch (e) {
       if (e.code == ApiErrorCode.notAnAdmin || e.code == ApiErrorCode.forbidden) {
         // Access was revoked while the panel was open. Say so rather than
         // leaving somebody looking at a screen whose every button now fails.
-        _isAdminOnServer = false;
-        _serverAdminRole = null;
+        _setPanelAccess(admin: false, role: null);
         stillAnAdmin = false;
       }
       failures.add(e.message);
@@ -1099,8 +1130,7 @@ class AppState extends ChangeNotifier {
     await _api?.signOut();
     await _store.setSignedIn(false);
     _failedAttempts = 0;
-    _isAdminOnServer = false;
-    _serverAdminRole = null;
+    _setPanelAccess(admin: false, role: null);
     _stage = AuthStage.signedOut;
     notifyListeners();
   }
@@ -2578,6 +2608,31 @@ class AppState extends ChangeNotifier {
     }
     if (_admins.any((a) => a.email.toLowerCase() == clean)) {
       return (ok: false, message: 'That email already has panel access.');
+
+    // Online the grant is the server's to make, and only the server's: it is
+    // what the panel entrance is checked against at that person's next
+    // request. This method used to stop at the local list below, report
+    // success, and leave nothing on the server — so the new admin saw no
+    // panel, and the next refresh of the team list quietly dropped them.
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        final granted = await admin.grantAccess(
+          email: clean,
+          role: role.name.toUpperCase(),
+        );
+        await refreshAdminPanel();
+        return (
+          ok: true,
+          message: '${granted.name} now has ${granted.role.label} access.',
+        );
+      } on ApiException catch (e) {
+        // "No account uses that email", "already has access", "only an
+        // owner may" — each comes back worded for the person reading it.
+        return (ok: false, message: e.message);
+      }
+    }
+
     }
     if (!adminRole.canManageTeam) {
       return (ok: false, message: 'Only an owner can add admins.');

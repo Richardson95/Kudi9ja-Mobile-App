@@ -275,6 +275,16 @@ class Kudi9jaApi {
 
   Future<AppUser> me() async => userFromApi(_asMap(await _client.get('/me')));
 
+  /// The profile as the server sends it, untouched.
+  ///
+  /// [me] maps it to an [AppUser] and drops what an [AppUser] has no field
+  /// for — including `admin` and `adminRole`, which is how the app finds out
+  /// whether the panel entrance should be on the dashboard. Nothing but the
+  /// sign-in response carried those, so a cold start hid the entrance until
+  /// the next sign-in.
+  Future<Map<String, dynamic>> profile() async =>
+      _asMap(await _client.get('/me'));
+
   /// Everything the dashboard needs, in one call.
   ///
   /// Six separate requests on a cold start would each wake the connection, each
