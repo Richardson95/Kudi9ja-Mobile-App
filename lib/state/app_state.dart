@@ -2232,6 +2232,20 @@ class AppState extends ChangeNotifier {
     await _store.saveNotifications(_notifications);
   }
 
+  /// Re-reads the notification list on its own. Never throws: the list a
+  /// minute old is still worth showing.
+  Future<void> refreshNotifications() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      _notifications = (await api.notifications(size: 100)).items;
+      await _store.saveNotifications(_notifications);
+      notifyListeners();
+    } on ApiException {
+      // Left as it was.
+    }
+  }
+
   Future<void> markNotificationsRead() async {
     final api = _api;
     if (api != null) {

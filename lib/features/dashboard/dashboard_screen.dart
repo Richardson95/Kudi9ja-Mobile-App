@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../data/models/admin.dart';
 import '../../data/models/models.dart';
 import '../../state/app_state.dart';
+import '../../widgets/application_banner.dart';
 import '../../widgets/primitives.dart';
 import '../admin/admin_shell.dart';
 import '../loans/loan_detail_screen.dart';
@@ -38,7 +39,10 @@ class DashboardScreen extends StatelessWidget {
       child: RefreshIndicator(
         color: AppColors.gold,
         backgroundColor: AppColors.surface,
-        onRefresh: () => Future<void>.delayed(const Duration(milliseconds: 900)),
+        // This waited 900ms and reloaded nothing, so a customer pulling to
+        // see whether their application had been decided was shown the same
+        // screen with a spinner on top of it.
+        onRefresh: app.refreshFromServer,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
@@ -59,6 +63,21 @@ class DashboardScreen extends StatelessWidget {
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
             if (app.isAdmin) ...[
               const SliverToBoxAdapter(child: _AdminEntry()),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            ],
+            // What became of the last loan application, on the screen the
+            // customer lands on. It was only on the Borrow tab, which is the
+            // one place somebody who has just been declined has no reason to
+            // go — so a refusal, and the reason they could act on, sat unseen.
+            if (app.pendingLoanApplication != null) ...[
+              SliverToBoxAdapter(
+                child: ApplicationBanner(application: app.pendingLoanApplication!),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            ] else if (app.lastDeclinedApplication != null) ...[
+              SliverToBoxAdapter(
+                child: ApplicationBanner(application: app.lastDeclinedApplication!),
+              ),
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
             ],
             SliverToBoxAdapter(child: _EarningsStrip(app: app)),

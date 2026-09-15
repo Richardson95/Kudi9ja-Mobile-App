@@ -46,6 +46,31 @@ class _HomeShellState extends State<HomeShell> {
     (Icons.person_rounded, Icons.person_outline_rounded, 'Profile'),
   ];
 
+  /// Switching tabs re-reads the server.
+  ///
+  /// The tabs sit in an IndexedStack, so a tab is built once and then kept;
+  /// nothing about opening it asked for fresh figures. A customer told by
+  /// text that their loan had been decided opened Borrow and found the
+  /// application still "with our team", because the screen was showing what
+  /// it had loaded an hour earlier.
+  ///
+  /// Throttled: a customer flicking between tabs is not asking for nine
+  /// requests a tap on a 4G connection. Anything under half a minute old is
+  /// recent enough.
+  DateTime? _lastRefresh;
+
+  void _select(int i) {
+    if (i == _index) return;
+    HapticFeedback.selectionClick();
+    setState(() => _index = i);
+    final now = DateTime.now();
+    final last = _lastRefresh;
+    if (last == null || now.difference(last) > const Duration(seconds: 30)) {
+      _lastRefresh = now;
+      context.read<AppState>().refreshFromServer();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,11 +103,7 @@ class _HomeShellState extends State<HomeShell> {
                       filled: _tabs[i].$1,
                       outlined: _tabs[i].$2,
                       label: _tabs[i].$3,
-                      onTap: () {
-                        if (_index == i) return;
-                        HapticFeedback.selectionClick();
-                        setState(() => _index = i);
-                      },
+                      onTap: () => _select(i),
                     ),
                   ),
               ],

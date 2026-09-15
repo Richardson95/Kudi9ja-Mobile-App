@@ -20,9 +20,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    // Opening the centre is what marks everything as seen.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AppState>().markNotificationsRead();
+    // Opening the centre is what marks everything as seen — after reading
+    // what is there now, so a decision made a minute ago is on the list
+    // rather than waiting for the next refresh.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final app = context.read<AppState>();
+      await app.refreshNotifications();
+      if (mounted) await app.markNotificationsRead();
     });
   }
 
