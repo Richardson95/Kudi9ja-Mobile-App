@@ -597,7 +597,7 @@ class _CreditSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${settings.minLoanAmount.asShortNaira} to ${settings.maxLoanAmount.asShortNaira} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
+                          '${settings.minLoanAmount.asNairaFlat} to ${settings.maxLoanAmount.asShortNaira} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiary,

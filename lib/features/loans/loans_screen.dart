@@ -42,7 +42,7 @@ class LoansScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: TabHeader(
               title: 'Borrow',
-              subtitle: 'From ${settings.minLoanAmount.asShortNaira} to '
+              subtitle: 'From ${settings.minLoanAmount.asNairaFlat} to '
                   '${settings.maxLoanAmount.asShortNaira}, repaid your way',
             ),
           ),
@@ -94,7 +94,7 @@ class LoansScreen extends StatelessWidget {
                 icon: Icons.bolt_rounded,
                 title: 'No active loans',
                 message:
-                    'Borrow ${settings.minLoanAmount.asShortNaira} to ${settings.maxLoanAmount.asShortNaira} over 1 to ${settings.maxLoanTenureMonths} months. Interest is flat and set by the tenure — ${settings.loanRateLabelFor(1)} over 1 month, ${settings.loanRateLabelFor(3)} over 3. A flat ${settings.flatProcessingFee.asShortNaira} fee comes out of the amount you receive.',
+                    'Borrow ${settings.minLoanAmount.asNairaFlat} to ${settings.maxLoanAmount.asShortNaira} over 1 to ${settings.maxLoanTenureMonths} months. Interest is flat and set by the tenure — ${settings.loanRateLabelFor(1)} over 1 month, ${settings.loanRateLabelFor(3)} over 3. A flat ${settings.flatProcessingFee.asShortNaira} fee comes out of the amount you receive.',
                 action: SizedBox(
                   width: 220,
                   child: GoldButton(
@@ -163,7 +163,7 @@ class _CreditCard extends StatelessWidget {
             // out from savings: a customer asks for what they need and a
             // person reads the application and decides.
             Text(
-              '${settings.minLoanAmount.asShortNaira} – ${settings.maxLoanAmount.asShortNaira}',
+              '${settings.minLoanAmount.asNairaFlat} – ${settings.maxLoanAmount.asShortNaira}',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,

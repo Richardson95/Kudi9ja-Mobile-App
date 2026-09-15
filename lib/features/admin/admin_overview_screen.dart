@@ -295,7 +295,7 @@ class _RatesCard extends StatelessWidget {
         ),
         _Line(
           'Loan range',
-          '${settings.minLoanAmount.asShortNaira} - ${settings.maxLoanAmount.asShortNaira}',
+          '${settings.minLoanAmount.asNairaFlat} - ${settings.maxLoanAmount.asShortNaira}',
         ),
         _Line(
           'Processing fee',
