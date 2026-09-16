@@ -9,6 +9,7 @@ import '../core/constants/app_config.dart';
 import '../core/theme/app_colors.dart';
 import '../data/legal/legal_documents.dart';
 import '../data/models/admin.dart';
+import '../data/models/app_review.dart';
 import '../data/models/app_notification.dart';
 import '../data/models/deposit.dart';
 import '../data/models/loan_application.dart';
@@ -197,6 +198,17 @@ class AppState extends ChangeNotifier {
   /// Agreements published since this customer last accepted, as the server
   /// reports them. The app asks on the next open; it never blocks.
   List<AgreementNotice> _outstandingAgreements = [];
+
+  /// What customers say about the app: the headline, the latest few, and
+  /// this customer's own. Read on its own after the main refresh, never
+  /// inside it — a reviews endpoint having a bad minute must not cost the
+  /// customer their balance.
+  ReviewSummary _reviewSummary = ReviewSummary.empty;
+  List<AppReview> _reviews = [];
+  AppReview? _myReview;
+  ReviewSummary get reviewSummary => _reviewSummary;
+  List<AppReview> get reviews => List.unmodifiable(_reviews);
+  AppReview? get myReview => _myReview;
   List<AgreementNotice> get outstandingAgreements =>
       List.unmodifiable(_outstandingAgreements);
   List<WithdrawalRequest> _withdrawals = [];
@@ -704,6 +716,67 @@ class AppState extends ChangeNotifier {
     } finally {
       _syncing = false;
       notifyListeners();
+    }
+    unawaited(refreshReviews());
+  }
+
+  /// Re-reads the reviews section. Never throws, and touches nothing else.
+  Future<void> refreshReviews() async {
+    final api = _api;
+    if (api == null || _stage == AuthStage.signedOut) return;
+    try {
+      final results = await Future.wait<Object?>([
+        api.reviewSummary(),
+        api.reviews(size: 20),
+        api.myReview(),
+      ]);
+      _reviewSummary = results[0] as ReviewSummary;
+      _reviews = (results[1] as Page<AppReview>).items;
+      _myReview = results[2] as AppReview?;
+      notifyListeners();
+    } on ApiException {
+      // Left as it was. The section is a nicety; nothing depends on it.
+    }
+  }
+
+  /// Writes or rewrites this customer's review. Returns a message on failure.
+  Future<String?> submitReview({required int rating, required String comment}) async {
+    final api = _api;
+    if (api == null) return 'You are offline. Try again when connected.';
+    try {
+      _myReview = await api.submitReview(rating: rating, comment: comment);
+      notifyListeners();
+      await refreshReviews();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> withdrawReview() async {
+    final api = _api;
+    if (api == null) return 'You are offline. Try again when connected.';
+    try {
+      await api.withdrawReview();
+      _myReview = null;
+      notifyListeners();
+      await refreshReviews();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// An admin removing a review. The reason is audited server-side.
+  Future<String?> removeReview(String id, {required String reason}) async {
+    final api = _api;
+    if (api == null) return 'You are offline. Try again when connected.';
+    try {
+      await api.removeReview(id, reason: reason);
+      await refreshReviews();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
     }
   }
 

@@ -710,6 +710,17 @@ the semantics are not.
 | `POST` | `/loans/{id}/repay` |
 | `POST` | `/loans/{id}/settle` — early payoff with rebate |
 
+**Reviews of the app** — every signed-in customer reads every review and the average; one review per customer, rewritable and withdrawable.
+
+| Method | Path |
+|---|---|
+| `GET` | `/reviews?page&size` — newest first; each row says whether it is the reader's |
+| `GET` | `/reviews/summary` — average (null until anyone has rated), count, per-star counts |
+| `GET` | `/reviews/mine` — 204 if none |
+| `PUT` | `/reviews/mine` — `{rating 1–5, comment ≤500}` writes or rewrites |
+| `DELETE` | `/reviews/mine` |
+| `DELETE` | `/admin/reviews/{id}` — `{reason}`; support and above; audited |
+
 ### Thrift
 
 | Method | Path |

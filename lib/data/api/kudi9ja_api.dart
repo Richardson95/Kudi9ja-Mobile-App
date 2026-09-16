@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../models/admin.dart';
+import '../models/app_review.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
 import '../models/loan_application.dart';
@@ -670,6 +671,42 @@ class Kudi9jaApi {
         idempotencyKey: newKey(),
         body: {'pin': pin},
       ));
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Reviews of the app
+  //
+  // Any signed-in customer reads every review and the average; any may write
+  // one, rewrite it, or take it back. What the list shows is what customers
+  // wrote, newest first — nothing is curated.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<Page<AppReview>> reviews({int page = 0, int size = 20}) async =>
+      Page.fromApi(
+        await _client.get('/reviews', query: {'page': page, 'size': size}),
+        AppReview.fromApi,
+      );
+
+  Future<ReviewSummary> reviewSummary() async =>
+      ReviewSummary.fromApi(_asMap(await _client.get('/reviews/summary')));
+
+  /// The caller's own review, or null if they have not written one.
+  Future<AppReview?> myReview() async {
+    final body = await _client.get('/reviews/mine');
+    return body is Map ? AppReview.fromApi(body.cast<String, dynamic>()) : null;
+  }
+
+  Future<AppReview> submitReview({
+    required int rating,
+    required String comment,
+  }) async =>
+      AppReview.fromApi(_asMap(await _client.put('/reviews/mine',
+          body: {'rating': rating, 'comment': comment})));
+
+  Future<void> withdrawReview() async => _client.delete('/reviews/mine');
+
+  /// An admin removing somebody's review, with a reason that is audited.
+  Future<void> removeReview(String id, {required String reason}) async =>
+      _client.delete('/admin/reviews/$id', body: {'reason': reason});
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Thrift circles

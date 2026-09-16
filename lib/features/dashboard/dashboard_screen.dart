@@ -11,10 +11,12 @@ import '../../data/models/models.dart';
 import '../../state/app_state.dart';
 import '../../widgets/application_banner.dart';
 import '../../widgets/primitives.dart';
+import '../../widgets/review_widgets.dart';
 import '../admin/admin_shell.dart';
 import '../loans/loan_detail_screen.dart';
 import '../loans/loan_request_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../reviews/reviews_screen.dart';
 import '../savings/create_plan_screen.dart';
 import '../savings/new_plan_sheet.dart';
 import '../savings/plan_detail_screen.dart';
@@ -91,6 +93,10 @@ class DashboardScreen extends StatelessWidget {
             SliverToBoxAdapter(child: _CreditSection(app: app)),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
             SliverToBoxAdapter(child: _RecentActivity(app: app)),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            // What customers say about the app, and the way to say it. Every
+            // customer reads every review; nothing here is curated.
+            SliverToBoxAdapter(child: _ReviewsSection(app: app)),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.huge)),
           ],
         ),
@@ -401,6 +407,56 @@ class _SavingsSection extends StatelessWidget {
         ],
       ),
     ).animate(delay: 260.ms).fadeIn().slideY(begin: 0.1);
+  }
+}
+
+/// The headline rating, the latest couple of reviews, and the way to add
+/// one. The full list is a tap away.
+class _ReviewsSection extends StatelessWidget {
+  const _ReviewsSection({required this.app});
+  final AppState app;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = app.reviewSummary;
+    final latest = app.reviews.take(2).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            title: 'What customers say',
+            actionLabel: summary.count > 0 ? 'See all' : null,
+            onAction: () => Navigator.of(context)
+                .push(slideRoute(const ReviewsScreen())),
+          ),
+          KCard(
+            gradient: AppColors.cardGradient,
+            borderColor: AppColors.gold.withValues(alpha: 0.22),
+            onTap: () => Navigator.of(context)
+                .push(slideRoute(const ReviewsScreen())),
+            child: Row(
+              children: [
+                Expanded(child: ReviewHeadline(summary: summary)),
+                const SizedBox(width: AppSpacing.md),
+                GhostButton(
+                  label: app.myReview == null ? 'Rate' : 'Edit',
+                  icon: Icons.star_rounded,
+                  expand: false,
+                  onPressed: () => showRateAppSheet(context),
+                ),
+              ],
+            ),
+          ),
+          for (final review in latest) ...[
+            const SizedBox(height: AppSpacing.md),
+            ReviewTile(review: review),
+          ],
+        ],
+      ),
+    ).animate(delay: 320.ms).fadeIn().slideY(begin: 0.1);
   }
 }
 
