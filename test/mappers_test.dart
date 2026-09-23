@@ -241,4 +241,94 @@ void main() {
       expect(page.totalElements, 1);
     });
   });
+
+  group('The panel reads the book', () {
+    /// The panel used to total the book itself, by adding up a page of
+    /// customer rows — which carry a wallet balance and nothing else. Every
+    /// lending figure it showed was therefore zero, whatever had been lent,
+    /// and refreshing could not fix it. These read the server's own count.
+    test('the overview carries the book-wide totals', () {
+      final book = platformBookFromApi({
+        'customerFundsHeld': 12500,
+        'book': {
+          'totalSaved': 400000,
+          'totalLent': 900000,
+          'totalInterestPaid': 30136.99,
+          'totalOverdue': 280000,
+          'activePlans': 3,
+          'activeLoans': 2,
+          'overdueLoans': 1,
+          'repaidLoans': 4,
+        },
+        'people': {'customers': 6},
+      });
+
+      expect(book.customers, 6);
+      expect(book.fundsHeld, 12500);
+      expect(book.lent, 900000);
+      expect(book.saved, 400000);
+      expect(book.interestPaid, closeTo(30136.99, 0.001));
+      expect(book.overdue, 280000);
+      expect(book.activeLoans, 2);
+      expect(book.overdueLoans, 1);
+      expect(book.repaidLoans, 4);
+    });
+
+    test('a missing book reads as zero rather than throwing', () {
+      final book = platformBookFromApi({});
+      expect(book.lent, 0);
+      expect(book.customers, 0);
+    });
+
+    /// A book row names the borrower. Reading the id from the wrong field
+    /// would quietly point every row at the same person.
+    test('a loan in the book carries the borrower and the money', () {
+      final loan = bookLoanFromApi({
+        'loanId': 'loan-1',
+        'customerId': 'cust-9',
+        'customerName': 'Yusuf Uthman Adisa',
+        'customerRef': 'K9-ABC123',
+        'principal': 400000,
+        'outstanding': 83000,
+        'amountRepaid': 417000,
+        'processingFee': 5000,
+        'tenureMonths': 3,
+        'purpose': 'Business',
+        'status': 'ACTIVE',
+        'statusLabel': 'Active',
+        'disbursedAt': '2026-07-13T11:00:00Z',
+        'dueDate': '2026-10-13T11:00:00Z',
+        'daysOverdue': 0,
+      });
+
+      expect(loan.id, 'loan-1');
+      expect(loan.customerId, 'cust-9');
+      expect(loan.customerName, 'Yusuf Uthman Adisa');
+      expect(loan.customerRef, 'K9-ABC123');
+      expect(loan.outstanding, 83000);
+      expect(loan.amountRepaid, 417000);
+      expect(loan.processingFee, 5000);
+      expect(loan.status, LoanStatus.active);
+      expect(loan.isOpen, isTrue);
+      expect(loan.dueDate, isNotNull);
+    });
+
+    test('a closed loan in the book is not open', () {
+      final repaid = bookLoanFromApi({'status': 'REPAID', 'outstanding': 0});
+      expect(repaid.status, LoanStatus.repaid);
+      expect(repaid.isOpen, isFalse);
+
+      final off = bookLoanFromApi({'status': 'WRITTEN_OFF'});
+      expect(off.status, LoanStatus.writtenOff);
+      expect(off.isOpen, isFalse);
+    });
+
+    /// A loan that has never been disbursed has no dates. Defaulting them to
+    /// "now" would put a pending loan on the schedule as if money had moved.
+    test('a loan with no dates keeps them null', () {
+      final pending = bookLoanFromApi({'status': 'PENDING'});
+      expect(pending.disbursedAt, isNull);
+      expect(pending.dueDate, isNull);
+    });
+  });
 }

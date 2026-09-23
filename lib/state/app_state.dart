@@ -145,6 +145,14 @@ class AppState extends ChangeNotifier {
   /// The customer list, the queues and the team, as the server reports them.
   List<CustomerRecord> _serverCustomers = [];
 
+  /// The book-wide totals, as the server counts them. Null until the panel has
+  /// loaded once, which is what [platformMetrics] falls back on.
+  PlatformBook? _book;
+
+  /// Every loan on the platform, for the panel's lending screen. Distinct from
+  /// [_loans], which is this account's own.
+  List<BookLoan> _bookLoans = [];
+
   /// Every bank a payout can go to, as the server names them.
   ///
   /// Fetched rather than bundled, because the server matches a payout account
@@ -973,6 +981,14 @@ class AppState extends ChangeNotifier {
             'Loan applications',
             () async =>
                 _adminApplications = (await admin.loanApplications(size: 200)).items,
+            failures),
+        _loadIntoPanel(
+            'The book',
+            () async => _book = await admin.book(),
+            failures),
+        _loadIntoPanel(
+            'The lending book',
+            () async => _bookLoans = (await admin.loans(size: 200)).items,
             failures),
       ]);
     }
@@ -2212,6 +2228,27 @@ class AppState extends ChangeNotifier {
   }
 
   /// Declines, with a reason the customer is shown word for word.
+  /// Reminds a borrower what is owed.
+  ///
+  /// The server sends it, logs it, and refuses outside 8am–8pm Lagos time,
+  /// which the Privacy Policy commits to. The panel used only to write a local
+  /// audit line saying a reminder had gone out — a record of something that
+  /// never happened.
+  Future<bool> remindBorrower(String loanId, {String? note}) async {
+    final admin = _admin;
+    if (admin == null) return false;
+    try {
+      await admin.remindBorrower(loanId, note: note);
+      _lastError = null;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return false;
+    }
+    await refreshAdminPanel();
+    return true;
+  }
+
   Future<bool> rejectLoanApplication(String id, String reason) async {
     final admin = _admin;
     if (admin != null) {
@@ -2975,8 +3012,20 @@ class AppState extends ChangeNotifier {
   /// else to learn about anybody — the panel used to invent no one, and still
   /// does not. Online it is what the server returns.
   List<CustomerRecord> get customers => isOnline
-      ? List.unmodifiable(_serverCustomers)
+      ? List.unmodifiable(_serverCustomers.map(_withBookDebt))
       : [if (thisDeviceCustomer != null) thisDeviceCustomer!];
+
+  /// Fills a customer row in from the lending book already in hand, so the
+  /// list can say what somebody owes. Without this every row reads "no debt",
+  /// because the list endpoint carries a wallet balance and nothing else.
+  CustomerRecord _withBookDebt(CustomerRecord c) {
+    final theirs = _bookLoans.where((l) => l.customerId == c.id && l.isOpen);
+    if (theirs.isEmpty) return c;
+    return c.withDebt(
+      owed: theirs.fold(0.0, (s, l) => s + l.outstanding),
+      loans: theirs.length,
+    );
+  }
 
   // ── Admin: platform metrics ─────────────────────────────────────────────
   /// Book-wide figures across every customer the panel can see.
@@ -2991,6 +3040,25 @@ class AppState extends ChangeNotifier {
     double overdue,
   })
   get platformMetrics {
+    // The server counts the whole book. The app used to add these up from a
+    // page of customer rows, which carry a wallet balance and nothing else —
+    // so every savings and lending figure on this screen was zero however much
+    // the company had lent, and no amount of refreshing would change it.
+    final book = _book;
+    if (book != null) {
+      return (
+        customers: book.customers,
+        deposits: book.fundsHeld,
+        saved: book.saved,
+        lent: book.lent,
+        interestPaid: book.interestPaid,
+        activePlans: book.activePlans,
+        activeLoans: book.activeLoans,
+        overdue: book.overdue,
+      );
+    }
+
+    // No server: the demo account on this device is the whole platform.
     final all = customers;
     return (
       customers: all.length,
@@ -3003,6 +3071,35 @@ class AppState extends ChangeNotifier {
       overdue: _loans
           .where((l) => l.status == LoanStatus.overdue)
           .fold(0.0, (s, l) => s + l.outstanding),
+    );
+  }
+
+  /// The lending book the panel lists: every loan on the platform when there
+  /// is a server, and this device's own when there is not.
+  List<BookLoan> get bookLoans => isOnline
+      ? List.unmodifiable(_bookLoans)
+      : List.unmodifiable(_loans.map(_asBookLoan));
+
+  /// A loan on this account, shaped as a book row, so the lending screen has
+  /// one thing to render whether or not there is a server behind it.
+  BookLoan _asBookLoan(Loan l) {
+    final me = thisDeviceCustomer;
+    return BookLoan(
+      id: l.id,
+      customerId: me?.id ?? '',
+      customerName: me?.fullName ?? 'This device',
+      customerRef: me?.accountNumber ?? '',
+      principal: l.principal,
+      outstanding: l.outstanding,
+      amountRepaid: l.amountRepaid,
+      processingFee: l.processingFee,
+      tenureMonths: l.tenureMonths,
+      purpose: l.purpose,
+      status: l.status,
+      statusLabel: l.status.label,
+      disbursedAt: l.disbursedAt,
+      dueDate: l.dueDate,
+      daysOverdue: 0,
     );
   }
 

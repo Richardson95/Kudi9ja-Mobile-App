@@ -33,6 +33,9 @@ class AdminApi {
   Future<Map<String, dynamic>> overview() async =>
       _obj(await _client.get('/admin/overview'));
 
+  /// The book-wide totals, counted by the server across every customer.
+  Future<PlatformBook> book() async => platformBookFromApi(await overview());
+
   Future<Map<String, dynamic>> whoAmI() async =>
       _obj(await _client.get('/admin/team/me'));
 
@@ -234,7 +237,8 @@ class AdminApi {
   // The book
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Future<Page<Map<String, dynamic>>> loans({
+  /// The lending book. Without a status this is every loan, closed included.
+  Future<Page<BookLoan>> loans({
     int page = 0,
     int size = 50,
     String? status,
@@ -242,7 +246,7 @@ class AdminApi {
       Page.fromApi(
         await _client.get('/admin/loans',
             query: {'page': page, 'size': size, 'status': status}),
-        (j) => j,
+        bookLoanFromApi,
       );
 
   Future<void> remindBorrower(String loanId, {String? note}) =>

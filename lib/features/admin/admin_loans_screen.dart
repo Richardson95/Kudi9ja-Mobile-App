@@ -10,8 +10,8 @@ import '../../data/models/models.dart';
 import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
-import '../loans/loan_detail_screen.dart';
 import 'admin_loan_applications_section.dart';
+import 'admin_users_screen.dart';
 import 'admin_shell.dart';
 
 /// The lending book: exposure, performance and every live loan.
@@ -26,7 +26,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
   String _filter = 'All';
   static const _filters = ['All', 'Active', 'Overdue', 'Repaid'];
 
-  bool _matches(Loan l) => switch (_filter) {
+  bool _matches(BookLoan l) => switch (_filter) {
     'Active' => l.status == LoanStatus.active,
     'Overdue' => l.status == LoanStatus.overdue,
     'Repaid' => l.status == LoanStatus.repaid,
@@ -36,8 +36,13 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final loans = app.loans.where(_matches).toList();
-    final all = app.loans;
+
+    // The whole lending book from the server, not this device's own loans.
+    // Reading `app.loans` here meant the panel showed the admin their own
+    // borrowing and called it the book: empty for an admin who has never
+    // borrowed, however much the company had lent.
+    final all = app.bookLoans;
+    final loans = all.where(_matches).toList();
 
     final disbursed = all.fold(0.0, (s, l) => s + l.principal);
     final outstanding = all.fold(0.0, (s, l) => s + l.outstanding);
@@ -183,11 +188,12 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
         const SizedBox(height: AppSpacing.lg),
 
         if (loans.isEmpty)
-          const EmptyState(
+          EmptyState(
             icon: Icons.request_quote_outlined,
-            title: 'No loans here',
-            message:
-                'Loans taken on this device appear here with their full repayment schedules.',
+            title: _filter == 'All' ? 'Nothing lent yet' : 'None $_filter here',
+            message: _filter == 'All'
+                ? 'Every loan the company writes appears here, with what is owed on it.'
+                : 'No loan in the book has that status right now.',
           )
         else
           for (var i = 0; i < loans.length; i++)
@@ -201,7 +207,9 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
 
         const SizedBox(height: AppSpacing.xl),
         Text(
-          'This view covers loans on the account held on this device. A live deployment lists the whole lending book from the API.',
+          app.isOnline
+              ? 'The whole lending book, every customer included. Tap a loan to open the borrower.'
+              : 'No server: this lists the loans held on this device.',
           style: TextStyle(
             fontSize: 11.5,
             height: 1.5,
@@ -216,24 +224,35 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
 
 class _AdminLoanTile extends StatelessWidget {
   const _AdminLoanTile({required this.loan});
-  final Loan loan;
+  final BookLoan loan;
 
   @override
   Widget build(BuildContext context) {
     final app = context.read<AppState>();
     final overdue = loan.status == LoanStatus.overdue;
-    final settled = loan.status == LoanStatus.repaid;
+    final settled = !loan.isOpen;
     final tint = settled
         ? AppColors.success
         : (overdue ? AppColors.danger : AppColors.gold);
 
+    // What has come back against what was ever owed. The book row carries no
+    // schedule, so this is the progress it can honestly show.
+    final owed = loan.amountRepaid + loan.outstanding;
+    final progress = owed <= 0 ? 0.0 : (loan.amountRepaid / owed).clamp(0.0, 1.0);
+
+    // The borrower's own record, if the panel has loaded them.
+    final borrower =
+        app.customers.where((c) => c.id == loan.customerId).firstOrNull;
+
     return KCard(
       borderColor: tint.withValues(alpha: 0.28),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => LoanDetailScreen(loanId: loan.id),
-        ),
-      ),
+      onTap: borrower == null
+          ? null
+          : () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdminCustomerDetailScreen(customer: borrower),
+                ),
+              ),
       child: Column(
         children: [
           Row(
@@ -244,8 +263,12 @@ class _AdminLoanTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Whose loan it is, first. A book that leads with the
+                    // amount makes an admin open every row to find a person.
                     Text(
-                      '${loan.purpose} • ${loan.principal.asShortNaira}',
+                      loan.customerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
@@ -253,7 +276,11 @@ class _AdminLoanTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${loan.tenureMonths} months • disbursed ${loan.disbursedAt.asDay}',
+                      '${loan.customerRef} • ${loan.purpose} • '
+                      '${loan.principal.asShortNaira} over ${loan.tenureMonths} '
+                      '${loan.tenureMonths == 1 ? 'month' : 'months'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
@@ -263,7 +290,7 @@ class _AdminLoanTile extends StatelessWidget {
                 ),
               ),
               StatusPill(
-                label: loan.status.label.toUpperCase(),
+                label: loan.statusLabel.toUpperCase(),
                 color: tint,
                 dense: true,
               ),
@@ -292,8 +319,10 @@ class _AdminLoanTile extends StatelessWidget {
               ),
               Expanded(
                 child: _Cell(
-                  label: 'Paid',
-                  value: '${loan.installmentsPaid}/${loan.tenureMonths}',
+                  label: overdue ? 'Overdue by' : 'Due',
+                  value: overdue
+                      ? '${loan.daysOverdue}d'
+                      : (loan.dueDate?.asDay ?? '—'),
                 ),
               ),
             ],
@@ -302,7 +331,7 @@ class _AdminLoanTile extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(9),
             child: LinearProgressIndicator(
-              value: loan.repaymentProgress,
+              value: progress,
               minHeight: 5,
               backgroundColor: AppColors.surfaceHigh,
               valueColor: AlwaysStoppedAnimation(tint),
@@ -316,13 +345,17 @@ class _AdminLoanTile extends StatelessWidget {
                   child: GhostButton(
                     label: 'Send reminder',
                     onPressed: () async {
-                      await app.logAdminAction(
-                        AuditCategory.loan,
-                        'Reminder sent',
-                        'Overdue reminder issued for the ${loan.purpose} loan (${loan.outstanding.asNairaFlat} outstanding).',
-                      );
+                      // The server sends it and logs it, and refuses outside
+                      // 8am-8pm Lagos time. Whatever it answers is what the
+                      // admin is told.
+                      final sent = await app.remindBorrower(loan.id);
                       if (!context.mounted) return;
-                      showToast(context, 'Reminder logged and queued');
+                      showToast(
+                        context,
+                        sent
+                            ? 'Reminder sent to ${loan.customerName}'
+                            : (app.lastError ?? 'That reminder could not be sent'),
+                      );
                     },
                   ),
                 ),

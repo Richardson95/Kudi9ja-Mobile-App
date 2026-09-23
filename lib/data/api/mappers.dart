@@ -495,6 +495,46 @@ CustomerRecord customerRowFromApi(Map<String, dynamic> j) => CustomerRecord(
       frozen: _str(j['accountStatus']) == 'FROZEN',
     );
 
+/// The book-wide totals behind the panel's front page.
+///
+/// The server has counted the whole book; the app takes the answer rather than
+/// adding up the page of customers it happens to be holding.
+PlatformBook platformBookFromApi(Map<String, dynamic> j) {
+  final book = _obj(j['book']);
+  final people = _obj(j['people']);
+  return PlatformBook(
+    customers: _int(people['customers']),
+    fundsHeld: _money(j['customerFundsHeld']),
+    saved: _money(book['totalSaved']),
+    lent: _money(book['totalLent']),
+    interestPaid: _money(book['totalInterestPaid']),
+    overdue: _money(book['totalOverdue']),
+    activePlans: _int(book['activePlans']),
+    activeLoans: _int(book['activeLoans']),
+    overdueLoans: _int(book['overdueLoans']),
+    repaidLoans: _int(book['repaidLoans']),
+  );
+}
+
+/// One row of `GET /api/v1/admin/loans`.
+BookLoan bookLoanFromApi(Map<String, dynamic> j) => BookLoan(
+      id: _str(j['loanId']),
+      customerId: _str(j['customerId']),
+      customerName: _str(j['customerName']),
+      customerRef: _str(j['customerRef']),
+      principal: _money(j['principal']),
+      outstanding: _money(j['outstanding']),
+      amountRepaid: _money(j['amountRepaid']),
+      processingFee: _money(j['processingFee']),
+      tenureMonths: _int(j['tenureMonths'], 1),
+      purpose: _str(j['purpose']),
+      status: _enum(j['status'], LoanStatus.values, LoanStatus.active),
+      statusLabel: _str(j['statusLabel']),
+      disbursedAt: _dateOrNull(j['disbursedAt']),
+      dueDate: _dateOrNull(j['dueDate']),
+      daysOverdue: _int(j['daysOverdue']),
+    );
+
 /// The full customer record behind one row.
 CustomerRecord customerDetailFromApi(Map<String, dynamic> j) {
   final money = _obj(j['financials']);

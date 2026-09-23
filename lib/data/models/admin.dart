@@ -1,3 +1,5 @@
+import 'models.dart';
+
 /// What an admin is allowed to do. Roles are hierarchical: an owner can do
 /// everything, a viewer can only look.
 enum AdminRole { owner, admin, support, viewer }
@@ -266,4 +268,116 @@ class CustomerRecord {
   final bool isThisDevice;
 
   double get netWorth => balance + totalSaved;
+
+  /// The same customer with what they owe filled in.
+  ///
+  /// The list endpoint is thin on purpose, so a row arrives knowing its wallet
+  /// balance and nothing about lending. The panel holds the whole book by the
+  /// time it draws this list, so the figure is filled from there rather than
+  /// asked for a customer at a time.
+  CustomerRecord withDebt({required double owed, required int loans}) =>
+      CustomerRecord(
+        id: id,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        accountNumber: accountNumber,
+        joinedAt: joinedAt,
+        balance: balance,
+        totalSaved: totalSaved,
+        totalOwed: owed,
+        interestPaid: interestPaid,
+        plansCount: plansCount,
+        loansCount: loans,
+        state: state,
+        bvn: bvn,
+        nin: nin,
+        address: address,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
+        verified: verified,
+        frozen: frozen,
+        isThisDevice: isThisDevice,
+      );
+}
+
+/// The book-wide figures, as `GET /api/v1/admin/overview` reports them.
+///
+/// These used to be added up in the app from a page of customer rows, which
+/// carry a wallet balance and nothing else: every loan total the panel showed
+/// was therefore zero, whatever the company had lent. The server already
+/// totals the whole book — across every customer, not only the page that was
+/// fetched — so the panel asks rather than counts.
+class PlatformBook {
+  const PlatformBook({
+    required this.customers,
+    required this.fundsHeld,
+    required this.saved,
+    required this.lent,
+    required this.interestPaid,
+    required this.overdue,
+    required this.activePlans,
+    required this.activeLoans,
+    required this.overdueLoans,
+    required this.repaidLoans,
+  });
+
+  final int customers;
+
+  /// Everything sitting in wallets. Customers' money, not the company's.
+  final double fundsHeld;
+  final double saved;
+
+  /// Principal out on loan, across live loans.
+  final double lent;
+  final double interestPaid;
+  final double overdue;
+  final int activePlans;
+  final int activeLoans;
+  final int overdueLoans;
+  final int repaidLoans;
+}
+
+/// One loan in the lending book, as the panel lists it.
+///
+/// Distinct from [Loan], which is a loan on *this* account with its schedule.
+/// This is somebody else's loan seen from the panel: enough to list, total and
+/// act on, and no schedule, because the panel does not show one.
+class BookLoan {
+  const BookLoan({
+    required this.id,
+    required this.customerId,
+    required this.customerName,
+    required this.customerRef,
+    required this.principal,
+    required this.outstanding,
+    required this.amountRepaid,
+    required this.processingFee,
+    required this.tenureMonths,
+    required this.purpose,
+    required this.status,
+    required this.statusLabel,
+    required this.disbursedAt,
+    required this.dueDate,
+    required this.daysOverdue,
+  });
+
+  final String id;
+  final String customerId;
+  final String customerName;
+  final String customerRef;
+  final double principal;
+  final double outstanding;
+  final double amountRepaid;
+  final double processingFee;
+  final int tenureMonths;
+  final String purpose;
+  final LoanStatus status;
+  final String statusLabel;
+  final DateTime? disbursedAt;
+  final DateTime? dueDate;
+  final int daysOverdue;
+
+  bool get isOpen =>
+      status == LoanStatus.active || status == LoanStatus.overdue;
 }
