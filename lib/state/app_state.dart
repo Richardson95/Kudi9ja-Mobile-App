@@ -153,6 +153,10 @@ class AppState extends ChangeNotifier {
   /// [_loans], which is this account's own.
   List<BookLoan> _bookLoans = [];
 
+  /// Paper loans waiting for their borrower to sign up. Money out of the door
+  /// that is on nobody's account yet, so it appears in no other total here.
+  List<WaitingLoan> _waitingLoans = [];
+
   /// Every bank a payout can go to, as the server names them.
   ///
   /// Fetched rather than bundled, because the server matches a payout account
@@ -989,6 +993,10 @@ class AppState extends ChangeNotifier {
         _loadIntoPanel(
             'The lending book',
             () async => _bookLoans = (await admin.loans(size: 200)).items,
+            failures),
+        _loadIntoPanel(
+            'Loans waiting to be claimed',
+            () async => _waitingLoans = await admin.waitingLoans(),
             failures),
       ]);
     }
@@ -3035,6 +3043,7 @@ class AppState extends ChangeNotifier {
     double saved,
     double lent,
     double interestPaid,
+    double interestCharged,
     int activePlans,
     int activeLoans,
     double overdue,
@@ -3052,6 +3061,7 @@ class AppState extends ChangeNotifier {
         saved: book.saved,
         lent: book.lent,
         interestPaid: book.interestPaid,
+        interestCharged: book.interestCharged,
         activePlans: book.activePlans,
         activeLoans: book.activeLoans,
         overdue: book.overdue,
@@ -3066,6 +3076,9 @@ class AppState extends ChangeNotifier {
       saved: all.fold(0.0, (s, c) => s + c.totalSaved),
       lent: all.fold(0.0, (s, c) => s + c.totalOwed),
       interestPaid: all.fold(0.0, (s, c) => s + c.interestPaid),
+      interestCharged: _loans
+          .where((l) => l.status.isOpen)
+          .fold(0.0, (s, l) => s + l.totalInterest),
       activePlans: all.fold(0, (s, c) => s + c.plansCount),
       activeLoans: all.fold(0, (s, c) => s + c.loansCount),
       overdue: _loans
@@ -3073,6 +3086,14 @@ class AppState extends ChangeNotifier {
           .fold(0.0, (s, l) => s + l.outstanding),
     );
   }
+
+  /// Loans written on paper whose borrower has not opened an account yet.
+  /// Empty without a server: there is nothing to have imported into.
+  List<WaitingLoan> get waitingLoans => List.unmodifiable(_waitingLoans);
+
+  /// What those waiting loans still have owing on them.
+  double get waitingLoansOutstanding =>
+      _waitingLoans.fold(0.0, (s, l) => s + l.outstanding);
 
   /// The lending book the panel lists: every loan on the platform when there
   /// is a server, and this device's own when there is not.

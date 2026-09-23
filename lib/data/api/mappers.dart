@@ -508,6 +508,7 @@ PlatformBook platformBookFromApi(Map<String, dynamic> j) {
     saved: _money(book['totalSaved']),
     lent: _money(book['totalLent']),
     interestPaid: _money(book['totalInterestPaid']),
+    interestCharged: _money(book['totalInterestCharged']),
     overdue: _money(book['totalOverdue']),
     activePlans: _int(book['activePlans']),
     activeLoans: _int(book['activeLoans']),
@@ -515,6 +516,21 @@ PlatformBook platformBookFromApi(Map<String, dynamic> j) {
     repaidLoans: _int(book['repaidLoans']),
   );
 }
+
+/// One row of `GET /api/v1/admin/loans/imports`: a paper loan whose borrower
+/// has not signed up yet.
+WaitingLoan waitingLoanFromApi(Map<String, dynamic> j) => WaitingLoan(
+      id: _str(j['id']),
+      fullName: _str(j['fullName']),
+      email: _str(j['email']),
+      phone: _str(j['phone']),
+      principal: _money(j['principal']),
+      outstanding: _money(j['outstanding']),
+      tenureMonths: _int(j['tenureMonths'], 1),
+      purpose: _str(j['purpose']),
+      disbursedAt: _dateOrNull(j['disbursedAt']),
+      dueDate: _dateOrNull(j['dueDate']),
+    );
 
 /// One row of `GET /api/v1/admin/loans`.
 BookLoan bookLoanFromApi(Map<String, dynamic> j) => BookLoan(

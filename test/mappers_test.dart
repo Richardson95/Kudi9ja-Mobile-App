@@ -274,10 +274,41 @@ void main() {
       expect(book.repaidLoans, 4);
     });
 
+    /// Two interest figures, opposite sides of the rate card. Reading one for
+    /// the other would show what savings cost as what lending earns.
+    test('the two interest figures are kept apart', () {
+      final book = platformBookFromApi({
+        'book': {'totalInterestPaid': 30136.99, 'totalInterestCharged': 150000},
+      });
+      expect(book.interestPaid, closeTo(30136.99, 0.001));
+      expect(book.interestCharged, 150000);
+    });
+
+    test('a loan waiting for its borrower carries what is owed on it', () {
+      final waiting = waitingLoanFromApi({
+        'id': 'imp-1',
+        'fullName': 'Adeoye Adeola',
+        'email': 'adexious@gmail.com',
+        'phone': '08074316482',
+        'principal': 400000,
+        'outstanding': 234000,
+        'tenureMonths': 3,
+        'purpose': 'Business',
+        'disbursedAt': '2026-07-13T11:00:00Z',
+        'dueDate': '2026-10-13T11:00:00Z',
+      });
+
+      expect(waiting.fullName, 'Adeoye Adeola');
+      expect(waiting.principal, 400000);
+      expect(waiting.outstanding, 234000);
+      expect(waiting.dueDate, isNotNull);
+    });
+
     test('a missing book reads as zero rather than throwing', () {
       final book = platformBookFromApi({});
       expect(book.lent, 0);
       expect(book.customers, 0);
+      expect(book.interestCharged, 0);
     });
 
     /// A book row names the borrower. Reading the id from the wrong field

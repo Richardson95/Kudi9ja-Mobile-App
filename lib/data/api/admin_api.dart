@@ -249,6 +249,12 @@ class AdminApi {
         bookLoanFromApi,
       );
 
+  /// Paper loans entered against a BVN whose borrower has not signed up yet.
+  Future<List<WaitingLoan>> waitingLoans() async =>
+      _list(await _client.get('/admin/loans/imports', query: {'claimed': false}))
+          .map(waitingLoanFromApi)
+          .toList();
+
   Future<void> remindBorrower(String loanId, {String? note}) =>
       _client.post('/admin/loans/$loanId/remind',
           body: {if (note != null) 'note': note});

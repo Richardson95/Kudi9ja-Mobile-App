@@ -187,6 +187,14 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
 
+        if (_filter == 'All' && app.waitingLoans.isNotEmpty) ...[
+          _WaitingLoansCard(
+            loans: app.waitingLoans,
+            outstanding: app.waitingLoansOutstanding,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+
         if (loans.isEmpty)
           EmptyState(
             icon: Icons.request_quote_outlined,
@@ -218,6 +226,122 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
         ),
         const SizedBox(height: AppSpacing.huge),
       ],
+    );
+  }
+}
+
+/// Paper loans nobody has claimed yet.
+///
+/// These are on no account, so they appear in no total on this screen and in
+/// no customer's record. They are still money lent, and an owner reading a
+/// book that quietly leaves them out is reading the wrong number.
+class _WaitingLoansCard extends StatefulWidget {
+  const _WaitingLoansCard({required this.loans, required this.outstanding});
+
+  final List<WaitingLoan> loans;
+  final double outstanding;
+
+  @override
+  State<_WaitingLoansCard> createState() => _WaitingLoansCardState();
+}
+
+class _WaitingLoansCardState extends State<_WaitingLoansCard> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.loans.length;
+
+    return KCard(
+      borderColor: AppColors.info.withValues(alpha: 0.35),
+      onTap: () => setState(() => _open = !_open),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconBadge(
+                icon: Icons.hourglass_empty_rounded,
+                color: AppColors.info,
+                size: 42,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$n ${n == 1 ? 'loan is' : 'loans are'} waiting to be claimed',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${widget.outstanding.asShortNaira} owed, entered from the '
+                      'paper records. Each lands on its account the day that '
+                      'person signs up.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        height: 1.45,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                _open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 20,
+                color: AppColors.textTertiary,
+              ),
+            ],
+          ),
+          if (_open)
+            for (final l in widget.loans) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          l.email.isEmpty ? l.purpose : l.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    l.outstanding.asShortNaira,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+        ],
+      ),
     );
   }
 }

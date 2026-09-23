@@ -315,6 +315,7 @@ class PlatformBook {
     required this.saved,
     required this.lent,
     required this.interestPaid,
+    required this.interestCharged,
     required this.overdue,
     required this.activePlans,
     required this.activeLoans,
@@ -330,7 +331,13 @@ class PlatformBook {
 
   /// Principal out on loan, across live loans.
   final double lent;
+  /// Interest paid **to** savers. Money the company has given up.
   final double interestPaid;
+
+  /// Interest charged on the loans still running: what the live book earns if
+  /// it all comes back. Contracted, not collected.
+  final double interestCharged;
+
   final double overdue;
   final int activePlans;
   final int activeLoans;
@@ -380,4 +387,35 @@ class BookLoan {
 
   bool get isOpen =>
       status == LoanStatus.active || status == LoanStatus.overdue;
+}
+
+/// A loan written on paper, waiting for its borrower to open an account.
+///
+/// It is not on anybody's account yet and so appears nowhere in the lending
+/// book. It is still money out of the door, which is why the panel shows it
+/// rather than leaving it invisible until somebody signs up.
+class WaitingLoan {
+  const WaitingLoan({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.phone,
+    required this.principal,
+    required this.outstanding,
+    required this.tenureMonths,
+    required this.purpose,
+    required this.disbursedAt,
+    required this.dueDate,
+  });
+
+  final String id;
+  final String fullName;
+  final String email;
+  final String phone;
+  final double principal;
+  final double outstanding;
+  final int tenureMonths;
+  final String purpose;
+  final DateTime? disbursedAt;
+  final DateTime? dueDate;
 }

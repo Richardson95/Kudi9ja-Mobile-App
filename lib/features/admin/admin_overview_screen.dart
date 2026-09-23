@@ -76,7 +76,12 @@ class AdminOverviewScreen extends StatelessWidget {
                 value: m.lent.asShortNaira,
                 icon: Icons.request_quote_outlined,
                 tint: AppColors.gold,
-                footnote: '${m.activeLoans} loans',
+                // A paper loan whose borrower has not signed up is on nobody's
+                // account and so counts nowhere else on this screen. Saying so
+                // here is the difference between a quiet omission and a queue.
+                footnote: app.waitingLoans.isEmpty
+                    ? '${m.activeLoans} loans'
+                    : '${m.activeLoans} loans • ${app.waitingLoans.length} waiting',
               ),
             ),
           ],
@@ -90,9 +95,24 @@ class AdminOverviewScreen extends StatelessWidget {
                 value: m.interestPaid.asShortNaira,
                 icon: Icons.trending_up_rounded,
                 tint: AppColors.success,
+                footnote: 'to savers',
               ),
             ),
             const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: MetricTile(
+                label: 'Interest to earn',
+                value: m.interestCharged.asShortNaira,
+                icon: Icons.percent_rounded,
+                tint: AppColors.gold,
+                footnote: 'on live loans',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
             Expanded(
               child: MetricTile(
                 label: 'Overdue',
@@ -101,6 +121,8 @@ class AdminOverviewScreen extends StatelessWidget {
                 tint: m.overdue > 0 ? AppColors.danger : AppColors.textTertiary,
               ),
             ),
+            const SizedBox(width: AppSpacing.md),
+            const Expanded(child: SizedBox()),
           ],
         ),
 
