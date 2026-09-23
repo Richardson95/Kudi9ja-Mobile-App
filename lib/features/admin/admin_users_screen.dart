@@ -273,9 +273,12 @@ class _AdminCustomerDetailScreenState
   /// "not fetched yet". This asks for the rest.
   CustomerRecord? _full;
 
-  /// This customer's own loans and plans, with their schedules.
+  /// This customer's own records, fetched for the person being looked at.
   List<Loan> _loans = const [];
   List<SavingsPlan> _plans = const [];
+  List<Transaction> _ledger = const [];
+  List<DepositClaim> _payIns = const [];
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -292,10 +295,15 @@ class _AdminCustomerDetailScreenState
 
     final loans = await app.loadCustomerLoans(id);
     final plans = await app.loadCustomerPlans(id);
+    final ledger = await app.loadCustomerTransactions(id);
+    final payIns = await app.loadCustomerPayIns(id);
     if (!mounted) return;
     setState(() {
       _loans = loans;
       _plans = plans;
+      _ledger = ledger;
+      _payIns = payIns;
+      _loaded = true;
     });
   }
 
@@ -305,7 +313,10 @@ class _AdminCustomerDetailScreenState
     // The row until the full record lands, so the screen opens immediately with
     // the name and balance rather than on a spinner.
     final c = _full ?? widget.customer;
-    final ledger = app.transactionsFor(c);
+    // The records of the customer being looked at. Without a server there is
+    // only the account on this device, which is what the demo panel shows.
+    final ledger = app.isOnline ? _ledger : app.transactionsFor(c);
+    final payIns = app.isOnline ? _payIns : app.depositsFor(c);
     final filtered = ledger.where(_txFilter.matches).toList();
 
     return Scaffold(
@@ -405,10 +416,17 @@ class _AdminCustomerDetailScreenState
                 ),
               ),
 
-              if (c.isThisDevice) ...[
+              // Shown for every customer. These sections were fenced behind
+              // "is this the account on this device", because that was the
+              // only account whose records the panel held — so an admin
+              // opening a real borrower saw no loans, no pay-ins and an empty
+              // ledger, and nothing said why.
+              if (payIns.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xl),
                 const AdminSectionLabel('PAY-INS'),
-                _PayIns(claims: app.depositsFor(c)),
+                _PayIns(claims: payIns),
+              ],
+              if (_plans.isNotEmpty || _loans.isNotEmpty || !_loaded) ...[
                 const SizedBox(height: AppSpacing.xl),
                 const AdminSectionLabel('PLANS AND LOANS'),
                 _LiveRecords(plans: _plans, loans: _loans),

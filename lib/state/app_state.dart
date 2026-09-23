@@ -1032,6 +1032,53 @@ class AppState extends ChangeNotifier {
   ///
   /// Fetched on demand rather than with the list: identity numbers and balances
   /// should not cross the wire for two hundred people because somebody scrolled.
+  /// One customer's ledger, pay-ins and withdrawals.
+  ///
+  /// Each has a per-customer endpoint that nothing was calling: the panel
+  /// filtered its own device's records instead, so every real customer's
+  /// record read "no transactions" however much had moved through it.
+  Future<List<Transaction>> loadCustomerTransactions(String id) async {
+    final admin = _admin;
+    if (admin == null) return const [];
+    try {
+      final page = await admin.customerTransactions(id, size: 200);
+      _lastError = null;
+      return page.items;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return const [];
+    }
+  }
+
+  Future<List<DepositClaim>> loadCustomerPayIns(String id) async {
+    final admin = _admin;
+    if (admin == null) return const [];
+    try {
+      final page = await admin.customerPayIns(id);
+      _lastError = null;
+      return page.items;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return const [];
+    }
+  }
+
+  Future<List<WithdrawalRequest>> loadCustomerWithdrawals(String id) async {
+    final admin = _admin;
+    if (admin == null) return const [];
+    try {
+      final page = await admin.customerWithdrawals(id);
+      _lastError = null;
+      return page.items;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return const [];
+    }
+  }
+
   /// One customer's loans, with the repayment schedule the server derives.
   ///
   /// The panel's customer screen used to render `loans` — the loans belonging
