@@ -273,6 +273,10 @@ class _AdminCustomerDetailScreenState
   /// "not fetched yet". This asks for the rest.
   CustomerRecord? _full;
 
+  /// This customer's own loans and plans, with their schedules.
+  List<Loan> _loans = const [];
+  List<SavingsPlan> _plans = const [];
+
   @override
   void initState() {
     super.initState();
@@ -280,8 +284,19 @@ class _AdminCustomerDetailScreenState
   }
 
   Future<void> _load() async {
-    final detail = await context.read<AppState>().loadCustomer(widget.customer.id);
+    final app = context.read<AppState>();
+    final id = widget.customer.id;
+
+    final detail = await app.loadCustomer(id);
     if (mounted && detail != null) setState(() => _full = detail);
+
+    final loans = await app.loadCustomerLoans(id);
+    final plans = await app.loadCustomerPlans(id);
+    if (!mounted) return;
+    setState(() {
+      _loans = loans;
+      _plans = plans;
+    });
   }
 
   @override
@@ -396,7 +411,7 @@ class _AdminCustomerDetailScreenState
                 _PayIns(claims: app.depositsFor(c)),
                 const SizedBox(height: AppSpacing.xl),
                 const AdminSectionLabel('PLANS AND LOANS'),
-                _LiveRecords(app: app),
+                _LiveRecords(plans: _plans, loans: _loans),
               ],
 
               const SizedBox(height: AppSpacing.xl),
@@ -738,15 +753,37 @@ class _PayInRow extends StatelessWidget {
   }
 }
 
+/// What this customer holds: their plans, and their loans with what falls due
+/// next. Both are fetched for the customer being looked at — reading them off
+/// the signed-in admin showed one person's money under another's name.
 class _LiveRecords extends StatelessWidget {
-  const _LiveRecords({required this.app});
-  final AppState app;
+  const _LiveRecords({required this.plans, required this.loans});
+  final List<SavingsPlan> plans;
+  final List<Loan> loans;
+
+  /// The next instalment in words: which one, how much, and when.
+  ///
+  /// Instalments are monthly — the tenure is a number of months and the nth
+  /// falls due a calendar month after disbursement. There is no weekly
+  /// schedule in this product, so nothing here has to choose between them.
+  static String _nextDue(Loan l) {
+    final next = l.nextInstallment;
+    if (next == null) {
+      return l.status.isOpen
+          ? 'Nothing scheduled'
+          : 'Closed — ${l.status.label.toLowerCase()}';
+    }
+    final of = 'Instalment ${next.number} of ${l.tenureMonths}';
+    final due = '${next.outstanding.asNaira} due ${next.dueDate.asDay}';
+    final late = next.dueDate.isBefore(DateTime.now());
+    return late ? '$of • $due (overdue)' : '$of • $due';
+  }
 
   @override
   Widget build(BuildContext context) => KCard(
     child: Column(
       children: [
-        for (final p in app.plans.take(4)) ...[
+        for (final p in plans.take(4)) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
@@ -782,43 +819,69 @@ class _LiveRecords extends StatelessWidget {
             ),
           ),
         ],
-        for (final l in app.loans.take(4)) ...[
+        for (final l in loans.take(4)) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.bolt_rounded,
-                  size: 16,
-                  color: AppColors.gold,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.bolt_rounded,
+                      size: 16,
+                      color: AppColors.gold,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        '${l.purpose} loan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    Text(
+                      l.outstanding.asShortNaira,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    StatusPill(
+                      label: l.status.label.toUpperCase(),
+                      color: l.status == LoanStatus.overdue
+                          ? AppColors.danger
+                          : (l.status.isOpen
+                              ? AppColors.gold
+                              : AppColors.success),
+                      dense: true,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
+                // What falls due next, which is the question an admin opens a
+                // borrower to answer. The server derives the schedule from what
+                // has actually been repaid, so this cannot drift from the
+                // ledger the way a stored date would.
+                Padding(
+                  padding: const EdgeInsets.only(left: 28, top: 3),
                   child: Text(
-                    '${l.purpose} loan',
-                    style: const TextStyle(fontSize: 13),
+                    _nextDue(l),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.4,
+                      color: l.status == LoanStatus.overdue
+                          ? AppColors.danger
+                          : AppColors.textTertiary,
+                    ),
                   ),
-                ),
-                Text(
-                  l.outstanding.asShortNaira,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                StatusPill(
-                  label: l.status.label.toUpperCase(),
-                  color: l.status.name == 'overdue'
-                      ? AppColors.danger
-                      : AppColors.success,
-                  dense: true,
                 ),
               ],
             ),
           ),
         ],
-        if (app.plans.isEmpty && app.loans.isEmpty)
+        if (plans.isEmpty && loans.isEmpty)
           Text(
             'No plans or loans on this account yet.',
             style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),

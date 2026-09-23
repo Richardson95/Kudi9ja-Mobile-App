@@ -1032,6 +1032,40 @@ class AppState extends ChangeNotifier {
   ///
   /// Fetched on demand rather than with the list: identity numbers and balances
   /// should not cross the wire for two hundred people because somebody scrolled.
+  /// One customer's loans, with the repayment schedule the server derives.
+  ///
+  /// The panel's customer screen used to render `loans` — the loans belonging
+  /// to whoever was signed in — so an admin opening a borrower saw their own
+  /// borrowing under somebody else's name.
+  Future<List<Loan>> loadCustomerLoans(String id) async {
+    final admin = _admin;
+    if (admin == null) return const [];
+    try {
+      final loans = await admin.customerLoans(id);
+      _lastError = null;
+      return loans;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return const [];
+    }
+  }
+
+  /// One customer's savings plans, for the same reason.
+  Future<List<SavingsPlan>> loadCustomerPlans(String id) async {
+    final admin = _admin;
+    if (admin == null) return const [];
+    try {
+      final plans = await admin.customerPlans(id);
+      _lastError = null;
+      return plans;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return const [];
+    }
+  }
+
   Future<CustomerRecord?> loadCustomer(String id) async {
     final admin = _admin;
     if (admin == null) {

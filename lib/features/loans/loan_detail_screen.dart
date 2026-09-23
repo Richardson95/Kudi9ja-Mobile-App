@@ -377,7 +377,10 @@ class _Hero extends StatelessWidget {
                 const SizedBox(width: 7),
                 Expanded(
                   child: Text(
-                    'Next: ${loan.nextInstallment!.amount.asNaira} due ${loan.nextInstallment!.dueDate.asDay}',
+                    // What is left on that instalment, not its full size: a
+                    // borrower who has already paid part of it is told to find
+                    // the whole thing again otherwise.
+                    'Next: ${loan.nextInstallment!.outstanding.asNaira} due ${loan.nextInstallment!.dueDate.asDay}',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
