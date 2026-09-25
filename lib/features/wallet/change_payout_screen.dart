@@ -9,7 +9,6 @@ import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/bank_picker.dart';
-import '../../widgets/code_sheet.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
@@ -62,15 +61,21 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
   /// **Seam:** `POST /api/v1/me/payout/code`. The code is emailed and is never
   /// returned to the app.
   Future<void> _sendCode() async {
-    final email = context.read<AppState>().user?.email ?? 'your email';
+    final app = context.read<AppState>();
+    final email = app.user?.email ?? 'your email';
     setState(() => _sending = true);
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final sent = await app.requestPayoutChangeCode();
     if (!mounted) return;
 
     setState(() {
       _sending = false;
-      _codeSent = true;
+      if (sent) _codeSent = true;
     });
+    if (!sent) {
+      showToast(context, app.lastError ?? 'We could not send the code.',
+          error: true);
+      return;
+    }
     HapticFeedback.selectionClick();
     showToast(context, 'We have sent a code to $email');
   }
@@ -92,28 +97,11 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
 
     setState(() => _busy = true);
 
-    // A code sent to the registered email, on top of the PIN. Somebody holding
-    // a stolen unlocked phone has the PIN screen in front of them; they do not
-    // have the customer's inbox.
-    final sent = await app.requestPayoutChangeCode();
-    if (!mounted) return;
-    if (!sent) {
-      setState(() => _busy = false);
-      showToast(context, app.lastError ?? 'We could not send the code.',
-          error: true);
-      return;
-    }
-
-    final code = await confirmWithEmailedCode(
-      context,
-      title: 'Confirm it is you',
-      message: 'We sent a code to your email address. '
-          'Enter it to change where your money is paid out.',
-    );
-    if (code == null || !mounted) {
-      setState(() => _busy = false);
-      return;
-    }
+    // The code emailed from "Email me a code", on top of the PIN. Somebody
+    // holding a stolen unlocked phone has the PIN screen in front of them; they
+    // do not have the customer's inbox. Asking for a second code here would
+    // replace the one the customer has just typed.
+    final code = _code.text.trim();
 
     try {
       await app.changePayoutAccount(

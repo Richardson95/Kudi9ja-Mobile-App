@@ -42,6 +42,11 @@ dependencies:
   # the manifest names — Android will not create it for us, and a message sent
   # to a channel that does not exist arrives at default importance, silently.
   flutter_local_notifications: ^18.0.1
+  # A bank statement is usually a PDF, which the in-app image viewer cannot
+  # draw. It is fetched with the admin's session, saved to the app's cache and
+  # handed to whatever the phone opens PDFs with.
+  path_provider: ^2.1.6
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:

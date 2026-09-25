@@ -1,5 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -408,12 +413,14 @@ class _DocumentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return KCard(
       child: InkWell(
-        onTap: () => showReceipt(
-          context,
-          '',
-          url: document.url,
-          headers: headers,
-        ),
+        onTap: () => document.isImage
+            ? showReceipt(
+                context,
+                '',
+                url: document.url,
+                headers: headers,
+              )
+            : _openFile(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -457,6 +464,49 @@ class _DocumentTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Opens a document that is not a picture — a PDF statement, usually.
+  ///
+  /// The image viewer cannot draw one, and the link needs the admin's session,
+  /// so it cannot be handed to a browser either. It is fetched here, saved to
+  /// the app's cache, and opened with whatever the phone reads that type with.
+  Future<void> _openFile(BuildContext context) async {
+    showToast(context, 'Opening ${document.label}...');
+    try {
+      final response =
+          await http.get(Uri.parse(document.url), headers: headers);
+      if (response.statusCode != 200) {
+        throw HttpException('HTTP ${response.statusCode}');
+      }
+      final dir = await getTemporaryDirectory();
+      final name = document.label.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final file = File('${dir.path}/$name${_extension(document.contentType)}');
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+
+      final result = await OpenFilex.open(
+        file.path,
+        type: document.contentType.isEmpty ? null : document.contentType,
+      );
+      if (result.type != ResultType.done && context.mounted) {
+        showToast(
+          context,
+          result.type == ResultType.noAppToOpen
+              ? 'No app on this phone opens ${_typeName(document.contentType)} files.'
+              : 'The document could not be opened.',
+          error: true,
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        showToast(
+          context,
+          'This document could not be opened. The link may have expired — '
+          'go back and open the application again.',
+          error: true,
+        );
+      }
+    }
   }
 
   Widget _row() {
@@ -508,6 +558,22 @@ class _DocumentTile extends StatelessWidget {
           ],
         );
   }
+}
+
+/// The file extension a saved document needs, so the phone knows what opens it.
+String _extension(String contentType) {
+  final type = contentType.toLowerCase();
+  if (type.contains('pdf')) return '.pdf';
+  if (type.contains('openxmlformats-officedocument.wordprocessingml')) {
+    return '.docx';
+  }
+  if (type.contains('msword')) return '.doc';
+  if (type.contains('openxmlformats-officedocument.spreadsheetml')) {
+    return '.xlsx';
+  }
+  if (type.contains('excel')) return '.xls';
+  if (type.contains('csv')) return '.csv';
+  return '';
 }
 
 /// A short name for a content type, for the line under a document.
