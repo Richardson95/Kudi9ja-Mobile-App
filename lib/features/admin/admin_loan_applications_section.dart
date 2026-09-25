@@ -477,7 +477,19 @@ class _DocumentTile extends StatelessWidget {
       final response =
           await http.get(Uri.parse(document.url), headers: headers);
       if (response.statusCode != 200) {
-        throw HttpException('HTTP ${response.statusCode}');
+        if (context.mounted) {
+          // Only a 403 is an expired link. Anything else is the file not
+          // coming back from storage, and reopening will not change that.
+          showToast(
+            context,
+            response.statusCode == 403
+                ? 'This link has expired — go back and open the application again.'
+                : 'This document could not be fetched (${response.statusCode}). '
+                    'Try again in a moment.',
+            error: true,
+          );
+        }
+        return;
       }
       final dir = await getTemporaryDirectory();
       final name = document.label.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
@@ -501,8 +513,8 @@ class _DocumentTile extends StatelessWidget {
       if (context.mounted) {
         showToast(
           context,
-          'This document could not be opened. The link may have expired — '
-          'go back and open the application again.',
+          'This document could not be downloaded. Check your connection '
+          'and try again.',
           error: true,
         );
       }
