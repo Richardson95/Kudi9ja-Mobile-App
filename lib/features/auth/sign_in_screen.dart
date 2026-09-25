@@ -13,6 +13,7 @@ import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
+import 'forgot_password_screen.dart';
 import 'signup/signup_flow.dart';
 
 /// Shown when there is no active session: welcome, sign in, or create account.
@@ -208,46 +209,13 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  void _showRecovery(BuildContext context) {
-    final email = context.read<AppState>().user?.email ?? 'your email';
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.sm,
-          AppSpacing.xl,
-          AppSpacing.xxl,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            IconBadge(icon: Icons.mark_email_read_outlined, size: 52),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Reset your password',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'We will send a secure reset link to $email. The link expires in 15 minutes and can only be used once.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            GoldButton(
-              label: 'Send reset link',
-              onPressed: () {
-                Navigator.pop(context);
-                showToast(context, 'Reset link sent to $email');
-              },
-            ),
-          ],
-        ),
-      ),
+  Future<void> _showRecovery(BuildContext context) async {
+    final email = await Navigator.of(context).push<String>(
+      slideRoute(ForgotPasswordScreen(email: _email.text.trim())),
     );
+    if (email == null || !mounted) return;
+    _email.text = email;
+    _password.clear();
   }
 
   void _confirmReset(BuildContext context) {
