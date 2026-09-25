@@ -284,6 +284,15 @@ void main() {
       expect(book.interestCharged, 150000);
     });
 
+    /// A management fee is not interest, and reads as its own figure.
+    test('fees are kept apart from interest', () {
+      final book = platformBookFromApi({
+        'book': {'totalInterestCharged': 150000, 'totalFeesCharged': 7500},
+      });
+      expect(book.interestCharged, 150000);
+      expect(book.feesCharged, 7500);
+    });
+
     test('a loan waiting for its borrower carries what is owed on it', () {
       final waiting = waitingLoanFromApi({
         'id': 'imp-1',

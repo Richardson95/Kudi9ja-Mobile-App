@@ -967,11 +967,15 @@ class AppState extends ChangeNotifier {
             failures),
         _loadIntoPanel(
             'Pay-ins',
-            () async => _deposits = (await admin.payIns(size: 200)).items,
+            () async => _deposits = await _everyStatus(
+                (status) => admin.payIns(size: 100, status: status),
+                const ['PENDING', 'CONFIRMED', 'REJECTED']),
             failures),
         _loadIntoPanel(
             'Withdrawals',
-            () async => _withdrawals = (await admin.withdrawals(size: 200)).items,
+            () async => _withdrawals = await _everyStatus(
+                (status) => admin.withdrawals(size: 100, status: status),
+                const ['PENDING', 'APPROVED', 'DECLINED']),
             failures),
         _loadIntoPanel(
             'The team',
@@ -1007,6 +1011,22 @@ class AppState extends ChangeNotifier {
 
     _syncing = false;
     notifyListeners();
+  }
+
+  /// One queue, read a status at a time and put back together.
+  ///
+  /// The server's pay-in and withdrawal lists answer only the status asked
+  /// for, and PENDING when none is named. Asking without one returned the
+  /// pending rows alone, so a payment vanished from the panel the moment it
+  /// was approved: the Approved and Confirmed lists stayed empty and the
+  /// to-date totals stayed at zero however much had moved. The server caps a
+  /// page at 100.
+  Future<List<T>> _everyStatus<T>(
+    Future<Page<T>> Function(String status) load,
+    List<String> statuses,
+  ) async {
+    final pages = await Future.wait(statuses.map(load));
+    return [for (final page in pages) ...page.items];
   }
 
   /// Runs one of the panel's loads, and never throws.
@@ -3125,6 +3145,7 @@ class AppState extends ChangeNotifier {
     double lent,
     double interestPaid,
     double interestCharged,
+    double feesCharged,
     int activePlans,
     int activeLoans,
     double overdue,
@@ -3143,6 +3164,7 @@ class AppState extends ChangeNotifier {
         lent: book.lent,
         interestPaid: book.interestPaid,
         interestCharged: book.interestCharged,
+        feesCharged: book.feesCharged,
         activePlans: book.activePlans,
         activeLoans: book.activeLoans,
         overdue: book.overdue,
@@ -3160,6 +3182,9 @@ class AppState extends ChangeNotifier {
       interestCharged: _loans
           .where((l) => l.status.isOpen)
           .fold(0.0, (s, l) => s + l.totalInterest),
+      feesCharged: _loans
+          .where((l) => l.status.isOpen)
+          .fold(0.0, (s, l) => s + l.processingFee),
       activePlans: all.fold(0, (s, c) => s + c.plansCount),
       activeLoans: all.fold(0, (s, c) => s + c.loansCount),
       overdue: _loans

@@ -122,7 +122,15 @@ class AdminOverviewScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            const Expanded(child: SizedBox()),
+            Expanded(
+              child: MetricTile(
+                label: 'Management fees',
+                value: m.feesCharged.asShortNaira,
+                icon: Icons.receipt_long_outlined,
+                tint: AppColors.gold,
+                footnote: 'on live loans',
+              ),
+            ),
           ],
         ),
 

@@ -509,6 +509,7 @@ PlatformBook platformBookFromApi(Map<String, dynamic> j) {
     lent: _money(book['totalLent']),
     interestPaid: _money(book['totalInterestPaid']),
     interestCharged: _money(book['totalInterestCharged']),
+    feesCharged: _money(book['totalFeesCharged']),
     overdue: _money(book['totalOverdue']),
     activePlans: _int(book['activePlans']),
     activeLoans: _int(book['activeLoans']),

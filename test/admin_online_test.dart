@@ -83,11 +83,16 @@ void main() {
           return json({'role': role, 'name': 'Owner', 'active': true});
         }
         if (path.endsWith('/admin/customers')) return json({'content': []});
+        // Like the server: one status per request, PENDING when none is named.
+        List<Map<String, Object?>> ofStatus(List<Map<String, Object?>> rows) {
+          final status = request.url.queryParameters['status'] ?? 'PENDING';
+          return rows.where((r) => r['status'] == status).toList();
+        }
         if (path.endsWith('/admin/payins')) {
-          return json({'content': claims ?? [claim('c-1')]});
+          return json({'content': ofStatus(claims ?? [claim('c-1')])});
         }
         if (path.endsWith('/admin/withdrawals')) {
-          return json({'content': withdrawals ?? [withdrawal('w-1')]});
+          return json({'content': ofStatus(withdrawals ?? [withdrawal('w-1')])});
         }
         if (path.endsWith('/admin/team')) return json([]);
         if (path.endsWith('/admin/audit')) return json({'content': []});
@@ -106,6 +111,25 @@ void main() {
       expect(app.adminRole, AdminRole.owner);
       expect(app.isAdmin, isTrue);
       expect(app.pendingDepositCount, 1);
+      expect(app.pendingWithdrawalCount, 1);
+    });
+
+    /// The server answers one status at a time. Reading only the default left
+    /// every approved payout and confirmed pay-in out of the panel.
+    test('settled payments are read as well as pending ones', () async {
+      final app = await panel(
+        claims: [claim('c-1'), claim('c-2', status: 'CONFIRMED')],
+        withdrawals: [
+          withdrawal('w-1'),
+          withdrawal('w-2', status: 'APPROVED'),
+          withdrawal('w-3', status: 'DECLINED'),
+        ],
+      );
+      await app.refreshAdminPanel();
+
+      expect(app.deposits.map((d) => d.id), unorderedEquals(['c-1', 'c-2']));
+      expect(app.withdrawals.map((w) => w.id),
+          unorderedEquals(['w-1', 'w-2', 'w-3']));
       expect(app.pendingWithdrawalCount, 1);
     });
 

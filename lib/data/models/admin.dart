@@ -316,6 +316,7 @@ class PlatformBook {
     required this.lent,
     required this.interestPaid,
     required this.interestCharged,
+    this.feesCharged = 0,
     required this.overdue,
     required this.activePlans,
     required this.activeLoans,
@@ -337,6 +338,11 @@ class PlatformBook {
   /// Interest charged on the loans still running: what the live book earns if
   /// it all comes back. Contracted, not collected.
   final double interestCharged;
+
+  /// Management (processing) fees on the loans still running. A one-off
+  /// charge taken off the disbursement — not interest, so never added to
+  /// [interestCharged].
+  final double feesCharged;
 
   final double overdue;
   final int activePlans;
