@@ -37,13 +37,23 @@ class _AgreementUpdateSheet extends StatefulWidget {
 class _AgreementUpdateSheetState extends State<_AgreementUpdateSheet> {
   bool _busy = false;
 
+  /// Closes the sheet, once.
+  ///
+  /// Accepting empties the list, which closes the sheet from [build]; the
+  /// accept call then returns and closes it again. A second pop does not find
+  /// the sheet — it is already on its way out — and takes the dashboard beneath
+  /// it instead, leaving a blank screen until the app is reopened.
+  void _close() {
+    if (ModalRoute.of(context)?.isCurrent ?? false) Navigator.pop(context);
+  }
+
   Future<void> _accept() async {
     setState(() => _busy = true);
     final message = await context.read<AppState>().acceptOutstandingAgreements();
     if (!mounted) return;
     setState(() => _busy = false);
     if (message == null) {
-      Navigator.pop(context);
+      _close();
     } else {
       showToast(context, message, error: true);
     }
@@ -55,7 +65,7 @@ class _AgreementUpdateSheetState extends State<_AgreementUpdateSheet> {
     if (notices.isEmpty) {
       // Accepted from elsewhere while this was open.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.pop(context);
+        if (mounted) _close();
       });
       return const SizedBox.shrink();
     }
@@ -166,7 +176,7 @@ class _AgreementUpdateSheetState extends State<_AgreementUpdateSheet> {
           const SizedBox(height: AppSpacing.md),
           GhostButton(
             label: 'Not now',
-            onPressed: _busy ? null : () => Navigator.pop(context),
+            onPressed: _busy ? null : _close,
           ),
         ],
       ),
