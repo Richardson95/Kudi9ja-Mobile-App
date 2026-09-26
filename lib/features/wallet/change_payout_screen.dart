@@ -61,6 +61,19 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
   /// **Seam:** `POST /api/v1/me/payout/code`. The code is emailed and is never
   /// returned to the app.
   Future<void> _sendCode() async {
+    // The button stays tappable so a tap is never silent. Disabled, it looked
+    // exactly like an enabled one, and a customer who had not filled in the
+    // account yet was left waiting for an email that was never asked for.
+    if (!_detailsReady) {
+      showToast(
+        context,
+        _bank == null
+            ? 'Choose your bank first, then we can email the code.'
+            : 'Enter the 10-digit account number first.',
+        error: true,
+      );
+      return;
+    }
     final app = context.read<AppState>();
     final email = app.user?.email ?? 'your email';
     setState(() => _sending = true);
@@ -196,7 +209,7 @@ class _ChangePayoutScreenState extends State<ChangePayoutScreen> {
                           : _codeSent
                           ? 'Send the code again'
                           : 'Email me a code',
-                      onPressed: _detailsReady && !_sending ? _sendCode : null,
+                      onPressed: _sending ? null : _sendCode,
                     ),
                     if (_codeSent) ...[
                       const SizedBox(height: AppSpacing.lg),
