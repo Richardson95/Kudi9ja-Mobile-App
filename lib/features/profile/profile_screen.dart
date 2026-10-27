@@ -19,7 +19,9 @@ import '../admin/admin_shell.dart';
 import '../insights/insights_screen.dart';
 import '../legal/legal_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../support/support_screen.dart';
 import 'security_screen.dart';
+import 'signatures_screen.dart';
 import '../../data/models/platform_settings.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -156,6 +158,23 @@ class ProfileScreen extends StatelessWidget {
             title: 'SUPPORT',
             children: [
               _Row(
+                icon: Icons.support_agent_rounded,
+                label: 'Help & complaints',
+                sublabel: app.supportUnread > 0
+                    ? '${app.supportUnread} new ${app.supportUnread == 1 ? 'reply' : 'replies'} from the team'
+                    : 'Ask a question or make a complaint',
+                trailing: app.supportUnread > 0
+                    ? StatusPill(
+                        label: '${app.supportUnread}',
+                        color: AppColors.gold,
+                        dense: true,
+                      )
+                    : null,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(slideRoute(const SupportScreen())),
+              ),
+              _Row(
                 icon: Icons.headset_mic_outlined,
                 label: 'Contact support',
                 // The address, now that there is no phone line. A row whose
@@ -185,6 +204,14 @@ class ProfileScreen extends StatelessWidget {
                 sublabel: 'Terms, privacy, lending agreement',
                 onTap: () =>
                     Navigator.of(context).push(slideRoute(const LegalScreen())),
+              ),
+              _Row(
+                icon: Icons.draw_outlined,
+                label: 'Signed agreements',
+                sublabel: 'Your signature, and what you signed',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(slideRoute(const SignaturesScreen())),
               ),
             ],
           ),
@@ -489,12 +516,19 @@ class ProfileScreen extends StatelessWidget {
                       'Any month from 1 to ${settings.maxLoanTenureMonths}',
                     ),
                     _Detail(
+                      'Repayment',
+                      [
+                        if (settings.loanWeeklyAllowed) 'Weekly',
+                        if (settings.loanMonthlyAllowed) 'Monthly',
+                      ].join(' or '),
+                    ),
+                    _Detail(
                       'Minimum loan',
                       settings.minLoanAmount.asNairaFlat,
                     ),
                     _Detail(
-                      'Processing fee',
-                      'Also called the management fee',
+                      'Management fee',
+                      'Also called the processing fee',
                     ),
                     _Detail(
                       '  Up to ${settings.processingFeeThreshold.asNairaFlat}',
@@ -502,11 +536,20 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     _Detail(
                       '  Above that',
-                      '${settings.feeRatePct.toStringAsFixed(0)}% of the whole amount',
+                      '${PlatformSettings.ratePct(settings.feeRatePct)} of the whole amount',
                     ),
                     _Detail(
-                      'Fee is',
+                      'Management fee is',
                       'Deducted from the loan before it reaches you',
+                    ),
+                    _Detail(
+                      'Transaction fee',
+                      '${PlatformSettings.ratePct(settings.loanRepaymentFeeRate * 100)} '
+                          'of each repayment, added to the instalment',
+                    ),
+                    _Detail(
+                      'Paying off early',
+                      'Costs exactly what is still owed',
                       last: true,
                     ),
                   ],

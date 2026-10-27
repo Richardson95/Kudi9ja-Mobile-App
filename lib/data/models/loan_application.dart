@@ -6,6 +6,8 @@
 /// Nothing reaches the wallet until they do.
 library;
 
+import 'platform_settings.dart';
+
 enum LoanApplicationStatus { pending, approved, rejected, cancelled }
 
 extension LoanApplicationStatusX on LoanApplicationStatus {
@@ -151,11 +153,20 @@ class LoanApplication {
     this.statementPassword = '',
     this.selfie,
     this.businessPhotos = const [],
+    this.repaymentFrequency = RepaymentFrequency.monthly,
+    this.groupPricing = false,
   });
 
   final String id;
   final double amount;
   final int tenureMonths;
+
+  /// Weekly or monthly — the borrower's choice, carried onto the loan.
+  final RepaymentFrequency repaymentFrequency;
+
+  /// Admin's view only: whether the applicant borrows on the loan-group
+  /// terms rather than the standard ones.
+  final bool groupPricing;
   final String purpose;
   final LoanApplicationStatus status;
   final DateTime submittedAt;
@@ -232,6 +243,8 @@ class LoanApplication {
         statementPassword: statementPassword,
         selfie: selfie,
         businessPhotos: businessPhotos,
+        repaymentFrequency: repaymentFrequency,
+        groupPricing: groupPricing,
       );
 
   Map<String, dynamic> toJson() => {
@@ -252,6 +265,7 @@ class LoanApplication {
         'loanId': loanId,
         'customerName': customerName,
         'customerRef': customerRef,
+        'repaymentFrequency': repaymentFrequency.wire,
       };
 
   static LoanApplication fromJson(Map<String, dynamic> j) => LoanApplication(
@@ -277,5 +291,6 @@ class LoanApplication {
         loanId: j['loanId'] as String? ?? '',
         customerName: j['customerName'] as String? ?? '',
         customerRef: j['customerRef'] as String? ?? '',
+        repaymentFrequency: RepaymentFrequency.fromWire(j['repaymentFrequency']),
       );
 }

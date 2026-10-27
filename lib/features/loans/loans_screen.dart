@@ -14,8 +14,9 @@ import '../../widgets/primitives.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../shell/home_shell.dart';
 import 'loan_calculator_screen.dart';
-import '../wallet/pay_in_screen.dart';
+import '../wallet/add_money_screen.dart';
 import 'loan_detail_screen.dart';
+import 'loan_officers_card.dart';
 import 'loan_request_screen.dart';
 import '../../data/models/platform_settings.dart';
 
@@ -27,6 +28,7 @@ class LoansScreen extends StatelessWidget {
     final app = context.watch<AppState>();
     final active = app.activeLoans;
     final closed = app.loans.where((l) => !l.isOpen).toList();
+    final terms = app.lendingTerms;
 
     return SafeArea(
       bottom: false,
@@ -42,12 +44,30 @@ class LoansScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: TabHeader(
               title: 'Borrow',
-              subtitle: 'From ${settings.minLoanAmount.asNairaFlat} to '
-                  '${settings.maxLoanAmount.asShortNaira}, repaid your way',
+              subtitle: 'Flat rates from ${terms.rateRange}, over up to '
+                  '${terms.maxTenureMonths} months, repaid weekly or monthly',
             ),
           ),
           SliverToBoxAdapter(child: _CreditCard(app: app)),
           const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+          if (!settings.lendingEnabled || app.eligibility?.eligible == false) ...[
+            SliverToBoxAdapter(
+              child: _Notice(
+                text: !settings.lendingEnabled
+                    ? 'New loans are paused for now. Repayments work as normal.'
+                    : (app.eligibility!.reason.isEmpty
+                          ? 'You cannot apply just yet.'
+                          : app.eligibility!.reason),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+          ],
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: LoanOfficersCard(),
+            ),
+          ),
 
           // What happened to the last application, before anything else. A
           // customer waiting on a decision, or holding a refusal they could
@@ -94,7 +114,7 @@ class LoansScreen extends StatelessWidget {
                 icon: Icons.bolt_rounded,
                 title: 'No active loans',
                 message:
-                    'Borrow ${settings.minLoanAmount.asNairaFlat} to ${settings.maxLoanAmount.asShortNaira} over 1 to ${settings.maxLoanTenureMonths} months. Interest is flat and set by the tenure — ${settings.loanRateLabelFor(1)} over 1 month, ${settings.loanRateLabelFor(3)} over 3. A flat ${settings.flatProcessingFee.asShortNaira} fee comes out of the amount you receive.',
+                    'Borrow ${terms.minAmount.asNairaFlat} to ${terms.maxAmount.asShortNaira} over 1 to ${terms.maxTenureMonths} months, and repay weekly or monthly. Interest is flat and set by the tenure — ${PlatformSettings.ratePct(terms.rateFor(1) * 100)} over 1 month, ${PlatformSettings.ratePct(terms.rateFor(3) * 100)} over 3. A ${terms.flatProcessingFee.asShortNaira} management fee comes out of the amount you receive, and each repayment carries a ${terms.repaymentFeeLabel} transaction fee.',
                 action: SizedBox(
                   width: 220,
                   child: GoldButton(
@@ -142,6 +162,7 @@ class _CreditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final terms = app.lendingTerms;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: KCard(
@@ -151,19 +172,33 @@ class _CreditCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Borrow for your business',
-              style: TextStyle(
-                fontSize: 12.5,
-                color: AppColors.textSecondary,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Borrow for your business',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                // A member of a loan group borrows on the group's own terms,
+                // and should know that is what the figures here are.
+                if (app.groupPricing)
+                  StatusPill(
+                    label: 'LOAN GROUP TERMS',
+                    color: AppColors.info,
+                    dense: true,
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             // The range, not an offer. There is no score and no limit worked
             // out from savings: a customer asks for what they need and a
             // person reads the application and decides.
             Text(
-              '${settings.minLoanAmount.asNairaFlat} – ${settings.maxLoanAmount.asShortNaira}',
+              '${terms.minAmount.asNairaFlat} – ${terms.maxAmount.asShortNaira}',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
@@ -242,7 +277,7 @@ class _ActiveLoanCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Borrowed ${loan.principal.asShortNaira} • ${loan.tenureMonths} months',
+                      'Borrowed ${loan.principal.asShortNaira} • ${loan.termPhrase}',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
@@ -270,8 +305,8 @@ class _ActiveLoanCard extends StatelessWidget {
               ),
               Expanded(
                 child: _Metric(
-                  label: 'Monthly',
-                  value: loan.monthlyRepayment.asNaira,
+                  label: loan.frequency.label,
+                  value: loan.installmentAmount.asNaira,
                 ),
               ),
               Expanded(
@@ -315,20 +350,25 @@ class _ActiveLoanCard extends StatelessWidget {
               Expanded(
                 child: GhostButton(
                   label: 'From wallet',
-                  onPressed: () =>
-                      _repay(context, loan, loan.monthlyRepayment),
+                  onPressed: () => _repay(
+                    context,
+                    loan,
+                    loan.nextInstallment?.outstanding ?? loan.installmentAmount,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: GoldButton(
-                  label: 'Transfer',
+                  label: 'Pay',
+                  icon: Icons.lock_rounded,
                   height: 54,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => PayInScreen(
+                      builder: (_) => AddMoneyScreen(
                         loan: loan,
-                        presetAmount: loan.monthlyRepayment,
+                        presetAmount:
+                            loan.nextInstallment?.outstanding ?? loan.installmentAmount,
                       ),
                     ),
                   ),
@@ -369,14 +409,51 @@ class _ActiveLoanCard extends StatelessWidget {
     await app.repayLoan(loan.id, due, pin: pin);
     if (!context.mounted) return;
 
+    final error = app.lastError;
+    if (error != null) {
+      showToast(context, error, error: true);
+      return;
+    }
     final settled = due >= loan.outstanding - 0.01;
     showToast(
       context,
       settled
-          ? 'Loan fully repaid. Your credit limit is restored.'
+          ? 'Loan fully repaid.'
           : '${due.asNaira} repaid successfully.',
     );
   }
+}
+
+/// A line of context the customer should see before trying to borrow.
+class _Notice extends StatelessWidget {
+  const _Notice({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+    child: Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.goldWash,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 16, color: AppColors.gold),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Metric extends StatelessWidget {

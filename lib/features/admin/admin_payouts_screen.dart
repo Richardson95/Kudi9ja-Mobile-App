@@ -11,6 +11,7 @@ import '../../data/models/withdrawal.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 import 'admin_deposits_section.dart';
+import 'admin_paystack_list.dart';
 import 'admin_shell.dart';
 
 /// Every withdrawal request lands here for a human decision before money
@@ -27,6 +28,9 @@ class _AdminPayoutsScreenState extends State<AdminPayoutsScreen> {
   bool _outgoing = false;
   WithdrawalStatus? _outFilter = WithdrawalStatus.pending;
   DepositStatus? _inFilter = DepositStatus.pending;
+
+  /// Money in through Paystack, rather than the receipt claims.
+  bool _paystack = false;
 
   @override
   Widget build(BuildContext context) {
@@ -139,42 +143,68 @@ class _AdminPayoutsScreenState extends State<AdminPayoutsScreen> {
               scrollDirection: Axis.horizontal,
               children: [
                 _Chip(
+                  label: 'Paystack',
+                  selected: _paystack,
+                  onTap: () => setState(() => _paystack = true),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _Chip(
                   label: 'To confirm',
                   count: app.pendingDepositCount,
-                  selected: _inFilter == DepositStatus.pending,
-                  onTap: () =>
-                      setState(() => _inFilter = DepositStatus.pending),
+                  selected: !_paystack && _inFilter == DepositStatus.pending,
+                  onTap: () => setState(() {
+                    _paystack = false;
+                    _inFilter = DepositStatus.pending;
+                  }),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _Chip(
                   label: 'Confirmed',
-                  selected: _inFilter == DepositStatus.confirmed,
-                  onTap: () =>
-                      setState(() => _inFilter = DepositStatus.confirmed),
+                  selected: !_paystack && _inFilter == DepositStatus.confirmed,
+                  onTap: () => setState(() {
+                    _paystack = false;
+                    _inFilter = DepositStatus.confirmed;
+                  }),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _Chip(
                   label: 'Rejected',
-                  selected: _inFilter == DepositStatus.rejected,
-                  onTap: () =>
-                      setState(() => _inFilter = DepositStatus.rejected),
+                  selected: !_paystack && _inFilter == DepositStatus.rejected,
+                  onTap: () => setState(() {
+                    _paystack = false;
+                    _inFilter = DepositStatus.rejected;
+                  }),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _Chip(
-                  label: 'Everything',
-                  selected: _inFilter == null,
-                  onTap: () => setState(() => _inFilter = null),
+                  label: 'All receipts',
+                  selected: !_paystack && _inFilter == null,
+                  onTap: () => setState(() {
+                    _paystack = false;
+                    _inFilter = null;
+                  }),
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          AdminDepositList(claims: inList),
-          const SizedBox(height: AppSpacing.lg),
-          const _Footnote(
-            text:
-                'Match each receipt against the Kudi9ja collection account statement before confirming. Nothing reaches a wallet or a loan until you approve it.',
-          ),
+          if (_paystack) ...[
+            const AdminPaystackList(),
+            const SizedBox(height: AppSpacing.lg),
+            const _Footnote(
+              text:
+                  'Card, transfer and USSD payments through Paystack. Each is '
+                  'credited the moment Paystack confirms it — there is nothing '
+                  'to approve here.',
+            ),
+          ] else ...[
+            AdminDepositList(claims: inList),
+            const SizedBox(height: AppSpacing.lg),
+            const _Footnote(
+              text:
+                  'Receipt claims for transfers to the collection account. Match each against the statement before confirming. Nothing reaches a wallet or a loan until you approve it.',
+            ),
+          ],
         ] else ...[
           SizedBox(
             height: 34,
@@ -387,11 +417,15 @@ class _RequestCard extends StatelessWidget {
     final app = context.read<AppState>();
     final canAct = app.adminRole.canApprovePayments;
 
-    final tint = switch (request.status) {
-      WithdrawalStatus.pending => AppColors.gold,
-      WithdrawalStatus.approved => AppColors.success,
-      WithdrawalStatus.declined => AppColors.danger,
-    };
+    final tint = request.bounced
+        ? AppColors.danger
+        : request.isSending
+        ? AppColors.info
+        : switch (request.status) {
+            WithdrawalStatus.pending => AppColors.gold,
+            WithdrawalStatus.approved => AppColors.success,
+            WithdrawalStatus.declined => AppColors.danger,
+          };
 
     return KCard(
       borderColor: tint.withValues(alpha: 0.3),
@@ -432,7 +466,10 @@ class _RequestCard extends StatelessWidget {
                 ),
               ),
               StatusPill(
-                label: request.status.label.toUpperCase(),
+                label: (request.status == WithdrawalStatus.approved
+                        ? request.stateLabel
+                        : request.status.label)
+                    .toUpperCase(),
                 color: tint,
                 dense: true,
               ),
@@ -454,6 +491,16 @@ class _RequestCard extends StatelessWidget {
               '${request.reviewedBy} • ${request.reviewedAt!.asDay}',
             ),
           if (request.note.isNotEmpty) _Line('Reason', request.note),
+          if (request.payoutProvider.isNotEmpty)
+            _Line(
+              'Sent by',
+              request.payoutProvider == 'PAYSTACK' ? 'Paystack transfer' : 'Hand',
+            ),
+          if (request.payoutReference.isNotEmpty)
+            _Line('Transfer reference', request.payoutReference),
+          if (request.paidOutAt != null) _Line('Landed', request.paidOutAt!.asDayTime),
+          if (request.payoutFailure.isNotEmpty)
+            _Line(request.bounced ? 'Returned because' : 'Note', request.payoutFailure),
 
           if (request.isPending) ...[
             const SizedBox(height: AppSpacing.lg),
@@ -524,13 +571,29 @@ class _RequestCard extends StatelessWidget {
     AppState app,
     WithdrawalRequest w,
   ) async {
+    final reference = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Release this payout?'),
-        content: Text(
-          '${w.amount.asNaira} will be sent to ${w.customerName} at ${w.bank} ${w.destinationAccount}. This cannot be undone.',
-          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${w.amount.asNaira} will be sent to ${w.customerName} at '
+              '${w.bank} ${w.destinationAccount}. With Paystack on, approving '
+              'sends the transfer now. This cannot be undone.',
+              style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: reference,
+              decoration: const InputDecoration(
+                hintText: 'Bank reference, if you paid it by hand',
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -550,10 +613,19 @@ class _RequestCard extends StatelessWidget {
         ],
       ),
     );
+    final ref = reference.text.trim();
+    reference.dispose();
     if (confirmed != true || !context.mounted) return;
 
-    await app.approveWithdrawal(w.id);
+    await app.approveWithdrawal(w.id, payoutReference: ref.isEmpty ? null : ref);
     if (!context.mounted) return;
+    final error = app.lastError;
+    if (error != null) {
+      // Paystack refused, or the bank has no code it can send to. Nothing
+      // left the account; the request is still waiting.
+      showToast(context, error, error: true);
+      return;
+    }
     showToast(context, '${w.amount.asNaira} released to ${w.customerName}');
   }
 
@@ -618,6 +690,11 @@ class _RequestCard extends StatelessWidget {
 
     await app.declineWithdrawal(w.id, reason);
     if (!context.mounted) return;
+    final error = app.lastError;
+    if (error != null) {
+      showToast(context, error, error: true);
+      return;
+    }
     showToast(
       context,
       '${w.amount.asNaira} refunded to ${w.customerName}',

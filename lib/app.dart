@@ -29,6 +29,11 @@ class _Kudi9jaAppState extends State<Kudi9jaApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Today's rates, before anybody signs in — the calculators and the
+    // agreements quote them — while the splash is still up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(context.read<AppState>().loadPublicSettings());
+    });
     // Hold the splash long enough for the brand animation to land.
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) setState(() => _booting = false);

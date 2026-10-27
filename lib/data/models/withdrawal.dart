@@ -27,6 +27,11 @@ class WithdrawalRequest {
     this.reviewedAt,
     this.reviewedBy = '',
     this.note = '',
+    this.payoutStatus = '',
+    this.payoutFailure = '',
+    this.paidOutAt,
+    this.payoutProvider = '',
+    this.payoutReference = '',
   });
 
   final String id;
@@ -44,7 +49,40 @@ class WithdrawalRequest {
   /// Reason given when declining, shown to the customer.
   final String note;
 
+  /// Where the money is once approved: `PROCESSING` while Paystack is still
+  /// sending it, `PAID` once it has landed, `FAILED` when the bank turned it
+  /// back and the wallet was refunded. Empty until approved, and on a payout
+  /// made by hand before Paystack.
+  final String payoutStatus;
+
+  /// Why a transfer failed or is waiting, in the words the bank used.
+  final String payoutFailure;
+  final DateTime? paidOutAt;
+
+  /// `PAYSTACK` or `MANUAL` — how an approved payout was sent.
+  final String payoutProvider;
+
+  /// The bank's or Paystack's reference for the transfer.
+  final String payoutReference;
+
   bool get isPending => status == WithdrawalStatus.pending;
+
+  /// Approved and on its way, but not yet confirmed by the bank.
+  bool get isSending =>
+      status == WithdrawalStatus.approved && payoutStatus == 'PROCESSING';
+
+  /// Approved, then turned back by the bank, and refunded to the wallet.
+  bool get bounced =>
+      status == WithdrawalStatus.approved && payoutStatus == 'FAILED';
+
+  /// What to call this request's state, payout included.
+  String get stateLabel => isSending
+      ? 'Sending'
+      : bounced
+      ? 'Returned to wallet'
+      : status == WithdrawalStatus.approved
+      ? 'Paid'
+      : status.label;
 
   /// How long the request has been sitting in the queue.
   Duration get age => DateTime.now().difference(requestedAt);
@@ -67,6 +105,11 @@ class WithdrawalRequest {
     reviewedAt: reviewedAt ?? this.reviewedAt,
     reviewedBy: reviewedBy ?? this.reviewedBy,
     note: note ?? this.note,
+    payoutStatus: payoutStatus,
+    payoutFailure: payoutFailure,
+    paidOutAt: paidOutAt,
+    payoutProvider: payoutProvider,
+    payoutReference: payoutReference,
   );
 
   Map<String, dynamic> toJson() => {
@@ -82,6 +125,11 @@ class WithdrawalRequest {
     'reviewedAt': reviewedAt?.toIso8601String(),
     'reviewedBy': reviewedBy,
     'note': note,
+    'payoutStatus': payoutStatus,
+    'payoutFailure': payoutFailure,
+    'paidOutAt': paidOutAt?.toIso8601String(),
+    'payoutProvider': payoutProvider,
+    'payoutReference': payoutReference,
   };
 
   factory WithdrawalRequest.fromJson(Map<String, dynamic> j) =>
@@ -100,5 +148,10 @@ class WithdrawalRequest {
             : DateTime.parse(j['reviewedAt'] as String),
         reviewedBy: j['reviewedBy'] as String? ?? '',
         note: j['note'] as String? ?? '',
+        payoutStatus: j['payoutStatus'] as String? ?? '',
+        payoutFailure: j['payoutFailure'] as String? ?? '',
+        paidOutAt: DateTime.tryParse(j['paidOutAt'] as String? ?? ''),
+        payoutProvider: j['payoutProvider'] as String? ?? '',
+        payoutReference: j['payoutReference'] as String? ?? '',
       );
 }

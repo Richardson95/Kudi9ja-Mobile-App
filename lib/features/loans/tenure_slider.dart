@@ -15,16 +15,21 @@ class TenureSlider extends StatelessWidget {
     super.key,
     required this.tenure,
     required this.onChanged,
+    this.terms,
   });
 
   final int tenure;
   final ValueChanged<int> onChanged;
 
+  /// The rate card to draw — the borrower's own. The standard one if unset.
+  final LendingTerms? terms;
+
   @override
   Widget build(BuildContext context) {
-    final max = settings.maxLoanTenureMonths;
+    final t = terms ?? settings.lending;
+    final max = t.maxTenureMonths;
     final months = tenure.clamp(1, max);
-    final perMonth = settings.loanRatePctFor(months) / months;
+    final perMonth = t.rateFor(months) * 100 / months;
 
     return KCard(
       child: Column(
@@ -44,7 +49,7 @@ class TenureSlider extends StatelessWidget {
                 ),
               ),
               StatusPill(
-                label: '${settings.loanRateLabelFor(months)} FLAT',
+                label: '${PlatformSettings.ratePct(t.rateFor(months) * 100)} FLAT',
                 color: AppColors.gold,
                 dense: true,
               ),

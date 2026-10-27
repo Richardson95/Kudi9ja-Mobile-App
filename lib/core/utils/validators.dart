@@ -47,6 +47,16 @@ abstract final class Validators {
     return digits;
   }
 
+  /// Whether a typed name is the name on the account: the same letters,
+  /// whatever the spacing, case or punctuation.
+  ///
+  /// Stricter than the server, which also accepts the parts in another order,
+  /// so a name passed here is never refused there.
+  static bool sameName(String a, String b) {
+    String norm(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+    return norm(a).isNotEmpty && norm(a) == norm(b);
+  }
+
   /// A home address.
   ///
   /// The server takes 5 to 400 characters. Checking it here as well means a

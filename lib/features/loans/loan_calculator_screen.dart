@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
+import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
 import 'tenure_slider.dart';
@@ -22,13 +24,9 @@ class LoanCalculatorScreen extends StatefulWidget {
 class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   final _amount = TextEditingController(text: '200,000');
   int _tenure = 6;
+  RepaymentFrequency _frequency = RepaymentFrequency.monthly;
 
   double get _principal => parseAmount(_amount.text);
-  double get _fee => Finance.processingFee(_principal);
-  double get _net => _principal - _fee;
-  double get _monthly => Finance.loanMonthly(_principal, _tenure);
-  double get _total => Finance.loanTotal(_principal, _tenure);
-  double get _interest => _total - _principal;
 
   @override
   void dispose() {
@@ -38,9 +36,21 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final over = _principal > settings.maxLoanAmount;
-    final under =
-        _principal > 0 && _principal < settings.minLoanAmount;
+    // This customer's own terms — a member of a loan group is priced on the
+    // group's.
+    final terms = context.watch<AppState>().lendingTerms;
+    if (!terms.allows(_frequency) && terms.frequencies.isNotEmpty) {
+      _frequency = terms.frequencies.first;
+    }
+    if (_tenure > terms.maxTenureMonths) _tenure = terms.maxTenureMonths;
+    final preview = Finance.loanPreview(
+      _principal,
+      _tenure,
+      frequency: _frequency,
+      terms: terms,
+    );
+    final over = _principal > terms.maxAmount;
+    final under = _principal > 0 && _principal < terms.minAmount;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Loan calculator')),
@@ -79,8 +89,8 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             Text(
                               over
-                                  ? 'The ceiling is ${settings.maxLoanAmount.asNairaFlat}'
-                                  : 'The minimum loan is ${settings.minLoanAmount.asNairaFlat}',
+                                  ? 'The ceiling is ${terms.maxAmount.asNairaFlat}'
+                                  : 'The minimum loan is ${terms.minAmount.asNairaFlat}',
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
@@ -111,25 +121,38 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     const SizedBox(height: AppSpacing.md),
                     TenureSlider(
                       tenure: _tenure,
+                      terms: terms,
                       onChanged: (t) => setState(() => _tenure = t),
                     ),
+                    if (terms.frequencies.length > 1) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Row(
+                        children: [
+                          for (final f in terms.frequencies) ...[
+                            if (f != terms.frequencies.first)
+                              const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: KOptionTile(
+                                title: f.label,
+                                selected: _frequency == f,
+                                onTap: () => setState(() => _frequency = f),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.xxl),
-                    _Headline(monthly: _monthly, tenure: _tenure, net: _net),
+                    _Headline(preview: preview, tenure: _tenure),
                     const SizedBox(height: AppSpacing.xl),
                     _Breakdown(
                       principal: _principal,
-                      fee: _fee,
-                      net: _net,
-                      interest: _interest,
-                      total: _total,
+                      preview: preview,
                       tenure: _tenure,
+                      terms: terms,
                     ),
                     const SizedBox(height: AppSpacing.xl),
-                    _SchedulePreview(
-                      monthly: _monthly,
-                      tenure: _tenure,
-                      total: _total,
-                    ),
+                    _SchedulePreview(preview: preview),
                   ],
                 ),
               ),
@@ -163,15 +186,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
 }
 
 class _Headline extends StatelessWidget {
-  const _Headline({
-    required this.monthly,
-    required this.tenure,
-    required this.net,
-  });
+  const _Headline({required this.preview, required this.tenure});
 
-  final double monthly;
+  final LoanPreview preview;
   final int tenure;
-  final double net;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -181,15 +199,15 @@ class _Headline extends StatelessWidget {
     child: Column(
       children: [
         Text(
-          'You repay each month',
+          'You repay each ${preview.frequency.unit}',
           style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSpacing.sm),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: Text(
-            monthly.asNaira,
-            key: ValueKey(monthly),
+            preview.each.asNaira,
+            key: ValueKey(preview.each),
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w800,
@@ -199,7 +217,8 @@ class _Headline extends StatelessWidget {
           ),
         ),
         Text(
-          'for $tenure ${tenure == 1 ? 'month' : 'months'}',
+          '${preview.frequency.paymentsPhrase(tenure, count: preview.count)}'
+          ' over $tenure ${tenure == 1 ? 'month' : 'months'}',
           style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -223,7 +242,7 @@ class _Headline extends StatelessWidget {
               ),
             ),
             Text(
-              net.asNaira,
+              preview.net.asNaira,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -240,19 +259,15 @@ class _Headline extends StatelessWidget {
 class _Breakdown extends StatelessWidget {
   const _Breakdown({
     required this.principal,
-    required this.fee,
-    required this.net,
-    required this.interest,
-    required this.total,
+    required this.preview,
     required this.tenure,
+    required this.terms,
   });
 
   final double principal;
-  final double fee;
-  final double net;
-  final double interest;
-  final double total;
+  final LoanPreview preview;
   final int tenure;
+  final LendingTerms terms;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -271,40 +286,44 @@ class _Breakdown extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         _Row('Loan amount', principal.asNaira),
         _Row(
-          'Processing fee (${Finance.processingFeeBasis(principal).toLowerCase()})',
-          '-${fee.asNaira}',
+          'Management fee (${terms.feeBasisFor(principal).toLowerCase()})',
+          '-${preview.fee.asNaira}',
         ),
-        _Row('You receive', net.asNaira, color: AppColors.success),
+        _Row('You receive', preview.net.asNaira, color: AppColors.success),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: HairLine(),
         ),
         _Row(
           'Interest rate',
-          '${settings.loanRateLabelFor(tenure)} flat over '
+          '${PlatformSettings.ratePct(preview.rate * 100)} flat over '
               '$tenure ${tenure == 1 ? 'month' : 'months'}',
         ),
-        _Row('Total interest', interest.asNaira),
-        _Row('Total repayable', total.asNaira, bold: true),
+        _Row('Total interest', preview.interest.asNaira),
+        if (preview.fees > 0)
+          _Row(
+            'Transaction fees (${PlatformSettings.ratePct(preview.feeRate * 100)} of each repayment)',
+            preview.fees.asNaira,
+          ),
+        _Row('Total repayable', preview.total.asNaira, bold: true),
       ],
     ),
   );
 }
 
 class _SchedulePreview extends StatelessWidget {
-  const _SchedulePreview({
-    required this.monthly,
-    required this.tenure,
-    required this.total,
-  });
+  const _SchedulePreview({required this.preview});
 
-  final double monthly;
-  final int tenure;
-  final double total;
+  final LoanPreview preview;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final plan = Finance.instalmentPlan(
+      preview.loanTotal,
+      preview.count,
+      preview.feeRate,
+    );
 
     return KCard(
       padding: const EdgeInsets.symmetric(
@@ -324,7 +343,7 @@ class _SchedulePreview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          for (var i = 0; i < tenure; i++) ...[
+          for (var i = 0; i < plan.length; i++) ...[
             if (i > 0) const HairLine(),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -350,7 +369,7 @@ class _SchedulePreview extends StatelessWidget {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
-                      Finance.addMonths(now, i + 1).asDay,
+                      preview.frequency.due(now, i + 1).asDay,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
@@ -358,7 +377,7 @@ class _SchedulePreview extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    monthly.asNaira,
+                    plan[i].total.asNaira,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -382,7 +401,7 @@ class _SchedulePreview extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  total.asNaira,
+                  preview.total.asNaira,
                   style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,

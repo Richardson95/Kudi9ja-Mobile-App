@@ -116,9 +116,9 @@ void main() {
   });
 
   group('The only way money gets in', () {
-    test('bank transfer is the only route, and it always needs approval', () {
-      // The method chooser offered Card and USSD, and Card credited the
-      // wallet on the spot with no claim and no admin. Both are gone.
+    test('nothing is credited on the phone — the server confirms every naira', () {
+      // The old method chooser offered Card and USSD, and Card credited the
+      // wallet on the spot with no claim and no admin. It stays gone.
       expect(
         File('lib/features/wallet/fund_wallet_screen.dart').existsSync(),
         isFalse,
@@ -134,17 +134,24 @@ void main() {
           isFalse,
           reason: '$path still routes to the old chooser',
         );
-        expect(source.contains('PayInScreen'), isTrue, reason: path);
+        expect(source.contains('AddMoneyScreen'), isTrue, reason: path);
       }
 
+      // Paystack: the customer pays on Paystack's page, and the wallet moves
+      // only when the server has asked Paystack and credited it. The screen
+      // starts a checkout and asks for the outcome; it never credits.
+      final addMoney = File('lib/features/wallet/add_money_screen.dart')
+          .readAsStringSync();
+      expect(addMoney.contains('startPaystack'), isTrue);
+      expect(addMoney.contains('fundWallet'), isFalse);
+      final result = File('lib/features/wallet/paystack_checkout_screen.dart')
+          .readAsStringSync();
+      expect(result.contains('confirmPaystack'), isTrue);
+      expect(result.contains('fundWallet'), isFalse);
+
+      // While Paystack is off, a transfer still needs its receipt.
       final payIn = File('lib/features/wallet/pay_in_screen.dart')
           .readAsStringSync();
-      // The payment methods themselves, not any word containing "card"
-      // (CompanyAccountCard and KCard are widgets).
-      for (final gone in const ["'Card'", 'USSD', 'credit_card', 'qr_code']) {
-        expect(payIn.contains(gone), isFalse, reason: 'found $gone');
-      }
-      // A receipt is required before the claim can be submitted.
       expect(payIn.contains('_receipt.isNotEmpty'), isTrue);
     });
 

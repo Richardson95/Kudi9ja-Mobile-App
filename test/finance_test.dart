@@ -116,14 +116,14 @@ void main() {
       expect(AppConfig.maxLoanAmount, 5000000);
     });
 
-    test('the management fee reaches its 1% band inside the loan range', () {
+    test('the management fee reaches its 2% band inside the loan range', () {
       // The threshold must sit under the ceiling, or the percentage band is
       // unreachable and the rule is decorative.
       expect(
         settings.processingFeeThreshold,
         lessThan(settings.maxLoanAmount),
       );
-      expect(Finance.processingFee(settings.maxLoanAmount), 50000);
+      expect(Finance.processingFee(settings.maxLoanAmount), 100000);
     });
 
     test('tenures run from 1 month to 2 years', () {
@@ -263,10 +263,64 @@ void main() {
       expect(flat.loanRateFor(3), 0.25);
     });
 
-    test('instalments split the total repayable evenly', () {
-      expect(Finance.loanMonthly(200000, 1), closeTo(225000, 0.01));
-      expect(Finance.loanMonthly(200000, 2), closeTo(117000, 0.01));
-      expect(Finance.loanMonthly(200000, 3), closeTo(83333.33, 0.01));
+    test('instalments are whole naira, rounded up, with 2% on each', () {
+      // 200,000 at 25% over 3 months is 250,000 of loan and interest, split
+      // 83,334 + 83,334 + 83,332, each carrying a 1,667 transaction fee.
+      final p = Finance.loanPreview(200000, 3);
+      expect(p.loanTotal, 250000);
+      expect(p.count, 3);
+      expect(p.base, 83334);
+      expect(p.instalmentFee, 1667);
+      expect(p.each, 85001);
+      expect(p.fees, 5001);
+      expect(p.total, 255001);
+      expect(p.fee, 5000);
+      expect(p.net, 195000);
+    });
+
+    test('the plan matches the server’s worked example', () {
+      // ₦125,000 over 12 weeks at 2% is ₦10,417 + ₦209 a week, the last
+      // ₦10,413 + ₦209 — the example on Finance.instalmentPlan.
+      final plan = Finance.instalmentPlan(125000, 12, 0.02);
+      expect(plan.length, 12);
+      expect(plan.first.base, 10417);
+      expect(plan.first.fee, 209);
+      expect(plan.last.base, 10413);
+      expect(plan.last.fee, 209);
+      expect(plan.fold(0.0, (s, p) => s + p.base), 125000);
+    });
+
+    test('older loans split to the kobo, with no fee', () {
+      final plan = Finance.instalmentPlan(250000, 3, 0, wholeNaira: false);
+      expect(plan.first.base, closeTo(83333.33, 0.001));
+      expect(plan.last.base, closeTo(83333.34, 0.001));
+      expect(plan.every((p) => p.fee == 0), isTrue);
+    });
+
+    test('weekly counts the whole weeks the calendar holds', () {
+      // Three months from 23 October is 92 days: 13 weeks. Three months from
+      // 30 November ends on 28 February, 90 days: 12.
+      expect(RepaymentFrequency.weekly.installments(3, DateTime(2026, 10, 23)), 13);
+      expect(RepaymentFrequency.weekly.installments(3, DateTime(2026, 11, 30)), 12);
+      expect(RepaymentFrequency.monthly.installments(3, DateTime(2026, 11, 30)), 3);
+      expect(
+        RepaymentFrequency.weekly.due(DateTime(2026, 10, 23), 2),
+        DateTime(2026, 11, 6),
+      );
+    });
+
+    test('weekly and monthly cost the same; only the split differs', () {
+      final start = DateTime(2026, 10, 23);
+      final monthly = Finance.loanPreview(125000, 3, start: start);
+      final weekly = Finance.loanPreview(
+        125000,
+        3,
+        frequency: RepaymentFrequency.weekly,
+        start: start,
+      );
+      expect(weekly.loanTotal, monthly.loanTotal);
+      expect(weekly.count, 13);
+      expect(monthly.count, 3);
     });
 
     test('the floor is 50,000 naira', () {
@@ -280,8 +334,8 @@ void main() {
       expect(Finance.netDisbursed(50000), 45000);
     });
 
-    test('stays flat across the whole 50k-500k band', () {
-      for (final amount in [50000.0, 120000.0, 250000.0, 499999.0]) {
+    test('stays flat across the whole 50k-250k band', () {
+      for (final amount in [50000.0, 120000.0, 200000.0, 249999.0]) {
         expect(
           Finance.processingFee(amount),
           5000,
@@ -290,35 +344,35 @@ void main() {
       }
     });
 
-    test('is 5,000 at the 500,000 threshold under either rule', () {
-      // The flat fee and the 1% rule agree exactly here, so the curve
+    test('is 5,000 at the 250,000 threshold under either rule', () {
+      // The flat fee and the 2% rule agree exactly here, so the curve
       // is continuous — no jump at the boundary.
-      expect(Finance.processingFee(500000), 5000);
-      expect(500000 * AppConfig.loanProcessingFeeRate, 5000);
-      expect(Finance.netDisbursed(500000), 495000);
+      expect(Finance.processingFee(250000), 5000);
+      expect(250000 * AppConfig.loanProcessingFeeRate, 5000);
+      expect(Finance.netDisbursed(250000), 245000);
     });
 
-    test('switches to 1% the moment the threshold is passed', () {
-      // 500,001 is already above it — there is no grace band.
-      expect(Finance.processingFee(500001), closeTo(5000.01, 0.0001));
-      expect(Finance.processingFee(600000), 6000);
-      expect(Finance.processingFee(1000000), 10000);
-      expect(Finance.netDisbursed(1000000), 990000);
+    test('switches to 2% the moment the threshold is passed', () {
+      // 250,001 is already above it — there is no grace band.
+      expect(Finance.processingFee(250001), closeTo(5000.02, 0.0001));
+      expect(Finance.processingFee(600000), 12000);
+      expect(Finance.processingFee(1000000), 20000);
+      expect(Finance.netDisbursed(1000000), 980000);
     });
 
-    test('the 1% is of the whole amount, never of the excess', () {
-      // The excess reading would make a 1,000,000 loan cost 5,000 — half of
-      // what it actually costs — so this is worth pinning down.
-      expect(Finance.processingFee(1000000), 10000);
+    test('the 2% is of the whole amount, never of the excess', () {
+      // The excess reading would make a 1,000,000 loan cost 15,000 instead
+      // of what it actually costs — so this is worth pinning down.
+      expect(Finance.processingFee(1000000), 20000);
       expect(
         Finance.processingFee(1000000),
-        isNot(closeTo((1000000 - 500000) * 0.01, 0.01)),
+        isNot(closeTo((1000000 - 250000) * 0.02, 0.01)),
       );
     });
 
     test('the fee is continuous across the threshold', () {
-      final below = Finance.processingFee(500000);
-      final above = Finance.processingFee(500000.01);
+      final below = Finance.processingFee(250000);
+      final above = Finance.processingFee(250000.01);
       expect(above - below, lessThan(1));
       expect(above, greaterThanOrEqualTo(below));
     });
@@ -333,7 +387,7 @@ void main() {
       // The admin panel prices an unsaved draft through the settings; a
       // customer is priced through Finance. If these ever diverge, the
       // preview lies about what will be charged.
-      for (final amount in [50000.0, 499999.0, 500000.0, 500001.0, 900000.0]) {
+      for (final amount in [50000.0, 249999.0, 250000.0, 250001.0, 900000.0]) {
         expect(
           settings.processingFeeFor(amount),
           Finance.processingFee(amount),
@@ -380,7 +434,7 @@ void main() {
       // The fee reduces what lands in the wallet...
       expect(Finance.netDisbursed(principal), 195000);
       // ...but repayment is still calculated on the full principal.
-      expect(Finance.loanTotal(principal, 3), closeTo(250000, 0.01));
+      expect(Finance.loanTotal(principal, 3), 250000);
     });
   });
 

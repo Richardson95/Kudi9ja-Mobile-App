@@ -1,17 +1,59 @@
+import 'dart:convert';
+
 import 'package:uuid/uuid.dart';
 
 import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
+import '../legal/legal_models.dart';
 import '../models/admin.dart';
 import '../models/app_review.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
+import '../models/lending_admin.dart';
 import '../models/loan_application.dart';
 import '../models/models.dart';
+import '../models/paystack.dart';
+import '../models/support.dart';
 import '../models/thrift.dart';
 import '../models/withdrawal.dart';
 import 'api_client.dart';
+import 'api_exception.dart';
 import 'mappers.dart';
+
+/// Reads one event off a help-and-complaints stream. Null for anything this
+/// build does not know — the opening hello, a heartbeat, a future event.
+SupportEvent? supportEventFrom(ServerEvent e) {
+  Object? data;
+  try {
+    data = jsonDecode(e.data);
+  } catch (_) {
+    return null;
+  }
+  if (data is! Map) return null;
+  final j = data.cast<String, dynamic>();
+  switch (e.event) {
+    case 'message':
+      if (j['message'] is! Map || j['conversation'] is! Map) return null;
+      return SupportMessageEvent(
+        SupportConversation.fromApi((j['conversation'] as Map).cast<String, dynamic>()),
+        SupportMessage.fromApi((j['message'] as Map).cast<String, dynamic>()),
+      );
+    case 'conversation':
+      return SupportConversationEvent(SupportConversation.fromApi(j));
+    case 'typing':
+      final who = '${j['who'] ?? ''}'.toUpperCase();
+      return SupportTypingEvent(
+        '${j['conversationId'] ?? ''}',
+        who == 'STAFF'
+            ? SupportAuthor.staff
+            : who == 'CUSTOMER'
+            ? SupportAuthor.customer
+            : SupportAuthor.system,
+        '${j['name'] ?? ''}',
+      );
+  }
+  return null;
+}
 
 /// Every operation the app performs on the server, named the way the app talks
 /// about them.
@@ -145,9 +187,15 @@ class Kudi9jaApi {
   /// The versions matter as much as the acceptance: the Lending Agreement a
   /// customer agreed to is the one that governs their loans, and "they accepted
   /// something, once" is not a record anyone can act on later.
+  ///
+  /// So does the signature. No account opens without one: a PNG of what the
+  /// customer drew, as a data URL, and the name they typed beside it — which
+  /// the server checks is the name on the account. The time is the server's.
   Future<Session> completeSignup(
     String draftId, {
     required Map<String, String> acceptedVersions,
+    required String signatureImage,
+    required String typedName,
   }) async {
     final body = _asMap(await _client.post(
       '/auth/signup/$draftId/complete',
@@ -156,6 +204,11 @@ class Kudi9jaApi {
         'acceptedVersions': acceptedVersions,
         'accepted': true,
         'device': AppConfig.deviceLabel,
+        'signature': {
+          'image': signatureImage,
+          'typedName': typedName,
+          'signedAt': DateTime.now().toUtc().toIso8601String(),
+        },
       },
     ));
     return _storeSession(body);
@@ -364,6 +417,17 @@ class Kudi9jaApi {
       _asMap(await _client.post('/me/legal/accept',
           body: {'document': document, 'version': version}));
 
+  /// The signature given when the agreements were accepted, with the image —
+  /// the customer's own copy.
+  Future<List<SignatureRecord>> mySignatures() async =>
+      _asList(await _client.get('/me/legal/signatures'))
+          .map(SignatureRecord.fromApi)
+          .toList();
+
+  /// Who at Kudi9ja looks after this customer's loan, lead first.
+  Future<List<MyOfficer>> myOfficers() async =>
+      _asList(await _client.get('/me/officers')).map(MyOfficer.fromApi).toList();
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Wallet and ledger
   // ═══════════════════════════════════════════════════════════════════════════
@@ -439,6 +503,48 @@ class Kudi9jaApi {
       Page.fromApi(
         await _client.get('/payins', query: {'page': page, 'size': size}),
         (j) => claimFromApi(j),
+      );
+
+  // ── Paystack ───────────────────────────────────────────────────────────────
+
+  /// Whether paying in through Paystack is switched on for this deployment.
+  ///
+  /// When it is, it is the way money comes in: the server refuses a receipt
+  /// claim, because a payment Paystack confirms needs nobody to check it.
+  Future<bool> paystackEnabled() async =>
+      _asMap(await _client.get('/payins/paystack/enabled'))['enabled'] == true;
+
+  /// Opens a Paystack checkout. Moves no money — the customer pays on
+  /// Paystack's page, and [confirmPaystack] is what credits anything.
+  Future<PaystackCheckout> startPaystack({
+    required double amount,
+    DepositPurpose purpose = DepositPurpose.wallet,
+    String? loanId,
+    String? callbackUrl,
+  }) async =>
+      PaystackCheckout.fromApi(_asMap(await _client.post(
+        '/payins/paystack',
+        idempotencyKey: newKey(),
+        body: {
+          'amount': amount,
+          'purpose': purpose == DepositPurpose.loanRepayment
+              ? 'LOAN_REPAYMENT'
+              : 'WALLET',
+          if (loanId != null) 'loanId': loanId,
+          if (callbackUrl != null) 'callbackUrl': callbackUrl,
+        },
+      )));
+
+  /// Back from checkout: the server asks Paystack what happened, and credits
+  /// the wallet or the loan — once — if it succeeded. Safe to ask again.
+  Future<PaystackPayment> confirmPaystack(String reference) async =>
+      PaystackPayment.fromApi(_asMap(await _client
+          .get('/payins/paystack/${Uri.encodeComponent(reference)}')));
+
+  Future<Page<PaystackPayment>> paystackPayments({int page = 0, int size = 25}) async =>
+      Page.fromApi(
+        await _client.get('/payins/paystack', query: {'page': page, 'size': size}),
+        PaystackPayment.fromApi,
       );
 
   // ── Money out ──────────────────────────────────────────────────────────────
@@ -597,18 +703,26 @@ class Kudi9jaApi {
   Future<Map<String, dynamic>> quoteLoan({
     required double amount,
     required int months,
+    RepaymentFrequency frequency = RepaymentFrequency.monthly,
   }) async =>
-      _asMap(await _client.get('/loans/quote',
-          query: {'amount': amount, 'months': months}));
+      _asMap(await _client.get('/loans/quote', query: {
+        'amount': amount,
+        'months': months,
+        'frequency': frequency.wire,
+      }));
 
   /// Applies to borrow.
   ///
   /// Four files and a form in one request. Nothing is credited by this call —
   /// an admin reads the statement, the photographs and the guarantor, and
   /// the money arrives only if they approve.
+  ///
+  /// [frequency] has to be chosen: the server refuses an application that
+  /// does not say whether it will be repaid weekly or monthly.
   Future<LoanApplication> applyForLoan({
     required double amount,
     required int months,
+    required RepaymentFrequency frequency,
     required String purpose,
     required String businessName,
     required String businessAddress,
@@ -626,6 +740,7 @@ class Kudi9jaApi {
           'form': {
             'amount': amount,
             'months': months,
+            'repaymentFrequency': frequency.wire,
             'purpose': purpose,
             'businessName': businessName,
             'businessAddress': businessAddress,
@@ -656,18 +771,11 @@ class Kudi9jaApi {
         body: {'amount': amount, 'pin': pin},
       ));
 
-  /// Settles a loan early. Half the interest on the months it never ran is
-  /// given back.
+  /// Settles a loan early, from the wallet. It costs exactly what is still
+  /// owed, interest included — paying early earns no discount.
   Future<Map<String, dynamic>> settleLoan(String id, {required String pin}) async =>
       _asMap(await _client.post(
         '/loans/$id/settle',
-        idempotencyKey: newKey(),
-        body: {'pin': pin},
-      ));
-
-  Future<Map<String, dynamic>> cancelLoan(String id, {required String pin}) async =>
-      _asMap(await _client.post(
-        '/loans/$id/cancel',
         idempotencyKey: newKey(),
         body: {'pin': pin},
       ));
@@ -836,8 +944,101 @@ class Kudi9jaApi {
   Future<Map<String, dynamic>> legalDocument(String kind) async =>
       _asMap(await _client.get('/legal/$kind'));
 
-  Future<List<Map<String, dynamic>>> legalDocuments() async =>
-      _asList(await _client.get('/legal'));
+  /// Every document in force, as the server holds it.
+  ///
+  /// The server answers with a map keyed by document; an older one answered
+  /// with a list. Either is read.
+  Future<List<LegalDocument>> legalDocuments() async {
+    final body = await _client.get('/legal');
+    final rows = body is Map
+        ? body.values.whereType<Map>().map((e) => e.cast<String, dynamic>())
+        : _asList(body);
+    return [
+      for (final row in rows)
+        if (legalDocumentFromApi(row) case final doc?) doc,
+    ];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Help and complaints
+  //
+  // Conversations with the Kudi9ja team. Replies arrive live, down the event
+  // stream; writing is an ordinary request.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// The topics a conversation can be about. The queue sorts by these.
+  Future<List<String>> supportTopics() async {
+    final body = _asMap(await _client.get('/support/topics'));
+    return (body['categories'] as List? ?? const []).map((e) => '$e').toList();
+  }
+
+  Future<List<SupportConversation>> supportConversations() async =>
+      _asList(await _client.get('/support/conversations'))
+          .map(SupportConversation.fromApi)
+          .toList();
+
+  /// How many replies from the team this customer has not read.
+  Future<int> supportUnread() async =>
+      (_asMap(await _client.get('/support/unread'))['unread'] as num?)?.toInt() ?? 0;
+
+  Future<SupportThread> openSupportConversation({
+    required SupportKind kind,
+    required String category,
+    required String subject,
+    required String message,
+  }) async =>
+      SupportThread.fromApi(_asMap(await _client.post('/support/conversations',
+          body: {
+            'kind': kind.wire,
+            'category': category,
+            'subject': subject,
+            'message': message,
+          })));
+
+  /// A conversation and every message in it. Marks it read.
+  Future<SupportThread> supportThread(String id) async =>
+      SupportThread.fromApi(_asMap(await _client.get('/support/conversations/$id')));
+
+  /// Writes in a conversation. Writing in a resolved one reopens it.
+  Future<SupportMessage> sendSupportMessage(String id, String body) async =>
+      SupportMessage.fromApi(_asMap(await _client
+          .post('/support/conversations/$id/messages', body: {'body': body})));
+
+  /// Sends a photo or a document, with an optional message.
+  Future<SupportMessage> sendSupportAttachment(
+    String id, {
+    required List<int> bytes,
+    required String filename,
+    String? contentType,
+    String? body,
+  }) async =>
+      SupportMessage.fromApi(_asMap(await _client.upload(
+        '/support/conversations/$id/attachments',
+        fieldName: 'file',
+        bytes: bytes,
+        filename: filename,
+        contentType: contentType,
+        fields: {if (body != null && body.trim().isNotEmpty) 'body': body.trim()},
+      )));
+
+  /// Marks it sorted.
+  Future<SupportConversation> resolveSupportConversation(String id) async =>
+      SupportConversation.fromApi(
+          _asMap(await _client.post('/support/conversations/$id/resolve')));
+
+  /// Tells the team the customer is typing. Stored nowhere; a failure is not
+  /// worth anybody's attention.
+  Future<void> supportTyping(String id) async {
+    try {
+      await _client.post('/support/conversations/$id/typing');
+    } on ApiException {
+      // A typing hint that did not arrive changes nothing.
+    }
+  }
+
+  /// The live stream for this customer's conversations.
+  Stream<SupportEvent> supportEvents() =>
+      _client.events('/support/stream').map(supportEventFrom).where((e) => e != null).cast();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Plumbing

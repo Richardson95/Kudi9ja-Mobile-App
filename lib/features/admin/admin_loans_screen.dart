@@ -11,6 +11,9 @@ import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 import 'admin_loan_applications_section.dart';
+import 'admin_loan_records_screen.dart';
+import 'admin_new_offline_loan_screen.dart';
+import 'admin_offline_loans_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_shell.dart';
 
@@ -48,8 +51,9 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
     final outstanding = all.fold(0.0, (s, l) => s + l.outstanding);
     final collected = all.fold(0.0, (s, l) => s + l.amountRepaid);
     final fees = all.fold(0.0, (s, l) => s + l.processingFee);
-    final overdueCount =
-        all.where((l) => l.status == LoanStatus.overdue).length;
+    final overdueCount = all
+        .where((l) => l.status == LoanStatus.overdue)
+        .length;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -78,6 +82,41 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
+
+        Row(
+          children: [
+            Expanded(
+              child: GhostButton(
+                label: 'Loans from paper',
+                icon: Icons.description_outlined,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AdminOfflineLoansScreen(),
+                  ),
+                ),
+              ),
+            ),
+            if (app.adminRole.canActOnLoans) ...[
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: GoldButton(
+                  label: 'Enter a loan',
+                  icon: Icons.post_add_rounded,
+                  height: 54,
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AdminNewOfflineLoanScreen(),
+                      ),
+                    );
+                    if (context.mounted) await app.refreshAdminPanel();
+                  },
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
 
         const AdminSectionLabel('LENDING BOOK'),
         Row(
@@ -207,10 +246,9 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
           for (var i = 0; i < loans.length; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: _AdminLoanTile(loan: loans[i])
-                  .animate(delay: (40 * i).ms)
-                  .fadeIn()
-                  .slideY(begin: 0.08),
+              child: _AdminLoanTile(
+                loan: loans[i],
+              ).animate(delay: (40 * i).ms).fadeIn().slideY(begin: 0.08),
             ),
 
         const SizedBox(height: AppSpacing.xl),
@@ -301,43 +339,55 @@ class _WaitingLoansCardState extends State<_WaitingLoansCard> {
           if (_open)
             for (final l in widget.loans) ...[
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l.fullName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          l.email.isEmpty ? l.purpose : l.email,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
+              InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AdminOfflineLoanScreen(importId: l.id),
                   ),
-                  Text(
-                    l.outstanding.asShortNaira,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            l.email.isEmpty ? l.purpose : l.email,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    Text(
+                      l.outstanding.asShortNaira,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppColors.textTertiary,
+                    ),
+                  ],
+                ),
               ),
             ],
         ],
@@ -362,21 +412,24 @@ class _AdminLoanTile extends StatelessWidget {
     // What has come back against what was ever owed. The book row carries no
     // schedule, so this is the progress it can honestly show.
     final owed = loan.amountRepaid + loan.outstanding;
-    final progress = owed <= 0 ? 0.0 : (loan.amountRepaid / owed).clamp(0.0, 1.0);
+    final progress = owed <= 0
+        ? 0.0
+        : (loan.amountRepaid / owed).clamp(0.0, 1.0);
 
     // The borrower's own record, if the panel has loaded them.
-    final borrower =
-        app.customers.where((c) => c.id == loan.customerId).firstOrNull;
+    final borrower = app.customers
+        .where((c) => c.id == loan.customerId)
+        .firstOrNull;
 
     return KCard(
       borderColor: tint.withValues(alpha: 0.28),
       onTap: borrower == null
           ? null
           : () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AdminCustomerDetailScreen(customer: borrower),
-                ),
+              MaterialPageRoute(
+                builder: (_) => AdminCustomerDetailScreen(customer: borrower),
               ),
+            ),
       child: Column(
         children: [
           Row(
@@ -402,7 +455,8 @@ class _AdminLoanTile extends StatelessWidget {
                     Text(
                       '${loan.customerRef} • ${loan.purpose} • '
                       '${loan.principal.asShortNaira} over ${loan.tenureMonths} '
-                      '${loan.tenureMonths == 1 ? 'month' : 'months'}',
+                      '${loan.tenureMonths == 1 ? 'month' : 'months'}, '
+                      '${loan.frequency.adjective}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -461,6 +515,30 @@ class _AdminLoanTile extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation(tint),
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AdminLoanRecordsScreen(
+                        loanId: loan.id,
+                        title: '${loan.customerName} · ${loan.purpose}',
+                        outstanding: loan.outstanding,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.folder_open_rounded, size: 16),
+                  label: Text(
+                    loan.isOpen && app.adminRole.canActOnLoans
+                        ? 'Record repayment · documents'
+                        : 'Documents and records',
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (overdue && app.adminRole.canActOnLoans) ...[
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -478,7 +556,8 @@ class _AdminLoanTile extends StatelessWidget {
                         context,
                         sent
                             ? 'Reminder sent to ${loan.customerName}'
-                            : (app.lastError ?? 'That reminder could not be sent'),
+                            : (app.lastError ??
+                                  'That reminder could not be sent'),
                       );
                     },
                   ),

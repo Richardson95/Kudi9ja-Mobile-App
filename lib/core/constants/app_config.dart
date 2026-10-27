@@ -1,7 +1,7 @@
 /// Product rules for Kudi9ja. Single source of truth for every calculation.
 abstract final class AppConfig {
   static const appName = 'Kudi9ja';
-  static const tagline = 'Pay smart. Pay global.';
+  static const tagline = 'Easy money.';
 
   /// The one email address that is granted owner when it opens an account.
   ///
@@ -48,6 +48,16 @@ abstract final class AppConfig {
     return Uri.parse(apiBaseUrl).resolveUri(target).toString();
   }
 
+  /// Where Paystack sends the customer back to after checkout.
+  ///
+  /// The app never actually lands there: checkout runs inside the app, and
+  /// the moment Paystack heads for this address the app closes the page and
+  /// asks the server what happened. It is the website's own return page so
+  /// that a checkout finished in a browser instead still ends somewhere that
+  /// confirms the payment. The server uses its own configured address if it
+  /// has one, and the app recognises the return either way.
+  static const paystackCallbackUrl = 'https://www.kudi9ja.com/app/wallet/paystack';
+
   /// How the server labels this session in the customer's device list, so a
   /// stolen session can be recognised and signed out from the security screen.
   static const deviceLabel = 'Kudi9ja mobile';
@@ -81,10 +91,6 @@ abstract final class AppConfig {
   /// The month boundaries those three rates switch at.
   static const targetTierMedium = 6;
   static const targetTierLong = 12;
-
-  /// Half the interest on the months a loan never ran is given back when a
-  /// borrower settles early. 0.5 is that half.
-  static const earlyPayoffRebateShare = 0.5;
 
   /// Target Savings must run for at least this long.
   static const minTargetMonths = 3;
@@ -148,15 +154,23 @@ abstract final class AppConfig {
   /// Processing fee, also called the management fee: a flat
   /// [flatProcessingFee] on every loan from [minLoanAmount] up to and
   /// including [processingFeeThreshold]. The moment a loan goes past that —
-  /// ₦500,001 counts — the fee becomes [loanProcessingFeeRate] of the **whole
+  /// ₦250,001 counts — the fee becomes [loanProcessingFeeRate] of the **whole
   /// principal**, not of the excess over the threshold.
   ///
-  /// The two rules meet exactly at the threshold — 1% of ₦500,000 is ₦5,000 —
+  /// The two rules meet exactly at the threshold — 2% of ₦250,000 is ₦5,000 —
   /// so the fee curve is continuous and never jumps. It is always deducted
   /// from the disbursement, never added to what is owed.
   static const flatProcessingFee = 5000.0;
-  static const processingFeeThreshold = 500000.0;
-  static const loanProcessingFeeRate = 0.01;
+  static const processingFeeThreshold = 250000.0;
+  static const loanProcessingFeeRate = 0.02;
+
+  /// The transaction fee on every repayment, as a fraction of the instalment.
+  ///
+  /// It pays for what the payment provider charges to move the money, so it
+  /// rides on each instalment — weekly or monthly — rounded up to the naira,
+  /// rather than coming off the payout. Nothing but the management fee is
+  /// taken from what a borrower receives.
+  static const loanRepaymentFeeRate = 0.02;
 
   // Security ---------------------------------------------------------------
   /// Code lengths are deliberately **not** tunable. Every passcode and PIN
@@ -168,7 +182,12 @@ abstract final class AppConfig {
   static const maxPasscodeAttempts = 5;
 
   /// Idle minutes before the app demands the passcode again.
-  static const lockTimeoutMinutes = 2;
+  ///
+  /// Ten is the floor the server enforces: an admin can raise it, never lower
+  /// it, because a lock that fires mid-application loses a customer their
+  /// place for no gain in safety.
+  static const lockTimeoutMinutes = 10;
+  static const minLockTimeoutMinutes = 10;
 
   // Pay-in, payout and thrift ----------------------------------------------
   /// The smallest pay-in we will match against the bank statement, and the

@@ -22,6 +22,7 @@ library;
 
 import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
+import '../legal/legal_models.dart';
 import '../models/admin.dart';
 import '../models/app_notification.dart';
 import '../models/deposit.dart';
@@ -233,8 +234,16 @@ List<SavingsPlan> plansFromApi(Object? value) =>
 /// approved, so neither exists yet. Both fall back to the request date rather
 /// than to now, so a loan requested last week does not appear to have been
 /// disbursed today while it sits in the queue.
+///
+/// The server's own figures and schedule ride along in [LoanFigures], and the
+/// loan reads them in preference to working anything out: weekly counts,
+/// whole-naira rounding and the transaction fee on each instalment are the
+/// server's arithmetic, and a phone that redoes it is a phone that can
+/// disagree by a naira.
 Loan loanFromApi(Map<String, dynamic> j) {
   final requested = _date(j['requestedAt']);
+  final schedule = _list(j['schedule']).map(installmentFromApi).toList();
+  final count = _int(j['installmentCount']);
   return Loan(
     id: _str(j['id']),
     principal: _money(j['principal']),
@@ -246,8 +255,51 @@ Loan loanFromApi(Map<String, dynamic> j) {
     dueDate: _date(j['dueDate'], requested),
     amountRepaid: _money(j['amountRepaid']),
     status: _enum(j['status'], LoanStatus.values, LoanStatus.pending),
+    frequency: RepaymentFrequency.fromWire(j['repaymentFrequency']),
+    installmentCount:
+        count > 0 ? count : (schedule.isEmpty ? null : schedule.length),
+    repaymentFeeRate: _money(j['repaymentFeeRate']),
+    transactionFee: _money(j['transactionFee']),
+    // Whole naira on every loan priced with the transaction fee; the rest
+    // were split to the kobo.
+    wholeNaira: _money(j['repaymentFeeRate']) > 0,
+    figures: j.containsKey('totalRepayable')
+        ? LoanFigures(
+            totalInterest: _money(j['totalInterest']),
+            totalRepayable: _money(j['totalRepayable']),
+            outstanding: _money(j['outstanding']),
+            installmentAmount:
+                _money(j['installmentAmount'] ?? j['monthlyRepayment']),
+            installmentBase:
+                _money(j['installmentBase'] ?? j['installmentAmount']),
+            installmentFee: _money(j['installmentFee']),
+            totalRepaymentFees: _money(j['totalRepaymentFees']),
+            loanAndInterest:
+                _money(j['loanAndInterest'] ?? j['totalRepayable']),
+            netDisbursed: _money(j['netDisbursed']),
+            // Paying off early costs exactly what is outstanding. Whatever
+            // the server sends wins.
+            settlementAmount:
+                _money(j['earlySettlementAmount'] ?? j['outstanding']),
+            repaymentProgress: _money(j['repaymentProgress']),
+            rebateGranted: _money(j['rebateGranted']),
+            decisionReasons: _str(j['decisionReasons']),
+            schedule: schedule,
+          )
+        : null,
   );
 }
+
+/// One row of a loan's schedule, as the server derives it.
+Installment installmentFromApi(Map<String, dynamic> j) => Installment(
+      number: _int(j['number']),
+      dueDate: _date(j['dueDate']),
+      amount: _money(j['amount']),
+      amountPaid: _money(j['amountPaid']),
+      fee: _money(j['fee']),
+      status: _enum(
+          j['status'], InstallmentStatus.values, InstallmentStatus.upcoming),
+    );
 
 List<Loan> loansFromApi(Object? value) => _list(value).map(loanFromApi).toList();
 
@@ -257,25 +309,52 @@ List<Loan> loansFromApi(Object? value) => _list(value).map(loanFromApi).toList()
 /// can be made at all — identity verified, account not frozen, lending open
 /// — and the smallest and largest loan the company writes. Everything
 /// between is the customer's to ask for and a person's to decide.
+///
+/// It also says what this customer borrows **on**. A member of a loan group
+/// is priced on the group's terms — their own rate card, fees and limits —
+/// and quoting them the standard terms is quoting a price they will not be
+/// charged.
 class LoanEligibility {
   const LoanEligibility({
     required this.eligible,
     required this.minAmount,
     required this.maxAmount,
     this.reason = '',
+    this.minMonths = 1,
+    this.maxMonths = 0,
+    this.groupPricing = false,
+    this.terms,
   });
 
   final bool eligible;
   final double minAmount;
   final double maxAmount;
   final String reason;
+  final int minMonths;
+  final int maxMonths;
 
-  static LoanEligibility fromApi(Map<String, dynamic> j) => LoanEligibility(
-        eligible: _bool(j['eligible'], true),
-        minAmount: _money(j['minAmount']),
-        maxAmount: _money(j['maxAmount']),
-        reason: _str(j['reason']),
-      );
+  /// True when this customer borrows on the loan-group terms.
+  final bool groupPricing;
+
+  /// Everything that prices this customer's loan, standard or group. Null
+  /// from a server that predates group pricing.
+  final LendingTerms? terms;
+
+  static LoanEligibility fromApi(Map<String, dynamic> j) {
+    final group = _bool(j['groupPricing']);
+    return LoanEligibility(
+      eligible: _bool(j['eligible'], true),
+      minAmount: _money(j['minAmount']),
+      maxAmount: _money(j['maxAmount']),
+      reason: _str(j['reason']),
+      minMonths: _int(j['minMonths'], 1),
+      maxMonths: _int(j['maxMonths']),
+      groupPricing: group,
+      terms: j['terms'] is Map
+          ? LendingTerms.fromApi(_obj(j['terms']), group: group)
+          : null,
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -330,6 +409,11 @@ WithdrawalRequest withdrawalFromApi(Map<String, dynamic> j,
       reviewedAt: _dateOrNull(j['reviewedAt']),
       reviewedBy: _str(j['reviewedBy']),
       note: _str(j['note']),
+      payoutStatus: _str(j['payoutStatus']),
+      payoutFailure: _str(j['payoutFailure']),
+      paidOutAt: _dateOrNull(j['paidOutAt']),
+      payoutProvider: _str(j['payoutProvider']),
+      payoutReference: _str(j['payoutReference']),
     );
 
 List<WithdrawalRequest> withdrawalsFromApi(Object? value,
@@ -493,6 +577,8 @@ CustomerRecord customerRowFromApi(Map<String, dynamic> j) => CustomerRecord(
       loansCount: 0,
       verified: _str(j['kycTier']) != 'TIER0',
       frozen: _str(j['accountStatus']) == 'FROZEN',
+      accountStatus: _str(j['accountStatus']),
+      accountStatusLabel: _str(j['accountStatusLabel']),
     );
 
 /// The book-wide totals behind the panel's front page.
@@ -515,6 +601,13 @@ PlatformBook platformBookFromApi(Map<String, dynamic> j) {
     activeLoans: _int(book['activeLoans']),
     overdueLoans: _int(book['overdueLoans']),
     repaidLoans: _int(book['repaidLoans']),
+    outstanding: _money(book['totalOutstanding']),
+    loansBehind: _int(book['loansBehind'], _int(book['overdueLoans'])),
+    totalRepaid: _money(book['totalRepaid']),
+    repayments: _int(book['repayments']),
+    repaidThisMonth: _money(book['repaidThisMonth']),
+    newThisWeek: _int(people['newThisWeek']),
+    frozenCustomers: _int(people['frozenCustomers']),
   );
 }
 
@@ -550,6 +643,7 @@ BookLoan bookLoanFromApi(Map<String, dynamic> j) => BookLoan(
       disbursedAt: _dateOrNull(j['disbursedAt']),
       dueDate: _dateOrNull(j['dueDate']),
       daysOverdue: _int(j['daysOverdue']),
+      frequency: RepaymentFrequency.fromWire(j['repaymentFrequency']),
     );
 
 /// The full customer record behind one row.
@@ -579,6 +673,8 @@ CustomerRecord customerDetailFromApi(Map<String, dynamic> j) {
     dateOfBirth: _dateOrNull(j['dateOfBirth']),
     verified: _str(j['kycTier']) != 'TIER0',
     frozen: _str(j['accountStatus']) == 'FROZEN',
+    accountStatus: _str(j['accountStatus']),
+    accountStatusLabel: _str(j['accountStatusLabel']),
   );
 }
 
@@ -648,6 +744,8 @@ LoanApplication loanApplicationFromApi(Map<String, dynamic> j) => LoanApplicatio
               (j['selfie'] as Map).cast<String, dynamic>()),
       businessPhotos:
           _list(j['businessPhotos']).map(applicationDocumentFromApi).toList(),
+      repaymentFrequency: RepaymentFrequency.fromWire(j['repaymentFrequency']),
+      groupPricing: _bool(j['groupPricing']),
     );
 
 Guarantor guarantorFromApi(Map<String, dynamic> j) => Guarantor(
@@ -698,3 +796,72 @@ AuditEntry auditRowFromApi(Map<String, dynamic> j) => AuditEntry(
       date: _date(j['date']),
       category: _enum(j['category'], AuditCategory.values, AuditCategory.general),
     );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Legal documents
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Reads a document from `GET /legal/{kind}` into the shape the reader draws.
+///
+/// The server holds the binding wording and decides which version is in
+/// force. A copy bundled into the app goes stale the day a new version takes
+/// effect — and then a customer is shown one wording and asked to accept a
+/// version number the server refuses. Null when the body cannot be read, so
+/// the bundled copy is shown instead of a blank page.
+LegalDocument? legalDocumentFromApi(Map<String, dynamic> j) {
+  final body = j['body'];
+  final rawSections = body is List
+      ? body
+      : body is Map
+          ? (body['sections'] as List? ?? const [])
+          : (j['sections'] as List? ?? const []);
+  final sections = <LegalSection>[];
+  for (final section in _list(rawSections)) {
+    final blocks = <LegalBlock>[];
+    for (final b in _list(section['blocks'])) {
+      final block = _legalBlock(b);
+      if (block != null) blocks.add(block);
+    }
+    sections.add(LegalSection(_str(section['title']), blocks));
+  }
+  final id = _str(j['kind'], _str(j['id'])).toLowerCase();
+  if (sections.isEmpty || id.isEmpty) return null;
+  return LegalDocument(
+    id: id,
+    title: _str(j['title']),
+    shortTitle: _str(j['shortTitle'], _str(j['title'])),
+    summary: _str(j['summary']),
+    version: _str(j['version']),
+    effective: _date(j['effectiveFrom'] ?? j['effective']),
+    readMinutes: _int(j['readMinutes'], 5),
+    sections: sections,
+  );
+}
+
+LegalBlock? _legalBlock(Map<String, dynamic> b) {
+  switch (_str(b['type'])) {
+    case 'text':
+      return LegalText(_str(b['text']));
+    case 'list':
+      return LegalList(
+        (b['items'] as List? ?? const []).map((e) => '$e').toList(),
+        ordered: _bool(b['ordered']),
+      );
+    case 'definitions':
+      return LegalDefs([
+        for (final e in _list(b['entries']))
+          (_str(e['term']), _str(e['meaning'])),
+      ]);
+    case 'note':
+      return LegalNote(
+        _str(b['text']),
+        title: b['title'] as String?,
+        tone: _enum(b['tone'], LegalTone.values, LegalTone.neutral),
+      );
+    case 'example':
+      return LegalExample(_str(b['title']), [
+        for (final r in _list(b['rows'])) (_str(r['label']), _str(r['value'])),
+      ]);
+  }
+  return null;
+}

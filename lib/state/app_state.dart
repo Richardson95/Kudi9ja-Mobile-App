@@ -12,8 +12,11 @@ import '../data/models/admin.dart';
 import '../data/models/app_review.dart';
 import '../data/models/app_notification.dart';
 import '../data/models/deposit.dart';
+import '../data/models/lending_admin.dart';
 import '../data/models/loan_application.dart';
 import '../data/models/models.dart';
+import '../data/models/paystack.dart';
+import '../data/models/support.dart';
 import '../data/models/thrift.dart';
 import '../data/models/withdrawal.dart';
 import '../data/services/push_service.dart';
@@ -518,14 +521,21 @@ class AppState extends ChangeNotifier {
   /// The customer lands **unlocked** rather than locked. They have just typed
   /// their passcode twice while setting it; asking for it a third time, ten
   /// seconds later, reads as the app not having noticed.
+  ///
+  /// The signature goes with it: no account opens without one, and the server
+  /// keeps it beside the versions accepted as the record of the agreement.
   Future<void> completeSignupFromDraft(
     Kudi9jaApi api,
     String draftId, {
     required Map<String, String> acceptedVersions,
+    required String signatureImage,
+    required String typedName,
   }) async {
     final session = await api.completeSignup(
       draftId,
       acceptedVersions: acceptedVersions,
+      signatureImage: signatureImage,
+      typedName: typedName,
     );
 
     _user = session.user;
@@ -551,6 +561,13 @@ class AppState extends ChangeNotifier {
     unawaited(_push?.start());
   }
 
+  /// Why the last sign-in was refused, when the server said. Lets the sign-in
+  /// screen tell a wrong password from an account the team opened that its
+  /// customer has not activated yet — which is answered by signing up, not by
+  /// trying another password.
+  ApiErrorCode? _lastSignInRefusal;
+  ApiErrorCode? get lastSignInRefusal => _lastSignInRefusal;
+
   /// Email + password sign-in used when returning from a signed-out state.
   ///
   /// Online this is the server's decision, and it is the only one that counts:
@@ -558,6 +575,7 @@ class AppState extends ChangeNotifier {
   /// checking a local copy would let a stolen phone in with a password the
   /// account no longer has.
   Future<bool> signInWithPassword(String email, String password) async {
+    _lastSignInRefusal = null;
     final api = _api;
     if (api != null) {
       try {
@@ -579,6 +597,7 @@ class AppState extends ChangeNotifier {
         return true;
       } on ApiException catch (e) {
         _lastError = e.message;
+        _lastSignInRefusal = e.code;
         notifyListeners();
         return false;
       }
@@ -730,6 +749,110 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     unawaited(refreshReviews());
+    unawaited(refreshExtras());
+  }
+
+  // ── What prices a loan, and the documents that bind it ──────────────────
+
+  /// Whether this customer may apply, the range, and the terms they borrow
+  /// on. Null until the server has answered.
+  LoanEligibility? _eligibility;
+  LoanEligibility? get eligibility => _eligibility;
+
+  /// The terms this customer's loans are priced on: the loan-group terms for
+  /// a member of a group, the standard ones for everybody else.
+  ///
+  /// Read from the eligibility answer, which knows who is asking. The public
+  /// settings only know the two sets exist.
+  LendingTerms get lendingTerms => _eligibility?.terms ?? settings.lending;
+
+  /// True when this customer borrows on the loan-group terms.
+  bool get groupPricing => _eligibility?.groupPricing ?? false;
+
+  /// Who at Kudi9ja looks after this customer's loan, lead first.
+  List<MyOfficer> _officers = [];
+  List<MyOfficer> get officers => List.unmodifiable(_officers);
+
+  /// Whether paying in through Paystack is switched on. Null until known.
+  bool? _paystackEnabled;
+  bool? get paystackEnabled => _paystackEnabled;
+
+  /// This customer's own withdrawals, newest first, with where each payout
+  /// has got to. Kept apart from the panel's queue, which is everybody's.
+  List<WithdrawalRequest> _myWithdrawals = [];
+  List<WithdrawalRequest> get myWithdrawals => List.unmodifiable(_myWithdrawals);
+
+  /// Reads the live rates, the binding documents and the rest of what the
+  /// customer's screens price and promise from.
+  ///
+  /// Kept out of [refreshFromServer]'s single wait on purpose, and each read
+  /// on its own: a settings endpoint having a bad minute must not cost the
+  /// customer their balance, and none of these must cost each other.
+  /// Never throws.
+  Future<void> refreshExtras() async {
+    final api = _api;
+    if (api == null || _stage == AuthStage.signedOut) return;
+
+    Future<void> quietly(Future<void> Function() read) async {
+      try {
+        await read();
+      } on ApiException {
+        // What was there stays. Each of these is a refinement, not the page.
+      } catch (_) {
+        // Same.
+      }
+    }
+
+    await Future.wait([
+      quietly(() async {
+        final live = PlatformSettings.fromPublicApi(await api.publicSettings());
+        applySettings(live);
+        if (live.version != null) _settingsVersion = live.version!;
+        await _store.savePlatformSettings(live);
+      }),
+      quietly(() async => _eligibility = await api.eligibility()),
+      quietly(() async => _officers = await api.myOfficers()),
+      quietly(() async => _paystackEnabled = await api.paystackEnabled()),
+      quietly(() async => _myWithdrawals = (await api.withdrawals(size: 25)).items),
+      quietly(() async => _supportUnread = await api.supportUnread()),
+      quietly(() async {
+        final docs = await api.legalDocuments();
+        if (docs.isNotEmpty) useServerLegalDocuments(docs);
+      }),
+    ]);
+    notifyListeners();
+  }
+
+  /// Reads the documents in force before a screen that asks for acceptance
+  /// of them, so the versions it sends are the ones the server holds.
+  /// Signed-out callers included: sign-up is where this matters most.
+  Future<void> loadLegalDocuments() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final docs = await api.legalDocuments();
+      if (docs.isNotEmpty) {
+        useServerLegalDocuments(docs);
+        notifyListeners();
+      }
+    } on ApiException {
+      // The bundled copies stand in.
+    }
+  }
+
+  /// Reads the live rates without a session — before sign-in, so the
+  /// calculators on the welcome screens quote today's prices.
+  Future<void> loadPublicSettings() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final live = PlatformSettings.fromPublicApi(await api.publicSettings());
+      applySettings(live);
+      await _store.savePlatformSettings(live);
+      notifyListeners();
+    } on ApiException {
+      // The last settings this device saw stand in.
+    }
   }
 
   /// Re-reads the reviews section. Never throws, and touches nothing else.
@@ -915,6 +1038,9 @@ class AppState extends ChangeNotifier {
   void handlePush() {
     if (_stage == AuthStage.signedOut) return;
     unawaited(refreshFromServer());
+    // A reply from the team arrives as a push too; the list and the badge
+    // follow it even when the stream is not open.
+    unawaited(refreshSupport());
   }
 
   // ── The admin panel ─────────────────────────────────────────────────────
@@ -1002,6 +1128,12 @@ class AppState extends ChangeNotifier {
             'Loans waiting to be claimed',
             () async => _waitingLoans = await admin.waitingLoans(),
             failures),
+        _loadIntoPanel(
+            'Help and complaints',
+            () async => _supportSummary = await admin.supportSummary(),
+            failures),
+        // The rates the controls screen edits, as the server holds them now.
+        loadPublicSettings(),
       ]);
     }
 
@@ -1311,6 +1443,8 @@ class AppState extends ChangeNotifier {
 
   /// Called whenever the app leaves the foreground.
   void lock() {
+    // Nothing is pushed to a locked screen.
+    stopSupportLive();
     if (_stage == AuthStage.unlocked) {
       _stage = AuthStage.locked;
       notifyListeners();
@@ -1324,6 +1458,12 @@ class AppState extends ChangeNotifier {
     // session that owns it. Only this handset: signing out on one phone must
     // not silence the customer's other devices.
     await _push?.stop();
+    stopSupportLive();
+    _openThread = null;
+    _supportConversations = [];
+    _supportUnread = 0;
+    _eligibility = null;
+    _officers = [];
 
     // Told to the server first, so the session is ended there too — but the
     // local clear happens either way. A customer signing out on a phone they
@@ -1573,6 +1713,7 @@ class AppState extends ChangeNotifier {
         accountNumber: accountNumber,
       );
       _withdrawals = [request, ..._withdrawals];
+      _myWithdrawals = [request, ..._myWithdrawals];
       await _store.saveWithdrawals(_withdrawals);
       // The wallet was debited server-side; read back what it says rather than
       // subtracting here, so the figure on screen is the one the ledger holds.
@@ -2078,6 +2219,7 @@ class AppState extends ChangeNotifier {
   Future<LoanApplication> submitLoanApplication({
     required double principal,
     required int months,
+    RepaymentFrequency frequency = RepaymentFrequency.monthly,
     required String purpose,
     required String businessName,
     required String businessAddress,
@@ -2094,6 +2236,7 @@ class AppState extends ChangeNotifier {
       final application = await api.applyForLoan(
         amount: principal,
         months: months,
+        frequency: frequency,
         purpose: purpose,
         businessName: businessName,
         businessAddress: businessAddress,
@@ -2120,6 +2263,7 @@ class AppState extends ChangeNotifier {
       id: _uuid.v4(),
       amount: principal,
       tenureMonths: months,
+      repaymentFrequency: frequency,
       purpose: purpose,
       status: LoanApplicationStatus.pending,
       submittedAt: DateTime.now(),
@@ -2256,6 +2400,7 @@ class AppState extends ChangeNotifier {
     final loan = await _disburseLocally(
       principal: approved.amount,
       months: approved.tenureMonths,
+      frequency: approved.repaymentFrequency,
       purpose: approved.purpose,
     );
     _adminApplications = [
@@ -2294,19 +2439,28 @@ class AppState extends ChangeNotifier {
   Future<Loan> _disburseLocally({
     required double principal,
     required int months,
+    RepaymentFrequency frequency = RepaymentFrequency.monthly,
     required String purpose,
   }) async {
     final now = DateTime.now();
-    final fee = Finance.processingFee(principal);
+    final terms = settings.lending;
+    final fee = Finance.processingFee(principal, terms);
+    final count = frequency.installments(months, now);
     final loan = Loan(
       id: _uuid.v4(),
       principal: principal,
       tenureMonths: months,
-      flatRate: settings.loanRateFor(months),
+      flatRate: terms.rateFor(months),
       processingFee: fee,
       purpose: purpose,
       disbursedAt: now,
-      dueDate: Finance.addMonths(now, months),
+      dueDate: frequency.due(now, count),
+      frequency: frequency,
+      installmentCount: count,
+      // Priced as the server prices a loan today: whole naira, with the
+      // transaction fee on every instalment.
+      repaymentFeeRate: terms.repaymentFeeRate,
+      wholeNaira: true,
     );
 
     _loans.insert(0, loan);
@@ -2672,7 +2826,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Clears a loan ahead of schedule and books the interest rebate.
+  /// Clears a loan ahead of schedule, from the wallet.
+  ///
+  /// It costs exactly what is still owed. Paying early once earned back part
+  /// of the interest; it no longer does, and `rebate` is only ever non-zero
+  /// for a server that still grants one.
   Future<({double paid, double rebate})> payOffEarly(
     String loanId, {
     String? pin,
@@ -2697,8 +2855,7 @@ class AppState extends ChangeNotifier {
     if (i < 0) return (paid: 0.0, rebate: 0.0);
 
     final l = _loans[i];
-    final rebate = Finance.earlyPayoffRebate(l);
-    final due = l.outstanding - rebate;
+    final due = l.outstanding;
 
     _loans[i] = l.copyWith(
       amountRepaid: l.totalRepayable,
@@ -2709,14 +2866,362 @@ class AppState extends ChangeNotifier {
     await _notify(
       NotifyKind.repaymentPaid,
       'Loan settled early',
-      'You cleared your ${l.purpose} loan and saved ${rebate.toStringAsFixed(0)} in interest.',
-      amount: rebate,
+      'You cleared your ${l.purpose} loan.',
+      amount: due,
     );
     notifyListeners();
-    return (paid: due, rebate: rebate);
+    return (paid: due, rebate: 0.0);
+  }
+
+  // ── Paystack ────────────────────────────────────────────────────────────
+
+  /// Opens a Paystack checkout for money into the wallet, or onto a loan.
+  ///
+  /// Moves nothing. The customer pays on Paystack's own page, and
+  /// [confirmPaystack] is what asks the server — which asks Paystack — whether
+  /// the money arrived.
+  Future<PaystackCheckout> startPaystack({
+    required double amount,
+    DepositPurpose purpose = DepositPurpose.wallet,
+    String? loanId,
+  }) async {
+    final api = _api;
+    if (api == null) {
+      throw ApiException(
+        code: ApiErrorCode.featureDisabled,
+        message: 'Paying in needs a connection to Kudi9ja.',
+      );
+    }
+    return api.startPaystack(
+      amount: amount,
+      purpose: purpose,
+      loanId: purpose == DepositPurpose.loanRepayment ? loanId : null,
+      callbackUrl: AppConfig.paystackCallbackUrl,
+    );
+  }
+
+  /// Back from checkout. Credits once if Paystack says it succeeded, and
+  /// brings the wallet and loans up to date when it has.
+  Future<PaystackPayment> confirmPaystack(String reference) async {
+    final api = _api;
+    if (api == null) {
+      throw ApiException(
+        code: ApiErrorCode.network,
+        message: 'We could not reach Kudi9ja to confirm the payment.',
+      );
+    }
+    final payment = await api.confirmPaystack(reference);
+    if (payment.credited) await _reloadLoansAndWallet();
+    return payment;
+  }
+
+  // ── Help and complaints ─────────────────────────────────────────────────
+
+  List<SupportConversation> _supportConversations = [];
+  List<SupportConversation> get supportConversations =>
+      List.unmodifiable(_supportConversations);
+
+  /// Replies from the team this customer has not read yet.
+  int _supportUnread = 0;
+  int get supportUnread => _supportUnread;
+
+  /// The thread open on screen, kept current by the live stream.
+  SupportThread? _openThread;
+  SupportThread? get openThread => _openThread;
+
+  /// Who is typing in which conversation, until when.
+  final Map<String, ({String name, DateTime until})> _typing = {};
+
+  /// The name of whoever is typing in [conversationId] right now, if anyone.
+  String? typingIn(String conversationId) {
+    final t = _typing[conversationId];
+    return t != null && t.until.isAfter(DateTime.now()) ? t.name : null;
+  }
+
+  StreamSubscription<SupportEvent>? _supportLive;
+
+  /// How many screens want the stream open. A thread opened from the list is
+  /// two holders; the stream closes when the last one leaves.
+  int _supportLiveHolders = 0;
+  bool get _supportLiveWanted => _supportLiveHolders > 0;
+  Duration _supportRetry = const Duration(seconds: 2);
+
+  /// Holds the event stream open while a help screen is showing, so replies
+  /// arrive the moment they are written. Reconnects with a growing pause if
+  /// it drops, and catches up on anything missed when it does. Every call is
+  /// matched by one to [releaseSupportLive].
+  void holdSupportLive({bool staff = false}) {
+    _supportLiveHolders++;
+    startSupportLive(staff: staff);
+  }
+
+  void releaseSupportLive() {
+    if (_supportLiveHolders > 0) _supportLiveHolders--;
+    if (_supportLiveHolders == 0) {
+      unawaited(_supportLive?.cancel());
+      _supportLive = null;
+    }
+  }
+
+  void startSupportLive({bool staff = false}) {
+    if (!_supportLiveWanted || _supportLive != null) return;
+    final events = staff ? _admin?.supportEvents() : _api?.supportEvents();
+    if (events == null) return;
+    _supportLive = events.listen(
+      (e) {
+        _supportRetry = const Duration(seconds: 2);
+        _applySupportEvent(e, staff: staff);
+      },
+      onError: (_) => _supportStreamEnded(staff),
+      onDone: () => _supportStreamEnded(staff),
+      cancelOnError: true,
+    );
+  }
+
+  /// Closes the stream outright — on lock and sign-out — whoever holds it.
+  void stopSupportLive() {
+    _supportLiveHolders = 0;
+    unawaited(_supportLive?.cancel());
+    _supportLive = null;
+  }
+
+  void _supportStreamEnded(bool staff) {
+    _supportLive = null;
+    if (!_supportLiveWanted || _stage != AuthStage.unlocked) return;
+    final pause = _supportRetry;
+    _supportRetry = Duration(
+        seconds: (_supportRetry.inSeconds * 2).clamp(2, 30));
+    Future<void>.delayed(pause, () async {
+      if (!_supportLiveWanted) return;
+      // Whatever was said while the stream was down.
+      if (staff) {
+        _supportStaffChanged++;
+        notifyListeners();
+      } else {
+        await refreshSupport();
+      }
+      final open = _openThread;
+      if (open != null) unawaited(loadSupportThread(open.conversation.id, staff: staff));
+      startSupportLive(staff: staff);
+    });
+  }
+
+  /// Bumped whenever the staff queue changed underneath the panel, so the
+  /// queue screen knows to read it again.
+  int _supportStaffChanged = 0;
+  int get supportStaffChanged => _supportStaffChanged;
+
+  void _applySupportEvent(SupportEvent e, {required bool staff}) {
+    switch (e) {
+      case SupportTypingEvent():
+        _typing[e.conversationId] = (
+          name: e.name.isEmpty ? 'Someone' : e.name,
+          until: DateTime.now().add(const Duration(milliseconds: 4500)),
+        );
+        notifyListeners();
+        // Draw the indicator away again once it has run out.
+        Future<void>.delayed(const Duration(milliseconds: 4600), notifyListeners);
+        return;
+      case SupportMessageEvent():
+        _typing.remove(e.conversation.id);
+        final open = _openThread;
+        if (open != null && open.conversation.id == e.conversation.id) {
+          _openThread = open.withMessage(e.message, e.conversation);
+        }
+        _upsertConversation(e.conversation);
+      case SupportConversationEvent():
+        final open = _openThread;
+        if (open != null && open.conversation.id == e.conversation.id) {
+          _openThread = SupportThread(conversation: e.conversation, messages: open.messages);
+        }
+        _upsertConversation(e.conversation);
+    }
+    if (staff) {
+      _supportStaffChanged++;
+    } else {
+      _supportUnread = _supportConversations.fold(0, (sum, c) => sum + c.unread);
+    }
+    notifyListeners();
+  }
+
+  void _upsertConversation(SupportConversation c) {
+    _supportConversations = [
+      c,
+      ..._supportConversations.where((o) => o.id != c.id),
+    ]..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+  }
+
+  /// Re-reads this customer's conversations. Never throws.
+  Future<void> refreshSupport() async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      _supportConversations = await api.supportConversations();
+      _supportUnread = _supportConversations.fold(0, (sum, c) => sum + c.unread);
+      notifyListeners();
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+    }
+  }
+
+  /// Opens a thread on screen and marks it read. Null if it could not be read.
+  Future<SupportThread?> loadSupportThread(String id, {bool staff = false}) async {
+    try {
+      final thread = staff
+          ? await _admin?.supportThread(id)
+          : await _api?.supportThread(id);
+      if (thread == null) return null;
+      _openThread = thread;
+      if (!staff) {
+        _upsertConversation(thread.conversation);
+        _supportUnread = _supportConversations.fold(0, (sum, c) => sum + c.unread);
+      }
+      notifyListeners();
+      return thread;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  void closeSupportThread() => _openThread = null;
+
+  /// Starts a conversation. Returns the thread, or throws with the server's
+  /// reason.
+  Future<SupportThread> openSupportConversation({
+    required SupportKind kind,
+    required String category,
+    required String subject,
+    required String message,
+  }) async {
+    final api = _api;
+    if (api == null) {
+      throw ApiException(
+        code: ApiErrorCode.network,
+        message: 'Help and complaints needs a connection to Kudi9ja.',
+      );
+    }
+    final thread = await api.openSupportConversation(
+      kind: kind,
+      category: category,
+      subject: subject,
+      message: message,
+    );
+    _openThread = thread;
+    _upsertConversation(thread.conversation);
+    notifyListeners();
+    return thread;
+  }
+
+  /// Writes in the open conversation — text, a file, or both. Returns null,
+  /// or what to tell the person writing.
+  Future<String?> sendSupportMessage(
+    String conversationId, {
+    String body = '',
+    List<int>? fileBytes,
+    String? filename,
+    String? contentType,
+    bool staff = false,
+  }) async {
+    try {
+      SupportMessage? message;
+      if (fileBytes != null && filename != null) {
+        message = staff
+            ? await _admin?.supportAttach(conversationId,
+                bytes: fileBytes, filename: filename, contentType: contentType, body: body)
+            : await _api?.sendSupportAttachment(conversationId,
+                bytes: fileBytes, filename: filename, contentType: contentType, body: body);
+      } else {
+        message = staff
+            ? await _admin?.supportReply(conversationId, body)
+            : await _api?.sendSupportMessage(conversationId, body);
+      }
+      if (message == null) return 'You are offline. Try again when connected.';
+      final open = _openThread;
+      if (open != null && open.conversation.id == conversationId) {
+        _openThread = open.withMessage(message);
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// Says the person is typing. Throttled by the caller; never throws.
+  void supportTyping(String conversationId, {bool staff = false}) {
+    if (staff) {
+      unawaited(_admin?.supportTyping(conversationId));
+    } else {
+      unawaited(_api?.supportTyping(conversationId));
+    }
+  }
+
+  /// Marks a conversation sorted, from the customer's side.
+  Future<String?> resolveSupportConversation(String id) async {
+    final api = _api;
+    if (api == null) return 'You are offline. Try again when connected.';
+    try {
+      final c = await api.resolveSupportConversation(id);
+      _upsertConversation(c);
+      final open = _openThread;
+      if (open != null && open.conversation.id == id) {
+        _openThread = SupportThread(conversation: c, messages: open.messages);
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// Replaces the open thread's conversation after the team acted on it.
+  void applySupportConversation(SupportConversation c) {
+    final open = _openThread;
+    if (open != null && open.conversation.id == c.id) {
+      _openThread = SupportThread(conversation: c, messages: open.messages);
+    }
+    _supportStaffChanged++;
+    notifyListeners();
+  }
+
+  /// Fetches a file from a conversation or a loan with this session.
+  Future<DownloadedFile> download(String url) {
+    final api = _api;
+    if (api == null) {
+      throw ApiException(
+        code: ApiErrorCode.network,
+        message: 'Opening a file needs a connection to Kudi9ja.',
+      );
+    }
+    return api.client.download(url);
+  }
+
+  // ── Signed agreements ───────────────────────────────────────────────────
+
+  /// The signatures this customer gave, with the image — their own copy.
+  Future<List<SignatureRecord>> loadMySignatures() async {
+    final api = _api;
+    if (api == null) return const [];
+    try {
+      return await api.mySignatures();
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return const [];
+    }
   }
 
   // ── Admin ───────────────────────────────────────────────────────────────
+
+  /// The panel's half of the server, for the screens that read and act on
+  /// it directly — groups, officers, paper loans, repayments, support,
+  /// reports. Null with no server. Every call is authorised again
+  /// server-side, per action.
+  AdminApi? get adminApi => _admin;
+
   List<AdminUser> get admins =>
       List.unmodifiable(_admins..sort((a, b) => a.role.index - b.role.index));
 
@@ -3031,21 +3536,30 @@ class AppState extends ChangeNotifier {
       final version = live.remove('version');
       live.remove('createdAt');
       live.remove('createdBy');
-      if (version is num) _settingsVersion = version.toInt();
+      // The version this screen was drawn from, when it was drawn from the
+      // server; otherwise the one just read. Checking against the version
+      // just read would let a screen loaded an hour ago overwrite whatever a
+      // colleague saved since without either of them knowing.
+      if (_settingsVersion == 0 && version is num) {
+        _settingsVersion = version.toInt();
+      }
+
+      final draft = next.toJson()..remove('version');
 
       // Saved before it is applied. Applying first and only then trying to save
       // is how a rejected change still appears to have worked — and every rate
       // on this screen is a price a real customer will be charged.
       final saved = await admin.saveSettings(
         expectedVersion: _settingsVersion,
-        settings: {...live, ...next.toJson()},
+        settings: {...live, ...draft},
       );
       final savedVersion =
           saved['version'] ?? (saved['settings'] as Map?)?['version'];
       if (savedVersion is num) _settingsVersion = savedVersion.toInt();
 
-      applySettings(next);
-      await _store.savePlatformSettings(next);
+      final applied = next.copyWith(version: _settingsVersion);
+      applySettings(applied);
+      await _store.savePlatformSettings(applied);
       _lastError = null;
       notifyListeners();
       return;
@@ -3192,6 +3706,15 @@ class AppState extends ChangeNotifier {
           .fold(0.0, (s, l) => s + l.outstanding),
     );
   }
+
+  /// The book as the server counts it, with everything the overview shows
+  /// beyond [platformMetrics] — still owed, repaid, loans behind. Null until
+  /// the panel has loaded.
+  PlatformBook? get book => _book;
+
+  /// The help-and-complaints queue's counts, for the panel's badge.
+  SupportQueueSummary _supportSummary = const SupportQueueSummary();
+  SupportQueueSummary get supportSummary => _supportSummary;
 
   /// Loans written on paper whose borrower has not opened an account yet.
   /// Empty without a server: there is nothing to have imported into.
@@ -3501,11 +4024,17 @@ class AppState extends ChangeNotifier {
 
   /// Releases the money to the customer's bank. The wallet was already
   /// debited when they asked, so approval only settles the record.
-  Future<void> approveWithdrawal(String id) async {
+  ///
+  /// With Paystack switched on, approving sends the transfer itself, and the
+  /// payout reads "sending" until the bank confirms it. Without it, the
+  /// transfer is made by hand and [payoutReference] is the bank's reference
+  /// for it. Leaves [lastError] set when the server refused.
+  Future<void> approveWithdrawal(String id, {String? payoutReference}) async {
     final admin = _admin;
     if (admin != null) {
+      _lastError = null;
       try {
-        await admin.approveWithdrawal(id);
+        await admin.approveWithdrawal(id, payoutReference: payoutReference);
         await refreshAdminPanel();
       } on ApiException catch (e) {
         _lastError = e.message;
@@ -3552,6 +4081,7 @@ class AppState extends ChangeNotifier {
   Future<void> declineWithdrawal(String id, String reason) async {
     final admin = _admin;
     if (admin != null) {
+      _lastError = null;
       try {
         await admin.declineWithdrawal(id, reason: reason);
         await refreshAdminPanel();

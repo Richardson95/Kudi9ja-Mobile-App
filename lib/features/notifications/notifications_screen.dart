@@ -86,6 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   NotifyKind.thrift => (Icons.groups_rounded, AppColors.gold),
   NotifyKind.security => (Icons.shield_rounded, AppColors.info),
   NotifyKind.general => (Icons.info_outline_rounded, AppColors.textSecondary),
+  NotifyKind.support => (Icons.support_agent_rounded, AppColors.gold),
 };
 
 class _NotificationCard extends StatelessWidget {

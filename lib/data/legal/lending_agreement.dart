@@ -534,7 +534,7 @@ LegalExample _example(double principal, int months) {
   final net = Finance.netDisbursed(principal);
   final interest = Finance.loanInterest(principal, months);
   final total = Finance.loanTotal(principal, months);
-  final instalment = Finance.loanMonthly(principal, months);
+  final instalment = total / months;
   final cost = interest + fee;
   final annualEquivalent = net <= 0 ? 0.0 : (cost / net) * (12 / months) * 100;
   final plural = months == 1 ? 'month' : 'months';
@@ -572,7 +572,7 @@ LegalExample _payoffExample() {
   const months = 3;
   final interest = Finance.loanInterest(principal, months);
   final total = Finance.loanTotal(principal, months);
-  final instalment = Finance.loanMonthly(principal, months);
+  final instalment = total / months;
 
   // One month elapsed, so one of the three has not yet started — the same
   // arithmetic Finance.earlyPayoffRebate performs on a live loan.

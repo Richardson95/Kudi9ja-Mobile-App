@@ -35,19 +35,38 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   int _tenure = 3;
   String _purpose = 'Business';
 
+  /// Weekly or monthly. Has to be chosen; the server refuses an application
+  /// that does not say.
+  RepaymentFrequency? _frequency;
+
   double get _principal => parseAmount(_amount.text);
-  double get _fee => Finance.processingFee(_principal);
-  double get _net => _principal - _fee;
-  double get _monthly => Finance.loanMonthly(_principal, _tenure);
-  double get _total => Finance.loanTotal(_principal, _tenure);
+
+  /// What this customer borrows on — the loan-group terms for a member of a
+  /// group — and the loan priced on them.
+  LendingTerms _terms(AppState app) => app.lendingTerms;
+
+  RepaymentFrequency _chosen(AppState app) {
+    final offered = _terms(app).frequencies;
+    final f = _frequency;
+    if (f != null && offered.contains(f)) return f;
+    return offered.isEmpty ? RepaymentFrequency.monthly : offered.first;
+  }
+
+  LoanPreview _preview(AppState app) => Finance.loanPreview(
+    _principal,
+    _tenure,
+    frequency: _chosen(app),
+    terms: _terms(app),
+  );
 
   String? _error(AppState app) {
+    final t = _terms(app);
     if (_principal == 0) return null;
-    if (_principal < settings.minLoanAmount) {
-      return 'Minimum loan is ${settings.minLoanAmount.asNairaFlat}';
+    if (_principal < t.minAmount) {
+      return 'Minimum loan is ${t.minAmount.asNairaFlat}';
     }
-    if (_principal > settings.maxLoanAmount) {
-      return 'Maximum loan is ${settings.maxLoanAmount.asNairaFlat}';
+    if (_principal > t.maxAmount) {
+      return 'Maximum loan is ${t.maxAmount.asNairaFlat}';
     }
     return null;
   }
@@ -67,11 +86,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   /// person before anything moves.
   void _continue() {
     FocusScope.of(context).unfocus();
+    final app = context.read<AppState>();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => LoanApplicationScreen(
           principal: _principal,
           months: _tenure,
+          frequency: _chosen(app),
           purpose: _purpose,
         ),
       ),
@@ -81,8 +102,12 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+    final terms = _terms(app);
     final error = _error(app);
-    final canSubmit = _principal >= settings.minLoanAmount && error == null;
+    final canSubmit = _principal >= terms.minAmount && error == null;
+    final preview = _preview(app);
+    final frequency = _chosen(app);
+    if (_tenure > terms.maxTenureMonths) _tenure = terms.maxTenureMonths;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Request a loan')),
@@ -101,7 +126,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     AppSpacing.xl,
                   ),
                   children: [
-                    const _RangeCard().animate().fadeIn().slideY(begin: 0.1),
+                    _RangeCard(terms: terms, group: app.groupPricing)
+                        .animate()
+                        .fadeIn()
+                        .slideY(begin: 0.1),
                     const SizedBox(height: AppSpacing.xxl),
                     Center(
                       child: Column(
@@ -129,12 +157,12 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                               ),
                             ),
                           ],
-                          if (_principal >= settings.minLoanAmount &&
+                          if (_principal >= terms.minAmount &&
                               error == null) ...[
                             const SizedBox(height: AppSpacing.md),
                             _NetBanner(
-                              fee: _fee,
-                              net: _net,
+                              fee: preview.fee,
+                              net: preview.net,
                               principal: _principal,
                             ),
                           ],
@@ -160,8 +188,28 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     const SizedBox(height: AppSpacing.md),
                     TenureSlider(
                       tenure: _tenure,
+                      terms: terms,
                       onChanged: (t) => setState(() => _tenure = t),
                     ),
+
+                    const SizedBox(height: AppSpacing.xl),
+                    const _Label('HOW WILL YOU REPAY?'),
+                    const SizedBox(height: AppSpacing.md),
+                    for (final f in terms.frequencies) ...[
+                      KOptionTile(
+                        title: f.label,
+                        subtitle: _principal > 0
+                            ? '${f.paymentsPhrase(_tenure)} of about '
+                                  '${Finance.loanPreview(_principal, _tenure, frequency: f, terms: terms).each.asNaira}'
+                            : f.paymentsPhrase(_tenure),
+                        icon: f == RepaymentFrequency.weekly
+                            ? Icons.view_week_outlined
+                            : Icons.calendar_month_outlined,
+                        selected: frequency == f,
+                        onTap: () => setState(() => _frequency = f),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
 
                     const SizedBox(height: AppSpacing.xl),
                     const _Label('WHAT IS IT FOR?'),
@@ -183,11 +231,9 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     const SizedBox(height: AppSpacing.xxl),
                     _Breakdown(
                       principal: _principal,
-                      fee: _fee,
-                      net: _net,
-                      monthly: _monthly,
-                      total: _total,
+                      preview: preview,
                       tenure: _tenure,
+                      terms: terms,
                     ),
                   ],
                 ),
@@ -265,7 +311,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 /// Saying "pre-approved" over a figure the customer had not asked for was
 /// also a promise nobody had made.
 class _RangeCard extends StatelessWidget {
-  const _RangeCard();
+  const _RangeCard({required this.terms, required this.group});
+
+  final LendingTerms terms;
+  final bool group;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -275,13 +324,21 @@ class _RangeCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Borrow from',
-          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Borrow from',
+                style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+              ),
+            ),
+            if (group)
+              StatusPill(label: 'LOAN GROUP TERMS', color: AppColors.info, dense: true),
+          ],
         ),
         const SizedBox(height: 4),
         Text(
-          '${settings.minLoanAmount.asNairaFlat} to ${settings.maxLoanAmount.asShortNaira}',
+          '${terms.minAmount.asNairaFlat} to ${terms.maxAmount.asShortNaira}',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
@@ -371,19 +428,15 @@ class _Chip extends StatelessWidget {
 class _Breakdown extends StatelessWidget {
   const _Breakdown({
     required this.principal,
-    required this.fee,
-    required this.net,
-    required this.monthly,
-    required this.total,
+    required this.preview,
     required this.tenure,
+    required this.terms,
   });
 
   final double principal;
-  final double fee;
-  final double net;
-  final double monthly;
-  final double total;
+  final LoanPreview preview;
   final int tenure;
+  final LendingTerms terms;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -399,7 +452,7 @@ class _Breakdown extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Every month',
+                    'Every ${preview.frequency.unit}',
                     style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textTertiary,
@@ -410,7 +463,7 @@ class _Breakdown extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      monthly.asNaira,
+                      preview.each.asNaira,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -430,7 +483,7 @@ class _Breakdown extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'For $tenure ${tenure == 1 ? 'month' : 'months'}',
+                      'In ${preview.frequency.paymentsPhrase(tenure, count: preview.count)}',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: AppColors.textTertiary,
@@ -441,7 +494,7 @@ class _Breakdown extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        total.asNaira,
+                        preview.total.asNaira,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -460,16 +513,27 @@ class _Breakdown extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         _Line('Loan amount', principal.asNaira),
         _Line(
-          'Processing fee (${Finance.processingFeeBasis(principal).toLowerCase()})',
-          '-${fee.asNaira}',
+          'Management fee (${terms.feeBasisFor(principal).toLowerCase()})',
+          '-${preview.fee.asNaira}',
         ),
-        _Line('Lands in your wallet if approved', net.asNaira, highlight: true),
+        _Line('Lands in your wallet if approved', preview.net.asNaira, highlight: true),
         _Line(
           'Interest rate',
-          '${settings.loanRateLabelFor(tenure)} flat over '
+          '${PlatformSettings.ratePct(preview.rate * 100)} flat over '
               '$tenure ${tenure == 1 ? 'month' : 'months'}',
         ),
-        _Line('Total interest', (total - principal).asNaira),
+        _Line('Total interest', preview.interest.asNaira),
+        if (preview.fees > 0) ...[
+          _Line(
+            'Each ${preview.frequency.unit}',
+            '${preview.base.asNaira} + ${preview.instalmentFee.asNaira} fee',
+          ),
+          _Line(
+            'Transaction fees (${PlatformSettings.ratePct(preview.feeRate * 100)} of each repayment)',
+            preview.fees.asNaira,
+          ),
+        ],
+        _Line('Total to repay', preview.total.asNaira),
       ],
     ),
   );
@@ -552,7 +616,7 @@ class _NetBanner extends StatelessWidget {
         ),
         const SizedBox(height: 3),
         Text(
-          '${principal.asNairaFlat} less ${fee.asNairaFlat} processing fee',
+          '${principal.asNairaFlat} less ${fee.asNairaFlat} management fee',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 11.5,

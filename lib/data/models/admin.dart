@@ -243,6 +243,8 @@ class CustomerRecord {
     this.verified = true,
     this.frozen = false,
     this.isThisDevice = false,
+    this.accountStatus = '',
+    this.accountStatusLabel = '',
   });
 
   final String id;
@@ -266,6 +268,15 @@ class CustomerRecord {
   final bool verified;
   final bool frozen;
   final bool isThisDevice;
+
+  /// The server's account status — `ACTIVE`, `FROZEN`, `PENDING_ACTIVATION`
+  /// and so on — and how it reads.
+  final String accountStatus;
+  final String accountStatusLabel;
+
+  /// Opened by the team for a loan customer, and not yet taken over: nobody
+  /// can sign in to it until the customer signs up with the BVN on it.
+  bool get awaitingActivation => accountStatus == 'PENDING_ACTIVATION';
 
   double get netWorth => balance + totalSaved;
 
@@ -298,6 +309,8 @@ class CustomerRecord {
         verified: verified,
         frozen: frozen,
         isThisDevice: isThisDevice,
+        accountStatus: accountStatus,
+        accountStatusLabel: accountStatusLabel,
       );
 }
 
@@ -322,6 +335,13 @@ class PlatformBook {
     required this.activeLoans,
     required this.overdueLoans,
     required this.repaidLoans,
+    this.outstanding = 0,
+    this.loansBehind = 0,
+    this.totalRepaid = 0,
+    this.repayments = 0,
+    this.repaidThisMonth = 0,
+    this.newThisWeek = 0,
+    this.frozenCustomers = 0,
   });
 
   final int customers;
@@ -344,11 +364,29 @@ class PlatformBook {
   /// [interestCharged].
   final double feesCharged;
 
+  /// Owed on every instalment past its day, on all running loans — not only
+  /// the loans past their last day.
   final double overdue;
   final int activePlans;
   final int activeLoans;
   final int overdueLoans;
   final int repaidLoans;
+
+  /// What customers still owe on the loans running now: loan, interest and
+  /// fees, less every repayment. Falls with each payment.
+  final double outstanding;
+
+  /// Running loans with at least one instalment past its day and unpaid.
+  final int loansBehind;
+
+  /// Every repayment customers have made, through the app or recorded by
+  /// hand, how many, and this month's.
+  final double totalRepaid;
+  final int repayments;
+  final double repaidThisMonth;
+
+  final int newThisWeek;
+  final int frozenCustomers;
 }
 
 /// One loan in the lending book, as the panel lists it.
@@ -373,6 +411,7 @@ class BookLoan {
     required this.disbursedAt,
     required this.dueDate,
     required this.daysOverdue,
+    this.frequency = RepaymentFrequency.monthly,
   });
 
   final String id;
@@ -390,6 +429,7 @@ class BookLoan {
   final DateTime? disbursedAt;
   final DateTime? dueDate;
   final int daysOverdue;
+  final RepaymentFrequency frequency;
 
   bool get isOpen =>
       status == LoanStatus.active || status == LoanStatus.overdue;

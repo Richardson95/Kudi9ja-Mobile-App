@@ -166,6 +166,97 @@ class ApiClient {
     return _withRefresh(attempt);
   }
 
+  /// Fetches a file with the session — a support attachment, a document on a
+  /// loan — and returns its bytes and type.
+  ///
+  /// These are never public links: a photo of somebody's bank app is their
+  /// account. The server wants the bearer as well as the path, so they cannot
+  /// be handed to anything that would open them without it.
+  Future<DownloadedFile> download(String pathOrUrl) async {
+    Future<http.Response> attempt() async {
+      final uri = pathOrUrl.startsWith('http')
+          ? Uri.parse(pathOrUrl)
+          : _uri(pathOrUrl.replaceFirst(RegExp(r'^/api/v1'), ''), null);
+      final request = http.Request('GET', uri)
+        ..headers.addAll(await _headers(json: false, authenticated: true))
+        ..headers['Accept'] = '*/*';
+      final streamed = await _http.send(request).timeout(_timeout);
+      return http.Response.fromStream(streamed);
+    }
+
+    if (_tokens.hasSession && _tokens.isAccessExpired) await _refreshSession();
+    http.Response response;
+    try {
+      response = await _attemptWithRetry(attempt);
+      if (response.statusCode == 401 && await _refreshSession()) {
+        response = await _attemptWithRetry(attempt);
+      }
+    } on TimeoutException {
+      throw ApiException.offline(
+          NetworkFailure.timeout, 'timed out after ${_timeout.inSeconds}s');
+    } on SocketException catch (e) {
+      throw ApiException.offline(NetworkFailure.unreachable, e.message);
+    } on http.ClientException catch (e) {
+      throw ApiException.offline(NetworkFailure.dropped, e.message);
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _errorFrom(response);
+    }
+    final disposition = response.headers['content-disposition'] ?? '';
+    final named = RegExp(r'filename="?([^";]+)"?').firstMatch(disposition)?.group(1);
+    return DownloadedFile(
+      bytes: response.bodyBytes,
+      contentType: response.headers['content-type'] ?? '',
+      filename: named ?? Uri.parse(pathOrUrl).pathSegments.lastOrNull ?? 'file',
+    );
+  }
+
+  /// Holds a server-sent event stream open and yields each event as it comes.
+  ///
+  /// Help and complaints pushes a reply down this the moment it is saved, so
+  /// a customer watching the thread sees it without pulling to refresh. The
+  /// stream ends when the server closes it (it does every half hour) or the
+  /// connection drops; the caller reconnects and catches up on what it missed
+  /// with an ordinary read. No timeout: a quiet stream is a healthy one, and
+  /// the server sends a heartbeat comment every 25 seconds.
+  Stream<ServerEvent> events(String path) async* {
+    if (_tokens.hasSession && _tokens.isAccessExpired) await _refreshSession();
+    final request = http.Request('GET', _uri(path, null))
+      ..headers.addAll(await _headers(json: false, authenticated: true))
+      ..headers['Accept'] = 'text/event-stream'
+      ..headers['Cache-Control'] = 'no-cache';
+
+    // Sent on the shared client, which is never closed here: cancelling the
+    // subscription is what ends this one connection.
+    final response = await _http.send(request);
+    if (response.statusCode == 401) {
+      await _refreshSession();
+      return;
+    }
+    if (response.statusCode != 200) return;
+
+    var event = 'message';
+    final data = StringBuffer();
+    await for (final line in response.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())) {
+      if (line.isEmpty) {
+        if (data.isNotEmpty) {
+          yield ServerEvent(event, data.toString());
+        }
+        event = 'message';
+        data.clear();
+      } else if (line.startsWith(':')) {
+        // A heartbeat. Nothing to deliver.
+      } else if (line.startsWith('event:')) {
+        event = line.substring(6).trim();
+      } else if (line.startsWith('data:')) {
+        if (data.isNotEmpty) data.write('\n');
+        data.write(line.substring(5).trimLeft());
+      }
+    }
+  }
+
   void close() => _http.close();
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -455,6 +546,28 @@ class ApiClient {
       return null;
     }
   }
+}
+
+/// A file fetched with the session.
+class DownloadedFile {
+  const DownloadedFile({
+    required this.bytes,
+    required this.contentType,
+    required this.filename,
+  });
+
+  final List<int> bytes;
+  final String contentType;
+  final String filename;
+
+  bool get isImage => contentType.toLowerCase().startsWith('image/');
+}
+
+/// One server-sent event: its name and its data, still as text.
+class ServerEvent {
+  const ServerEvent(this.event, this.data);
+  final String event;
+  final String data;
 }
 
 /// One file on its way up, named by the form field it belongs to.

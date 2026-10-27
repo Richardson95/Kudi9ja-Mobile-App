@@ -7,7 +7,13 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/admin.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
+import 'admin_announcement_screen.dart';
 import 'admin_audit_screen.dart';
+import 'admin_groups_screen.dart';
+import 'admin_offline_loans_screen.dart';
+import 'admin_repayments_screen.dart';
+import 'admin_reports_screen.dart';
+import 'admin_support_screen.dart';
 import 'admin_loans_screen.dart';
 import 'admin_overview_screen.dart';
 import 'admin_payouts_screen.dart';
@@ -99,12 +105,37 @@ class _AdminShellState extends State<AdminShell> {
               ),
             ),
           ),
-          IconButton(
-            tooltip: 'Audit log',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminAuditScreen()),
+          // Everything that does not fit the bar along the bottom. Help and
+          // complaints is first, and badged: somebody is waiting on it.
+          PopupMenuButton<Widget Function()>(
+            tooltip: 'More',
+            onSelected: (open) => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => open()),
             ),
-            icon: const Icon(Icons.history_rounded, size: 20),
+            icon: Badge(
+              isLabelVisible: app.supportSummary.open > 0,
+              label: Text('${app.supportSummary.open}'),
+              child: const Icon(Icons.more_vert_rounded),
+            ),
+            itemBuilder: (_) => [
+              _more(Icons.support_agent_rounded, 'Help & complaints',
+                  () => const AdminSupportScreen(),
+                  badge: app.supportSummary.open),
+              _more(Icons.payments_outlined, 'Repayments',
+                  () => const AdminRepaymentsScreen()),
+              _more(Icons.groups_2_outlined, 'Loan groups',
+                  () => const AdminGroupsScreen()),
+              _more(Icons.description_outlined, 'Loans from paper',
+                  () => const AdminOfflineLoansScreen()),
+              if (role.canEditSettings) ...[
+                _more(Icons.table_chart_outlined, 'Reports',
+                    () => const AdminReportsScreen()),
+                _more(Icons.campaign_outlined, 'Send an announcement',
+                    () => const AdminAnnouncementScreen()),
+              ],
+              _more(Icons.history_rounded, 'Audit log',
+                  () => const AdminAuditScreen()),
+            ],
           ),
         ],
       ),
@@ -215,6 +246,25 @@ class _AdminShellState extends State<AdminShell> {
     );
   }
 }
+
+PopupMenuItem<Widget Function()> _more(
+  IconData icon,
+  String label,
+  Widget Function() open, {
+  int badge = 0,
+}) =>
+    PopupMenuItem(
+      value: open,
+      child: Row(
+        children: [
+          Icon(icon, size: 19, color: AppColors.gold),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: Text(label)),
+          if (badge > 0)
+            StatusPill(label: '$badge', color: AppColors.danger, dense: true),
+        ],
+      ),
+    );
 
 // ── Shared admin widgets ──────────────────────────────────────────────────
 

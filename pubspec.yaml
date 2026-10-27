@@ -47,6 +47,12 @@ dependencies:
   # handed to whatever the phone opens PDFs with.
   path_provider: ^2.1.6
   open_filex: ^4.7.0
+  # Paystack checkout runs inside the app. The page is Paystack's own — card
+  # details go to Paystack, never to Kudi9ja — and the app only watches for
+  # the moment it heads back, closes it, and asks the server what happened.
+  webview_flutter: ^4.14.1
+  # Calling or emailing a loan officer, and opening the WhatsApp lines.
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

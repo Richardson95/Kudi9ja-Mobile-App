@@ -1,6 +1,7 @@
 import '../../core/constants/app_config.dart';
-import '../../core/utils/formatters.dart';
 import 'platform_settings.dart';
+
+export 'platform_settings.dart' show RepaymentFrequency, LendingTerms;
 
 // ── User ──────────────────────────────────────────────────────────────────
 
@@ -468,8 +469,9 @@ enum LoanStatus {
   overdue,
   rejected,
 
-  /// Withdrawn by the borrower inside the cancellation window, before the
-  /// money was theirs to keep. Nothing is owed.
+  /// Cancelled inside the change-of-mind window loans once had. No new loan
+  /// reaches this state — a loan in the wallet is repaid in full, with
+  /// interest — but the ones already cancelled keep their row.
   cancelled,
 
   /// Given up on by Kudi9ja after it went bad. The debt is not forgiven — it
@@ -497,6 +499,98 @@ extension LoanStatusX on LoanStatus {
   bool get isOpen => this == LoanStatus.active || this == LoanStatus.overdue;
 }
 
+/// What the server worked out about a loan, as it sends it.
+///
+/// Held beside the loan rather than recomputed, because the server is the one
+/// that charges: a schedule rounded on the phone a naira differently from the
+/// one on the server is a customer told they owe a naira they do not.
+class LoanFigures {
+  const LoanFigures({
+    required this.totalInterest,
+    required this.totalRepayable,
+    required this.outstanding,
+    required this.installmentAmount,
+    required this.installmentBase,
+    required this.installmentFee,
+    required this.totalRepaymentFees,
+    required this.loanAndInterest,
+    required this.netDisbursed,
+    required this.settlementAmount,
+    required this.repaymentProgress,
+    required this.schedule,
+    this.rebateGranted = 0,
+    this.decisionReasons = '',
+  });
+
+  final double totalInterest;
+  final double totalRepayable;
+  final double outstanding;
+
+  /// One instalment, transaction fee included, and its two parts.
+  final double installmentAmount;
+  final double installmentBase;
+  final double installmentFee;
+
+  /// What the transaction fees on every instalment add up to.
+  final double totalRepaymentFees;
+
+  /// The loan and its interest, before the transaction fees.
+  final double loanAndInterest;
+  final double netDisbursed;
+
+  /// What clears the loan today: everything still owed, interest included.
+  final double settlementAmount;
+  final double repaymentProgress;
+  final List<Installment> schedule;
+
+  /// Interest handed back on an early settlement, on the loans that were
+  /// written while that was offered.
+  final double rebateGranted;
+  final String decisionReasons;
+
+  Map<String, dynamic> toJson() => {
+    'totalInterest': totalInterest,
+    'totalRepayable': totalRepayable,
+    'outstanding': outstanding,
+    'installmentAmount': installmentAmount,
+    'installmentBase': installmentBase,
+    'installmentFee': installmentFee,
+    'totalRepaymentFees': totalRepaymentFees,
+    'loanAndInterest': loanAndInterest,
+    'netDisbursed': netDisbursed,
+    'settlementAmount': settlementAmount,
+    'repaymentProgress': repaymentProgress,
+    'rebateGranted': rebateGranted,
+    'decisionReasons': decisionReasons,
+    'schedule': schedule.map((i) => i.toJson()).toList(),
+  };
+
+  static LoanFigures? fromJson(Object? value) {
+    if (value is! Map) return null;
+    final j = value.cast<String, dynamic>();
+    double n(String k) => (j[k] as num?)?.toDouble() ?? 0;
+    return LoanFigures(
+      totalInterest: n('totalInterest'),
+      totalRepayable: n('totalRepayable'),
+      outstanding: n('outstanding'),
+      installmentAmount: n('installmentAmount'),
+      installmentBase: n('installmentBase'),
+      installmentFee: n('installmentFee'),
+      totalRepaymentFees: n('totalRepaymentFees'),
+      loanAndInterest: n('loanAndInterest'),
+      netDisbursed: n('netDisbursed'),
+      settlementAmount: n('settlementAmount'),
+      repaymentProgress: n('repaymentProgress'),
+      rebateGranted: n('rebateGranted'),
+      decisionReasons: j['decisionReasons'] as String? ?? '',
+      schedule: (j['schedule'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => Installment.fromJson(e.cast<String, dynamic>()))
+          .toList(),
+    );
+  }
+}
+
 class Loan {
   Loan({
     required this.id,
@@ -509,7 +603,14 @@ class Loan {
     required this.dueDate,
     this.amountRepaid = 0,
     this.status = LoanStatus.active,
-  });
+    this.frequency = RepaymentFrequency.monthly,
+    int? installmentCount,
+    this.repaymentFeeRate = 0,
+    this.transactionFee = 0,
+    this.wholeNaira = false,
+    this.figures,
+  }) : installmentCount =
+           installmentCount ?? frequency.installments(tenureMonths, disbursedAt);
 
   final String id;
   final double principal;
@@ -526,28 +627,111 @@ class Loan {
   final double amountRepaid;
   final LoanStatus status;
 
-  double get totalInterest => principal * flatRate;
-  double get totalRepayable => principal + totalInterest;
-  double get monthlyRepayment => totalRepayable / tenureMonths;
+  /// Weekly or monthly. The tenure is still counted in months.
+  final RepaymentFrequency frequency;
+
+  /// How many instalments, fixed on the day the loan was paid out.
+  final int installmentCount;
+
+  /// The transaction fee on every repayment, as a fraction: 0.02 for 2%.
+  /// Zero on loans priced before it existed.
+  final double repaymentFeeRate;
+
+  /// A flat fee taken off the payout — older loans only.
+  final double transactionFee;
+
+  /// Instalments in whole naira, rounded up — every loan since the repayment
+  /// fee. Older loans were split to the kobo.
+  final bool wholeNaira;
+
+  /// The server's own figures, when the loan came from it.
+  final LoanFigures? figures;
+
+  /// The loan and its interest, before the transaction fees.
+  double get loanAndInterest {
+    final f = figures;
+    if (f != null) return f.loanAndInterest;
+    final total = principal * (1 + flatRate);
+    return wholeNaira ? Finance.ceilNaira(total) : total;
+  }
+
+  List<InstalmentPart> get _plan => Finance.instalmentPlan(
+    loanAndInterest,
+    installmentCount,
+    repaymentFeeRate,
+    wholeNaira: wholeNaira,
+  );
+
+  double get totalInterest => figures?.totalInterest ?? loanAndInterest - principal;
+
+  /// What the transaction fees on all the instalments add up to.
+  double get totalRepaymentFees =>
+      figures?.totalRepaymentFees ?? _plan.fold(0.0, (sum, p) => sum + p.fee);
+
+  /// Everything repaid: the loan, the interest and every transaction fee.
+  double get totalRepayable =>
+      figures?.totalRepayable ?? loanAndInterest + totalRepaymentFees;
+
+  /// One instalment, fee included. The last can be a little smaller.
+  double get installmentAmount {
+    final f = figures;
+    if (f != null) return f.installmentAmount;
+    final plan = _plan;
+    return plan.isEmpty ? 0 : plan.first.total;
+  }
+
+  /// The share of the loan and interest in one instalment, and the fee on it.
+  double get installmentBase {
+    final f = figures;
+    if (f != null) return f.installmentBase;
+    final plan = _plan;
+    return plan.isEmpty ? 0 : plan.first.base;
+  }
+
+  double get installmentFee {
+    final f = figures;
+    if (f != null) return f.installmentFee;
+    final plan = _plan;
+    return plan.isEmpty ? 0 : plan.first.fee;
+  }
+
+  /// What reached the wallet: the loan less the management fee (and, on an
+  /// older loan, the flat transaction fee).
+  double get netDisbursed =>
+      figures?.netDisbursed ?? principal - processingFee - transactionFee;
+
   double get outstanding {
+    final f = figures;
+    if (f != null) return f.outstanding;
     final left = totalRepayable - amountRepaid;
     return left < 0.01 ? 0 : left;
   }
 
+  /// What clears the loan today. Paying early earns no discount: it costs
+  /// exactly what is still owed.
+  double get settlementAmount => figures?.settlementAmount ?? outstanding;
+
   double get repaymentProgress =>
-      totalRepayable <= 0 ? 0 : (amountRepaid / totalRepayable).clamp(0.0, 1.0);
+      figures?.repaymentProgress ??
+      (totalRepayable <= 0 ? 0 : (amountRepaid / totalRepayable).clamp(0.0, 1.0));
 
   bool get isOpen => status == LoanStatus.active || status == LoanStatus.overdue;
 
-  /// The full amortisation schedule, derived from what has actually been
-  /// repaid so far. Equal instalments, one per month of the tenure.
+  /// The repayment schedule — the server's when it sent one, otherwise
+  /// derived from what has actually been repaid so far: oldest first,
+  /// covered → paid, partly → part paid, past its date and not covered →
+  /// overdue.
   List<Installment> get schedule {
-    final each = monthlyRepayment;
+    final f = figures;
+    if (f != null && f.schedule.isNotEmpty) return f.schedule;
+
     var covered = amountRepaid;
     final now = DateTime.now();
+    final plan = _plan;
 
-    return List.generate(tenureMonths, (i) {
-      final due = Finance.addMonths(disbursedAt, i + 1);
+    return List.generate(plan.length, (i) {
+      final each = plan[i].total;
+      final due = frequency.due(disbursedAt, i + 1);
       final paidHere = covered >= each ? each : (covered > 0 ? covered : 0.0);
       covered -= paidHere;
 
@@ -557,6 +741,7 @@ class Loan {
         dueDate: due,
         amount: each,
         amountPaid: paidHere,
+        fee: plan[i].fee,
         status: settled
             ? InstallmentStatus.paid
             : (now.isAfter(due)
@@ -579,6 +764,11 @@ class Loan {
   int get installmentsPaid =>
       schedule.where((i) => i.status == InstallmentStatus.paid).length;
 
+  /// "6 months, repaid monthly" or "26 weeks, repaid weekly".
+  String get termPhrase =>
+      '${frequency.length(tenureMonths, count: installmentCount)}, '
+      'repaid ${frequency.adjective}';
+
   Loan copyWith({double? amountRepaid, LoanStatus? status}) => Loan(
     id: id,
     principal: principal,
@@ -590,6 +780,14 @@ class Loan {
     dueDate: dueDate,
     amountRepaid: amountRepaid ?? this.amountRepaid,
     status: status ?? this.status,
+    frequency: frequency,
+    installmentCount: installmentCount,
+    repaymentFeeRate: repaymentFeeRate,
+    transactionFee: transactionFee,
+    wholeNaira: wholeNaira,
+    // The server's figures describe the loan as it was sent. A change made
+    // here — only ever on a device with no server — is worked out afresh.
+    figures: amountRepaid == null && status == null ? figures : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -603,6 +801,12 @@ class Loan {
     'dueDate': dueDate.toIso8601String(),
     'amountRepaid': amountRepaid,
     'status': status.index,
+    'frequency': frequency.wire,
+    'installmentCount': installmentCount,
+    'repaymentFeeRate': repaymentFeeRate,
+    'transactionFee': transactionFee,
+    'wholeNaira': wholeNaira,
+    if (figures != null) 'figures': figures!.toJson(),
   };
 
   factory Loan.fromJson(Map<String, dynamic> j) => Loan(
@@ -616,6 +820,14 @@ class Loan {
     dueDate: DateTime.parse(j['dueDate'] as String),
     amountRepaid: (j['amountRepaid'] as num).toDouble(),
     status: LoanStatus.values[j['status'] as int],
+    // Loans cached before weekly repayment and the transaction fee read as
+    // what they were: monthly, with no fee, split to the kobo.
+    frequency: RepaymentFrequency.fromWire(j['frequency']),
+    installmentCount: j['installmentCount'] as int?,
+    repaymentFeeRate: (j['repaymentFeeRate'] as num?)?.toDouble() ?? 0,
+    transactionFee: (j['transactionFee'] as num?)?.toDouble() ?? 0,
+    wholeNaira: j['wholeNaira'] as bool? ?? false,
+    figures: LoanFigures.fromJson(j['figures']),
   );
 }
 
@@ -638,13 +850,22 @@ class Installment {
     required this.amount,
     required this.amountPaid,
     required this.status,
+    this.fee = 0,
   });
 
   final int number;
   final DateTime dueDate;
+
+  /// The whole instalment, transaction fee included.
   final double amount;
   final double amountPaid;
   final InstallmentStatus status;
+
+  /// The transaction fee within [amount].
+  final double fee;
+
+  /// The share of the loan and interest, before the transaction fee.
+  double get base => amount - fee;
 
   double get outstanding {
     final left = amount - amountPaid;
@@ -652,6 +873,25 @@ class Installment {
   }
 
   int get daysUntilDue => dueDate.difference(DateTime.now()).inDays;
+
+  Map<String, dynamic> toJson() => {
+    'number': number,
+    'dueDate': dueDate.toIso8601String(),
+    'amount': amount,
+    'amountPaid': amountPaid,
+    'status': status.index,
+    'fee': fee,
+  };
+
+  factory Installment.fromJson(Map<String, dynamic> j) => Installment(
+    number: j['number'] as int? ?? 0,
+    dueDate: DateTime.tryParse(j['dueDate'] as String? ?? '') ?? DateTime.now(),
+    amount: (j['amount'] as num?)?.toDouble() ?? 0,
+    amountPaid: (j['amountPaid'] as num?)?.toDouble() ?? 0,
+    status: InstallmentStatus.values[(j['status'] as int? ?? 2)
+        .clamp(0, InstallmentStatus.values.length - 1)],
+    fee: (j['fee'] as num?)?.toDouble() ?? 0,
+  );
 }
 
 // ── Transactions ──────────────────────────────────────────────────────────
@@ -845,51 +1085,108 @@ abstract final class Finance {
       settings.savingsAnnualRate * (days / settings.daysPerYear) * 100;
 
   /// Flat interest on the amount borrowed, at the rate published for a
-  /// tenure of [months] — 10% over one month, 15% over two, 25% over three.
-  static double loanInterest(double principal, int months) =>
-      principal * settings.loanRateFor(months);
+  /// tenure of [months], rounded up to the naira as loans are now priced.
+  static double loanInterest(double principal, int months, [LendingTerms? terms]) =>
+      loanTotal(principal, months, terms) - principal;
 
-  static double loanTotal(double principal, int months) =>
-      principal + loanInterest(principal, months);
+  /// The loan and its interest, before the transaction fees — whole naira,
+  /// rounded up.
+  static double loanTotal(double principal, int months, [LendingTerms? terms]) =>
+      principal <= 0
+      ? 0
+      : ceilNaira(principal * (1 + (terms ?? settings.lending).rateFor(months)));
 
-  static double loanMonthly(double principal, int months) =>
-      months <= 0 ? 0 : loanTotal(principal, months) / months;
+  /// The management fee on a loan of [principal]: flat up to and including
+  /// the threshold — ₦5,000 to ₦250,000 at the shipped setting — and a
+  /// percentage of the whole principal, not of the excess, above it. The
+  /// rules meet exactly at the threshold, so the fee curve is continuous.
+  /// Always taken out of the disbursement.
+  static double processingFee(double principal, [LendingTerms? terms]) =>
+      (terms ?? settings.lending).processingFeeFor(principal);
 
-  /// A flat ₦5,000 on any loan up to and including ₦500,000; 1% of the whole
-  /// principal — not of the excess — once the amount goes above that, so
-  /// ₦500,001 is charged 1%. The rules meet exactly at the threshold, so the
-  /// fee curve is continuous. Always taken out of the disbursement.
-  static double processingFee(double principal) =>
-      settings.processingFeeFor(principal);
-
-  /// What actually reaches the wallet once the fee is taken off.
-  static double netDisbursed(double principal) =>
-      settings.netDisbursedFor(principal);
+  /// What actually reaches the wallet once the fee is taken off. Nothing else
+  /// comes off: the transaction fee is paid with each repayment.
+  static double netDisbursed(double principal, [LendingTerms? terms]) =>
+      (terms ?? settings.lending).netDisbursedFor(principal);
 
   /// Human-readable description of how this loan's fee was worked out.
-  static String processingFeeBasis(double principal) =>
-      principal <= settings.processingFeeThreshold
-      ? 'Flat fee up to ${settings.processingFeeThreshold.asNairaFlat}'
-      : '${settings.feeRatePct.toStringAsFixed(0)}% of the whole amount';
+  static String processingFeeBasis(double principal, [LendingTerms? terms]) =>
+      (terms ?? settings.lending).feeBasisFor(principal);
 
-  /// Settling a loan early earns back half the interest on the months that
-  /// have not yet started — the reward for clearing a debt ahead of time.
-  static double earlyPayoffRebate(Loan loan) {
-    if (!loan.isOpen) return 0;
-    final elapsed = monthsBetween(loan.disbursedAt, DateTime.now());
-    final remaining = loan.tenureMonths - elapsed - 1;
-    if (remaining <= 0) return 0;
-    // A share of the flat interest attributable to the months that never
-    // started — half of it at the shipped setting.
-    final rebate =
-        loan.totalInterest *
-        (remaining / loan.tenureMonths) *
-        settings.earlyPayoffRebateShare;
-    return rebate > loan.outstanding ? loan.outstanding : rebate;
+  /// Rounds up to the whole naira, ignoring floating-point dust — 10,417.000000001
+  /// is 10,417, not 10,418.
+  static double ceilNaira(double v) =>
+      ((v * 1e6).roundToDouble() / 1e6).ceilToDouble();
+
+  /// Splits the loan and interest into [count] instalments and puts the
+  /// transaction fee on each.
+  ///
+  /// In whole naira, as loans are now priced: each share is the total divided
+  /// equally and rounded **up** to the naira, the last takes whatever is left
+  /// so the shares sum to the total exactly, and the fee on each is [feeRate]
+  /// of its share, also rounded up. ₦125,000 over 12 weeks at 2% is ₦10,417 +
+  /// ₦209 a week, the last ₦10,413 + ₦209. Loans priced before that were
+  /// split to the kobo with no fee, and are split here exactly as they were.
+  /// Mirrors `Finance.instalmentPlan` on the server.
+  static List<InstalmentPart> instalmentPlan(
+    double loanTotal,
+    int count,
+    double feeRate, {
+    bool wholeNaira = true,
+  }) {
+    if (count <= 0) return const [];
+    double round2(double v) => (v * 100).roundToDouble() / 100;
+    var each = wholeNaira ? ceilNaira(loanTotal / count) : round2(loanTotal / count);
+    var last = round2(loanTotal - each * (count - 1));
+    if (wholeNaira && last <= 0) {
+      // Only a tiny loan over very many weeks: rounding every share up would
+      // leave nothing for the last, so round them down instead.
+      each = (loanTotal / count).floorToDouble();
+      last = round2(loanTotal - each * (count - 1));
+    }
+    return List.generate(count, (i) {
+      final base = i == count - 1 ? last : each;
+      final fee = wholeNaira ? ceilNaira(base * feeRate) : round2(base * feeRate);
+      return InstalmentPart(base, fee);
+    });
   }
 
-  static double earlyPayoffAmount(Loan loan) =>
-      loan.outstanding - earlyPayoffRebate(loan);
+  /// Everything a borrower should see before they ask for a loan, priced on
+  /// [terms] — theirs, which for a member of a loan group are the group's.
+  ///
+  /// A preview. The server prices the application again and its answer is
+  /// the one charged; this mirrors its arithmetic so the two agree.
+  static LoanPreview loanPreview(
+    double principal,
+    int months, {
+    RepaymentFrequency frequency = RepaymentFrequency.monthly,
+    LendingTerms? terms,
+    DateTime? start,
+  }) {
+    final t = terms ?? settings.lending;
+    final rate = t.rateFor(months);
+    final loanTotal = Finance.loanTotal(principal, months, t);
+    final count = frequency.installments(months, start);
+    final plan = instalmentPlan(loanTotal, count, t.repaymentFeeRate);
+    final fees = plan.fold(0.0, (sum, p) => sum + p.fee);
+    final first = plan.isEmpty ? const InstalmentPart(0, 0) : plan.first;
+    final fee = principal > 0 ? t.processingFeeFor(principal) : 0.0;
+    return LoanPreview(
+      rate: rate,
+      interest: (loanTotal - principal).clamp(0, double.infinity).toDouble(),
+      loanTotal: loanTotal,
+      fees: fees,
+      total: loanTotal + fees,
+      frequency: frequency,
+      count: count,
+      each: first.total,
+      base: first.base,
+      instalmentFee: first.fee,
+      feeRate: t.repaymentFeeRate,
+      fee: fee,
+      net: principal - fee,
+    );
+  }
 
   /// Whole months elapsed between two dates.
   static int monthsBetween(DateTime from, DateTime to) {
@@ -944,4 +1241,66 @@ abstract final class Finance {
       from.minute,
     );
   }
+}
+
+/// One instalment: its share of the loan and interest, and the transaction
+/// fee on that share.
+class InstalmentPart {
+  const InstalmentPart(this.base, this.fee);
+  final double base;
+  final double fee;
+  double get total => base + fee;
+}
+
+/// What a loan will cost, worked out before anyone asks for it.
+class LoanPreview {
+  const LoanPreview({
+    required this.rate,
+    required this.interest,
+    required this.loanTotal,
+    required this.fees,
+    required this.total,
+    required this.frequency,
+    required this.count,
+    required this.each,
+    required this.base,
+    required this.instalmentFee,
+    required this.feeRate,
+    required this.fee,
+    required this.net,
+  });
+
+  /// The flat rate for the tenure.
+  final double rate;
+
+  /// Flat interest, whole naira, rounded up.
+  final double interest;
+
+  /// The loan and its interest, before the transaction fees.
+  final double loanTotal;
+
+  /// The transaction fee on every instalment, added up.
+  final double fees;
+
+  /// Everything repaid: the loan, the interest and every transaction fee.
+  final double total;
+  final RepaymentFrequency frequency;
+
+  /// How many instalments.
+  final int count;
+
+  /// One instalment, fee included, and its two parts. The last can be a
+  /// little smaller.
+  final double each;
+  final double base;
+  final double instalmentFee;
+
+  /// The transaction fee rate on each repayment: 0.02 for 2%.
+  final double feeRate;
+
+  /// The management fee — the only thing taken off the payout.
+  final double fee;
+
+  /// What reaches the wallet.
+  final double net;
 }

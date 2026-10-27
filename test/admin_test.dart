@@ -380,9 +380,24 @@ void main() {
         flatProcessingFee: 6000,
         processingFeeThreshold: 750000,
         loanProcessingFeeRate: 0.012,
-        earlyPayoffRebateShare: 0.4,
+        loanRepaymentFeeRate: 0.03,
+        loanWeeklyAllowed: false,
+        loanMonthlyAllowed: false,
+        groupLending: LendingTerms(
+          group: true,
+          rates: {1: 0.11, 2: 0.15},
+          maxTenureMonths: 12,
+          minAmount: 40000,
+          maxAmount: 900000,
+          flatProcessingFee: 4000,
+          processingFeeThreshold: 200000,
+          processingFeeRate: 0.015,
+          repaymentFeeRate: 0.01,
+          weeklyAllowed: false,
+          monthlyAllowed: false,
+        ),
         maxPasscodeAttempts: 4,
-        lockTimeoutMinutes: 5,
+        lockTimeoutMinutes: 15,
         minDepositAmount: 250,
         minWithdrawalAmount: 750,
         minCircleContribution: 2500,
@@ -465,7 +480,10 @@ void main() {
       await app.fundWallet(600000, 'Test');
       final loan = await _borrowLocally(app, principal: 100000, months: 3);
       final agreedTotal = loan.totalRepayable;
-      expect(agreedTotal, closeTo(125000, 0.01));
+      // 125,000 of loan and interest, and 2% on each of the three
+      // instalments: 834 + 834 + 834.
+      expect(loan.loanAndInterest, 125000);
+      expect(agreedTotal, 127502);
 
       await app.updatePlatformSettings(
         settings.withLoanRate(3, 0.40),

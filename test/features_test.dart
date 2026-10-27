@@ -41,7 +41,7 @@ void main() {
     });
 
     test('marks paid instalments from the amount actually repaid', () {
-      final each = buildLoan().monthlyRepayment;
+      final each = buildLoan().installmentAmount;
       final loan = buildLoan(repaid: each * 2);
       expect(loan.installmentsPaid, 2);
       expect(loan.schedule[0].status, InstallmentStatus.paid);
@@ -63,7 +63,7 @@ void main() {
         amountRepaid: 0,
       );
       final partial = fresh.copyWith(
-        amountRepaid: fresh.monthlyRepayment * 0.5,
+        amountRepaid: fresh.installmentAmount * 0.5,
       );
       expect(partial.schedule.first.status, InstallmentStatus.partial);
       expect(partial.installmentsPaid, 0);
@@ -71,14 +71,14 @@ void main() {
 
     test('a part payment on an already-due instalment reads as overdue', () {
       // Lateness outranks partial payment — the money is still late.
-      final each = buildLoan().monthlyRepayment;
+      final each = buildLoan().installmentAmount;
       final loan = buildLoan(repaid: each * 0.5);
       expect(loan.schedule.first.status, InstallmentStatus.overdue);
       expect(loan.installmentsPaid, 0);
     });
 
     test('nextInstallment is the first unsettled row', () {
-      final each = buildLoan().monthlyRepayment;
+      final each = buildLoan().installmentAmount;
       final loan = buildLoan(repaid: each * 2);
       expect(loan.nextInstallment?.number, 3);
     });
@@ -91,7 +91,7 @@ void main() {
   });
 
   group('Early settlement', () {
-    test('rebates half the interest on months not yet started', () {
+    test('costs exactly what is still owed — paying early earns no discount', () {
       final start = DateTime.now().subtract(const Duration(days: 31));
       final loan = Loan(
         id: 'l2',
@@ -102,15 +102,13 @@ void main() {
         purpose: 'Rent',
         disbursedAt: start,
         dueDate: Finance.addMonths(start, 3),
+        amountRepaid: 40000,
       );
-      // One month elapsed of three, so one month remains unstarted:
-      // half of a third of the 25,000 flat interest.
-      final rebate = Finance.earlyPayoffRebate(loan);
-      expect(rebate, closeTo(25000 * (1 / 3) * 0.5, 1));
-      expect(Finance.earlyPayoffAmount(loan), lessThan(loan.outstanding));
+      expect(loan.settlementAmount, loan.outstanding);
+      expect(loan.settlementAmount, closeTo(125000 - 40000, 0.01));
     });
 
-    test('a settled loan earns no rebate', () {
+    test('the server’s settlement figure is the one shown', () {
       final loan = Loan(
         id: 'l3',
         principal: 50000,
@@ -120,9 +118,24 @@ void main() {
         purpose: 'Personal',
         disbursedAt: DateTime.now(),
         dueDate: Finance.addMonths(DateTime.now(), 3),
-        status: LoanStatus.repaid,
+        figures: const LoanFigures(
+          totalInterest: 12500,
+          totalRepayable: 63751,
+          outstanding: 63751,
+          installmentAmount: 21251,
+          installmentBase: 20834,
+          installmentFee: 417,
+          totalRepaymentFees: 1251,
+          loanAndInterest: 62500,
+          netDisbursed: 45000,
+          settlementAmount: 63751,
+          repaymentProgress: 0,
+          schedule: [],
+        ),
       );
-      expect(Finance.earlyPayoffRebate(loan), 0);
+      expect(loan.settlementAmount, 63751);
+      expect(loan.installmentAmount, 21251);
+      expect(loan.totalRepaymentFees, 1251);
     });
   });
 

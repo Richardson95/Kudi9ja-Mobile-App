@@ -7,6 +7,11 @@ enum NotifyKind {
   thrift,
   security,
   general,
+
+  /// The Kudi9ja team answered a question or a complaint. Added last, so the
+  /// index every notification cached before it was stored under still reads
+  /// the same kind.
+  support,
 }
 
 /// An entry in the in-app notification centre.

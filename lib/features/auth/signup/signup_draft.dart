@@ -37,6 +37,17 @@ class SignupDraft {
   bool emailVerified = false;
   bool identityVerified = false;
   bool termsAccepted = false;
+
+  /// The name typed beside the signature. It has to be the name on the
+  /// account: a signature in somebody else's name is not this customer's.
+  String typedName = '';
+
+  /// The signature drawn at the end, as a PNG data URL. No account opens
+  /// without one.
+  String signatureImage = '';
+
+  /// Agreement that the drawn signature counts as a handwritten one.
+  bool signatureConsent = false;
 }
 
 const kNigerianStates = <String>[

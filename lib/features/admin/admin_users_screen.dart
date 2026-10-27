@@ -16,6 +16,7 @@ import '../wallet/transaction_list.dart';
 import '../../state/app_state.dart';
 import '../../widgets/company_account.dart';
 import '../../widgets/primitives.dart';
+import 'admin_customer_extras.dart';
 import 'admin_shell.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -206,6 +207,18 @@ class _CustomerTile extends StatelessWidget {
                   SourcePill(
                     isThisDevice: customer.isThisDevice,
                   ),
+                  if (customer.awaitingActivation)
+                    StatusPill(
+                      label: 'NOT SIGNED UP',
+                      color: AppColors.info,
+                      dense: true,
+                    )
+                  else if (customer.frozen)
+                    StatusPill(
+                      label: 'FROZEN',
+                      color: AppColors.danger,
+                      dense: true,
+                    ),
                 ],
               ),
               const SizedBox(height: 2),
@@ -396,6 +409,14 @@ class _AdminCustomerDetailScreenState
                     _Detail('BVN', c.bvn.isEmpty ? '-' : maskTail(c.bvn)),
                     _Detail('NIN', c.nin.isEmpty ? '-' : maskTail(c.nin)),
                     _Detail('Joined', c.joinedAt.asDay),
+                    if (c.accountStatusLabel.isNotEmpty)
+                      _Detail(
+                        'Account',
+                        c.awaitingActivation
+                            ? '${c.accountStatusLabel} — opened by the team; '
+                                  'they activate it by signing up with the BVN'
+                            : c.accountStatusLabel,
+                      ),
                     _Detail(
                       'KYC',
                       c.verified ? 'Tier 2 — fully verified' : 'Incomplete',
@@ -512,9 +533,11 @@ class _AdminCustomerDetailScreenState
                   ),
                 ),
 
+              CustomerExtras(customer: c),
+
               const SizedBox(height: AppSpacing.xl),
               const AdminSectionLabel('ACTIONS'),
-              _Actions(customer: c),
+              _Actions(customer: c, onChanged: _load),
               const SizedBox(height: AppSpacing.huge),
             ],
           ),
@@ -910,13 +933,17 @@ class _LiveRecords extends StatelessWidget {
 }
 
 class _Actions extends StatelessWidget {
-  const _Actions({required this.customer});
+  const _Actions({required this.customer, required this.onChanged});
   final CustomerRecord customer;
+
+  /// Re-reads the record after its status changed.
+  final Future<void> Function() onChanged;
 
   @override
   Widget build(BuildContext context) {
     final app = context.read<AppState>();
     final canAct = app.adminRole.canManageCustomers;
+    final frozen = customer.frozen;
 
     return Column(
       children: [
@@ -940,6 +967,21 @@ class _Actions extends StatelessWidget {
           onTap: !canAct
               ? null
               : () async {
+                  if (app.isOnline) {
+                    final done = await changeCustomerStatus(
+                      context,
+                      customer: customer,
+                      status: 'FLAGGED',
+                      title: 'Flag for review?',
+                      message: '${customer.fullName} is marked for compliance review.',
+                      confirm: 'Flag',
+                    );
+                    if (done && context.mounted) {
+                      showToast(context, 'Flagged and written to the audit log');
+                      await onChanged();
+                    }
+                    return;
+                  }
                   await app.logAdminAction(
                     AuditCategory.customer,
                     'Customer flagged',
@@ -951,11 +993,28 @@ class _Actions extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         _ActionRow(
-          icon: Icons.ac_unit_rounded,
-          label: 'Freeze account',
-          tint: AppColors.danger,
+          icon: frozen ? Icons.lock_open_rounded : Icons.ac_unit_rounded,
+          label: frozen ? 'Unfreeze account' : 'Freeze account',
+          tint: frozen ? AppColors.success : AppColors.danger,
           onTap: !canAct
               ? null
+              : app.isOnline
+              ? () async {
+                  final done = await changeCustomerStatus(
+                    context,
+                    customer: customer,
+                    status: frozen ? 'ACTIVE' : 'FROZEN',
+                    title: frozen ? 'Unfreeze this account?' : 'Freeze this account?',
+                    message: frozen
+                        ? '${customer.fullName} can move money again.'
+                        : '${customer.fullName} will not be able to move money until an admin unfreezes them.',
+                    confirm: frozen ? 'Unfreeze' : 'Freeze',
+                  );
+                  if (done && context.mounted) {
+                    showToast(context, frozen ? '${customer.fullName} unfrozen' : '${customer.fullName} frozen');
+                    await onChanged();
+                  }
+                }
               : () => _confirmFreeze(context, app, customer),
         ),
         if (!canAct) ...[

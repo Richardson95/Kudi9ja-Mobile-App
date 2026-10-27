@@ -9,7 +9,9 @@ import '../../core/utils/formatters.dart';
 import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
+import 'admin_repayments_screen.dart';
 import 'admin_shell.dart';
+import 'admin_support_screen.dart';
 
 class AdminOverviewScreen extends StatelessWidget {
   const AdminOverviewScreen({super.key});
@@ -18,6 +20,8 @@ class AdminOverviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final m = app.platformMetrics;
+    final book = app.book;
+    final waitingOnTeam = app.supportSummary.open;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -34,6 +38,68 @@ class AdminOverviewScreen extends StatelessWidget {
             value: app.pendingDepositValue + app.pendingWithdrawalValue,
           ).animate().fadeIn(),
           const SizedBox(height: AppSpacing.lg),
+        ],
+
+        if (waitingOnTeam > 0) ...[
+          KCard(
+            borderColor: AppColors.info.withValues(alpha: 0.4),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdminSupportScreen()),
+            ),
+            child: Row(
+              children: [
+                IconBadge(icon: Icons.support_agent_rounded, color: AppColors.info, size: 44),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    '$waitingOnTeam conversation${waitingOnTeam == 1 ? '' : 's'} '
+                    'waiting on the team'
+                    '${app.supportSummary.overdue > 0 ? ' · ${app.supportSummary.overdue} late' : ''}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.info,
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: AppColors.info),
+              ],
+            ),
+          ).animate().fadeIn(),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+
+        if (book != null) ...[
+          const AdminSectionLabel('THE LENDING BOOK'),
+          Row(
+            children: [
+              Expanded(
+                child: MetricTile(
+                  label: 'Still owed on running loans',
+                  value: book.outstanding.asNaira,
+                  icon: Icons.account_balance_outlined,
+                  tint: AppColors.gold,
+                  footnote: '${book.activeLoans + book.overdueLoans} running',
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminRepaymentsScreen()),
+                  ),
+                  child: MetricTile(
+                    label: 'Repaid by customers',
+                    value: book.totalRepaid.asNaira,
+                    icon: Icons.payments_outlined,
+                    tint: AppColors.success,
+                    footnote: '${book.repaidThisMonth.asNaira} this month',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
         ],
 
         const AdminSectionLabel('BOOK AT A GLANCE'),
@@ -101,11 +167,11 @@ class AdminOverviewScreen extends StatelessWidget {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: MetricTile(
-                label: 'Interest to earn',
+                label: 'Interest charged',
                 value: m.interestCharged.asShortNaira,
                 icon: Icons.percent_rounded,
                 tint: AppColors.gold,
-                footnote: 'on live loans',
+                footnote: 'on every loan paid out',
               ),
             ),
           ],
@@ -119,16 +185,21 @@ class AdminOverviewScreen extends StatelessWidget {
                 value: m.overdue.asShortNaira,
                 icon: Icons.warning_amber_rounded,
                 tint: m.overdue > 0 ? AppColors.danger : AppColors.textTertiary,
+                // Owed on every instalment past its day — not only on loans
+                // past their last.
+                footnote: book == null
+                    ? null
+                    : '${book.loansBehind} with missed payments',
               ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: MetricTile(
-                label: 'Management fees',
+                label: 'Fees charged',
                 value: m.feesCharged.asShortNaira,
                 icon: Icons.receipt_long_outlined,
                 tint: AppColors.gold,
-                footnote: 'on live loans',
+                footnote: 'management and transaction',
               ),
             ),
           ],
@@ -185,7 +256,8 @@ class AdminOverviewScreen extends StatelessWidget {
 
         const SizedBox(height: AppSpacing.xl),
         Text(
-          'Figures cover every customer the panel can see. On this build that is the account held on this device plus the labelled sample records; a live deployment reads the whole book from the Kudi9ja API.',
+          'Figures cover every customer on the server — loans running and '
+          'closed, and loans entered from paper.',
           style: TextStyle(
             fontSize: 11.5,
             height: 1.5,
@@ -328,8 +400,19 @@ class _RatesCard extends StatelessWidget {
           '${settings.minLoanAmount.asNairaFlat} - ${settings.maxLoanAmount.asShortNaira}',
         ),
         _Line(
-          'Processing fee',
-          'Flat ${settings.flatProcessingFee.asShortNaira} to ${settings.processingFeeThreshold.asShortNaira}, then ${settings.feeRatePct.toStringAsFixed(0)}%',
+          'Management fee',
+          'Flat ${settings.flatProcessingFee.asShortNaira} to ${settings.processingFeeThreshold.asShortNaira}, then ${PlatformSettings.ratePct(settings.feeRatePct)}',
+        ),
+        _Line(
+          'Transaction fee',
+          '${PlatformSettings.ratePct(settings.loanRepaymentFeeRate * 100)} of each repayment',
+        ),
+        _Line(
+          'Repayment',
+          [
+            if (settings.loanWeeklyAllowed) 'Weekly',
+            if (settings.loanMonthlyAllowed) 'Monthly',
+          ].join(' or '),
         ),
         _Line(
           'Target bonus tiers',

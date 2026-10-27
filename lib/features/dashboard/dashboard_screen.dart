@@ -20,7 +20,8 @@ import '../reviews/reviews_screen.dart';
 import '../savings/create_plan_screen.dart';
 import '../savings/new_plan_sheet.dart';
 import '../savings/plan_detail_screen.dart';
-import '../wallet/pay_in_screen.dart';
+import '../support/support_screen.dart';
+import '../wallet/add_money_screen.dart';
 import '../wallet/transaction_list.dart';
 import '../wallet/change_payout_screen.dart';
 import '../wallet/withdraw_screen.dart';
@@ -232,11 +233,12 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = <(IconData, String, Widget)>[
-      (Icons.add_rounded, 'Add money', const PayInScreen()),
+      (Icons.add_rounded, 'Add money', const AddMoneyScreen()),
       (Icons.savings_outlined, 'Save', const CreatePlanScreen()),
       (Icons.bolt_rounded, 'Borrow', const LoanRequestScreen()),
       (Icons.account_balance_rounded, 'Payout account', const ChangePayoutScreen()),
       (Icons.north_east_rounded, 'Withdraw', const WithdrawScreen()),
+      (Icons.support_agent_rounded, 'Help', const SupportScreen()),
     ];
 
     return SizedBox(

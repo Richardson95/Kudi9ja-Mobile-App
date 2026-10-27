@@ -99,7 +99,8 @@ class _ApplicationRow extends StatelessWidget {
                     size: 13, color: AppColors.textTertiary),
                 const SizedBox(width: 4),
                 Text(
-                  'Over ${application.tenureMonths} months · '
+                  'Over ${application.tenureMonths} months, '
+                  '${application.repaymentFrequency.adjective} · '
                   '${application.purpose}',
                   style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
                 ),
@@ -166,8 +167,9 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
         title: const Text('Approve this loan?'),
         content: Text(
           '${_a.amount.asNaira} goes into ${_a.customerName}’s wallet as soon '
-          'as you confirm, less the management fee. There is no undo — only '
-          'their own change-of-mind window.',
+          'as you confirm, less the management fee. There is no undo: once '
+          'the money is in the wallet, the loan is repaid in full, with '
+          'interest.',
           style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
         actions: [
@@ -239,9 +241,19 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'over ${_a.tenureMonths} months for ${_a.purpose}',
+                  'over ${_a.tenureMonths} months, repaid '
+                  '${_a.repaymentFrequency.adjective}, for ${_a.purpose}',
                   style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
                 ),
+                if (_a.groupPricing) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  // Priced on the group's own terms when it is approved.
+                  StatusPill(
+                    label: 'LOAN GROUP TERMS',
+                    color: AppColors.info,
+                    dense: true,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 const HairLine(),
                 const SizedBox(height: AppSpacing.md),

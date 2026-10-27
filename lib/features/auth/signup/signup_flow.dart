@@ -193,9 +193,13 @@ class _SignupFlowState extends State<SignupFlow> {
         await app.completeSignupFromDraft(
           api,
           _draft.draftId!,
+          // The versions the review step showed, which are the server's own
+          // once it has answered.
           acceptedVersions: {
             for (final doc in allLegalDocuments()) doc.id: doc.version,
           },
+          signatureImage: _draft.signatureImage,
+          typedName: _draft.typedName,
         );
         if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
       } on ApiException catch (e) {

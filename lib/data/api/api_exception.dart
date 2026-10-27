@@ -36,6 +36,11 @@ enum ApiErrorCode {
   accountDormant('ACCOUNT_DORMANT'),
   accountClosed('ACCOUNT_CLOSED'),
 
+  /// Kudi9ja opened this account for a loan customer, and the customer has
+  /// not taken it over yet. It cannot be signed in to: signing up with the
+  /// BVN on it hands it to them, loan and history included.
+  accountNotActivated('ACCOUNT_NOT_ACTIVATED'),
+
   // Sign-up
   emailTaken('EMAIL_TAKEN'),
   phoneTaken('PHONE_TAKEN'),

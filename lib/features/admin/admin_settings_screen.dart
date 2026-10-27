@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/admin.dart';
+import '../../data/models/models.dart';
 import '../../data/models/platform_settings.dart';
 import '../../data/api/api_exception.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
+import 'admin_group_terms_screen.dart';
 import 'admin_shell.dart';
 
 /// Every rate, limit and switch that shapes the product. Changes take effect
@@ -24,6 +27,11 @@ class AdminSettingsScreen extends StatefulWidget {
 
 class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   late PlatformSettings _draft = settings;
+
+  /// The settings the draft was taken from. While nothing has been edited,
+  /// a fresher copy from the server replaces both — the screen must not
+  /// open on figures the server has since moved past.
+  late PlatformSettings _base = settings;
   bool _saving = false;
 
   late final _accountName = TextEditingController(
@@ -73,7 +81,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _draft.targetTierMedium != settings.targetTierMedium ||
       _draft.targetTierLong != settings.targetTierLong ||
       _draft.daysPerSavingsMonth != settings.daysPerSavingsMonth ||
-      _draft.earlyPayoffRebateShare != settings.earlyPayoffRebateShare ||
+      _draft.loanRepaymentFeeRate != settings.loanRepaymentFeeRate ||
+      _draft.loanWeeklyAllowed != settings.loanWeeklyAllowed ||
+      _draft.loanMonthlyAllowed != settings.loanMonthlyAllowed ||
+      !_draft.groupLending.sameAs(settings.groupLending) ||
       _draft.maxPasscodeAttempts != settings.maxPasscodeAttempts ||
       _draft.lockTimeoutMinutes != settings.lockTimeoutMinutes ||
       _draft.minDepositAmount != settings.minDepositAmount ||
@@ -220,10 +231,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       '${_draft.lockTimeoutMinutes} min',
     );
     cmp(
-      'Early settlement rebate',
-      '${(settings.earlyPayoffRebateShare * 100).toStringAsFixed(0)}%',
-      '${(_draft.earlyPayoffRebateShare * 100).toStringAsFixed(0)}%',
+      'Transaction fee on each repayment',
+      '${(settings.loanRepaymentFeeRate * 100).toStringAsFixed(2)}%',
+      '${(_draft.loanRepaymentFeeRate * 100).toStringAsFixed(2)}%',
     );
+    cmp('Weekly repayment', settings.loanWeeklyAllowed, _draft.loanWeeklyAllowed);
+    cmp('Monthly repayment', settings.loanMonthlyAllowed, _draft.loanMonthlyAllowed);
+    out.addAll(groupTermsChanges(settings.groupLending, _draft.groupLending));
     cmp(
       'Minimum pay-in',
       settings.minDepositAmount.asNairaFlat,
@@ -267,6 +281,20 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     }
     if (_draft.savingsAnnualRate <= 0) {
       return 'The savings rate has to be above zero.';
+    }
+    if (!_draft.loanWeeklyAllowed && !_draft.loanMonthlyAllowed) {
+      return 'Offer weekly repayment, monthly repayment, or both.';
+    }
+    if (_draft.lockTimeoutMinutes < AppConfig.minLockTimeoutMinutes) {
+      return 'The idle lock must be at least '
+          '${AppConfig.minLockTimeoutMinutes} minutes.';
+    }
+    final group = _draft.groupLending;
+    if (group.minAmount >= group.maxAmount) {
+      return 'The smallest group loan must be smaller than the largest.';
+    }
+    if (!group.weeklyAllowed && !group.monthlyAllowed) {
+      return 'Group loans need weekly repayment, monthly repayment, or both.';
     }
     return null;
   }
@@ -348,15 +376,40 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     setState(() {
       _saving = false;
       _draft = settings;
+      _base = settings;
     });
     HapticFeedback.heavyImpact();
     showToast(context, 'Settings applied across the app');
+  }
+
+  Future<void> _editGroupTerms(bool canEdit) async {
+    final next = await Navigator.of(context).push<LendingTerms>(
+      MaterialPageRoute(
+        builder: (_) => AdminGroupTermsScreen(
+          terms: _draft.groupLending,
+          standard: _draft.lending,
+          canEdit: canEdit,
+        ),
+      ),
+    );
+    if (next != null && mounted) {
+      setState(() => _draft = _draft.copyWith(groupLending: next));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final canEdit = app.adminRole.canEditSettings;
+    // Nothing edited yet, and the server has sent fresher settings: start
+    // from those.
+    if (identical(_draft, _base) && !identical(_base, settings)) {
+      _base = settings;
+      _draft = settings;
+      _accountName.text = settings.companyAccountName;
+      _accountNumber.text = settings.companyAccountNumber;
+      _bank.text = settings.companyBank;
+    }
 
     return Stack(
       children: [
@@ -744,20 +797,96 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               ),
             ),
 
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.xl),
+            const AdminSectionLabel('REPAYMENTS'),
             _RateCard(
-              label: 'Early settlement rebate',
+              label: 'Transaction fee on each repayment',
               helper:
-                  'The share of the interest on months that never ran, given '
-                  'back when a borrower clears a loan early',
-              valueLabel: _ratePct(_draft.earlyPayoffRebateShare * 100),
-              value: (_draft.earlyPayoffRebateShare * 100).clamp(0, 100),
+                  'Covers what the payment provider charges to move the '
+                  'money. Added to every instalment, weekly or monthly, and '
+                  'rounded up to the naira. Frozen onto a loan when it is '
+                  'paid out.',
+              valueLabel: '${(_draft.loanRepaymentFeeRate * 100).toStringAsFixed(2)}%',
+              value: (_draft.loanRepaymentFeeRate * 100).clamp(0, 20),
               min: 0,
-              max: 100,
-              divisions: 100,
+              max: 20,
+              divisions: 80,
               enabled: canEdit,
               onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(earlyPayoffRebateShare: v / 100),
+                () => _draft = _draft.copyWith(loanRepaymentFeeRate: v / 100),
+              ),
+              example: () {
+                final p = Finance.loanPreview(
+                  125000,
+                  3,
+                  frequency: RepaymentFrequency.weekly,
+                  terms: _draft.lending,
+                );
+                return '₦125,000 over 3 months, weekly: ${p.count} payments of '
+                    '${p.base.asNairaFlat} + ${p.instalmentFee.asNairaFlat} fee';
+              }(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _SwitchCard(
+              label: 'Weekly repayment',
+              helper: 'Borrowers may choose to repay once a week',
+              value: _draft.loanWeeklyAllowed,
+              enabled: canEdit,
+              onChanged: (v) =>
+                  setState(() => _draft = _draft.copyWith(loanWeeklyAllowed: v)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _SwitchCard(
+              label: 'Monthly repayment',
+              helper: 'Borrowers may choose to repay once a month',
+              value: _draft.loanMonthlyAllowed,
+              enabled: canEdit,
+              onChanged: (v) =>
+                  setState(() => _draft = _draft.copyWith(loanMonthlyAllowed: v)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            KCard(
+              child: Text(
+                'Paying off early costs exactly what is still owed, and a loan '
+                'in the wallet cannot be cancelled: both the rebate and the '
+                'change-of-mind window are retired.',
+                style: TextStyle(fontSize: 11.5, height: 1.5, color: AppColors.textTertiary),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+            const AdminSectionLabel('LOAN GROUP TERMS'),
+            KCard(
+              onTap: () => _editGroupTerms(canEdit),
+              borderColor: _draft.groupLending.sameAs(settings.groupLending)
+                  ? null
+                  : AppColors.gold.withValues(alpha: 0.5),
+              child: Row(
+                children: [
+                  IconBadge(icon: Icons.groups_2_outlined, size: 42),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'What members of a loan group borrow on',
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_draft.groupLending.rateRange} over up to '
+                          '${_draft.groupLending.maxTenureMonths} months · '
+                          '${_draft.groupLending.minAmount.asShortNaira} to '
+                          '${_draft.groupLending.maxAmount.asShortNaira} · '
+                          '${_draft.groupLending.repaymentFeeLabel} per repayment',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+                ],
               ),
             ),
 
@@ -792,7 +921,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               label: 'Lock the app after',
               value: '${_draft.lockTimeoutMinutes} min idle',
               enabled: canEdit,
-              onMinus: _draft.lockTimeoutMinutes > 1
+              // Ten minutes is the floor the server holds: a lock that fires
+              // mid-application loses a customer their place.
+              onMinus: _draft.lockTimeoutMinutes > AppConfig.minLockTimeoutMinutes
                   ? () => setState(
                       () => _draft = _draft.copyWith(
                         lockTimeoutMinutes: _draft.lockTimeoutMinutes - 1,
@@ -806,7 +937,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               ),
               typedValue: _draft.lockTimeoutMinutes,
               unit: ' min',
-              min: 0,
+              min: AppConfig.minLockTimeoutMinutes.toDouble(),
               onTyped: (v) => setState(
                 () => _draft = _draft.copyWith(lockTimeoutMinutes: v.toInt()),
               ),

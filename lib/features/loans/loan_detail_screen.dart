@@ -12,7 +12,8 @@ import '../../widgets/inputs.dart';
 import '../../widgets/pin_sheet.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/result_screen.dart';
-import '../wallet/pay_in_screen.dart';
+import '../wallet/add_money_screen.dart';
+import 'loan_officers_card.dart';
 
 /// A loan, its full amortisation schedule, and every way to settle it.
 class LoanDetailScreen extends StatelessWidget {
@@ -30,7 +31,8 @@ class LoanDetailScreen extends StatelessWidget {
 
     final loan = found;
     final schedule = loan.schedule;
-    final rebate = Finance.earlyPayoffRebate(loan);
+    final next = loan.nextInstallment;
+    final nextDue = next?.outstanding ?? loan.installmentAmount;
 
     return Scaffold(
       appBar: AppBar(title: Text('${loan.purpose} loan')),
@@ -44,28 +46,26 @@ class LoanDetailScreen extends StatelessWidget {
               _Hero(loan: loan),
               const SizedBox(height: AppSpacing.xl),
 
+              if (loan.status == LoanStatus.overdue) ...[
+                const _OverdueNote(),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+
               if (loan.isOpen) ...[
-                if (rebate > 0)
-                  _RebateBanner(
-                    rebate: rebate,
-                    payoff: Finance.earlyPayoffAmount(loan),
-                    onTap: () => _payOffEarly(context, loan),
-                  ),
-                if (rebate > 0) const SizedBox(height: AppSpacing.md),
                 GoldButton(
-                  label: 'Repay by bank transfer',
-                  icon: Icons.receipt_long_rounded,
+                  label: 'Pay ${nextDue.asNaira}',
+                  icon: Icons.lock_rounded,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => PayInScreen(
+                      builder: (_) => AddMoneyScreen(
                         loan: loan,
-                        presetAmount: loan.monthlyRepayment,
+                        presetAmount: nextDue,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                const _TransferNote(),
+                const _PayNote(),
                 const SizedBox(height: AppSpacing.lg),
                 const _OrDivider(),
                 const SizedBox(height: AppSpacing.lg),
@@ -80,17 +80,24 @@ class LoanDetailScreen extends StatelessWidget {
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: GhostButton(
-                        label: 'Pay ${loan.monthlyRepayment.asShortNaira}',
-                        onPressed: () =>
-                            _repay(context, loan, loan.monthlyRepayment),
+                        label: 'Pay ${nextDue.asShortNaira}',
+                        onPressed: () => _repay(context, loan, nextDue),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GhostButton(
+                  label: 'Pay off the whole loan · ${loan.settlementAmount.asNaira}',
+                  icon: Icons.flash_on_rounded,
+                  onPressed: () => _payOffEarly(context, loan),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 const _AutoDebitRow(),
                 const SizedBox(height: AppSpacing.xl),
               ],
+
+              const LoanOfficersCard(),
 
               const _Label('REPAYMENT SCHEDULE'),
               const SizedBox(height: AppSpacing.md),
@@ -128,18 +135,48 @@ class LoanDetailScreen extends StatelessWidget {
                     _Line('Total interest', loan.totalInterest.asNaira),
                     const _Sep(),
                     _Line(
-                      'Processing fee',
+                      'Management fee',
                       '-${loan.processingFee.asNaira}',
+                    ),
+                    if (loan.transactionFee > 0) ...[
+                      const _Sep(),
+                      _Line(
+                        'Transaction fee (taken at payout)',
+                        '-${loan.transactionFee.asNaira}',
+                      ),
+                    ],
+                    const _Sep(),
+                    _Line('Credited to wallet', loan.netDisbursed.asNaira),
+                    const _Sep(),
+                    _Line(
+                      'Repaid',
+                      '${loan.frequency.label} · ${loan.installmentCount} '
+                          'payment${loan.installmentCount == 1 ? '' : 's'}',
                     ),
                     const _Sep(),
                     _Line(
-                      'Credited to wallet',
-                      Finance.netDisbursed(loan.principal).asNaira,
+                      '${loan.frequency.label} instalment',
+                      loan.installmentAmount.asNaira,
                     ),
+                    if (loan.totalRepaymentFees > 0) ...[
+                      const _Sep(),
+                      _Line(
+                        'Of which transaction fee',
+                        '${loan.installmentFee.asNaira} '
+                            '(${PlatformSettings.ratePct(loan.repaymentFeeRate * 100)} '
+                            'of each repayment)',
+                      ),
+                      const _Sep(),
+                      _Line('Transaction fees in all', loan.totalRepaymentFees.asNaira),
+                    ],
                     const _Sep(),
                     _Line('Total repayable', loan.totalRepayable.asNaira),
                     const _Sep(),
-                    _Line('Monthly instalment', loan.monthlyRepayment.asNaira),
+                    _Line('Repaid so far', loan.amountRepaid.asNaira),
+                    if ((loan.figures?.rebateGranted ?? 0) > 0) ...[
+                      const _Sep(),
+                      _Line('Rebate', loan.figures!.rebateGranted.asNaira),
+                    ],
                     const _Sep(),
                     _Line('Disbursed', loan.disbursedAt.asDay),
                     const _Sep(),
@@ -236,46 +273,72 @@ class LoanDetailScreen extends StatelessWidget {
     await _repay(context, loan, amount);
   }
 
+  /// Clears the whole loan from the wallet. It costs exactly what is still
+  /// owed, interest included — paying early earns no discount, and the
+  /// screen says so before the PIN rather than after.
   Future<void> _payOffEarly(BuildContext context, Loan loan) async {
     final app = context.read<AppState>();
-    final rebate = Finance.earlyPayoffRebate(loan);
-    final due = Finance.earlyPayoffAmount(loan);
+    final due = loan.settlementAmount;
 
     if (due > app.balance) {
-      showToast(
-        context,
-        'Settling early needs ${due.asNaira} in your wallet.',
-        error: true,
+      final topUp = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Pay off the whole loan'),
+          content: Text(
+            'Clearing it needs ${due.asNaira} — everything still owed, interest '
+            'included. Your wallet holds ${app.balance.asNaira}. Pay the rest '
+            'with Paystack instead?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not now'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Pay with Paystack'),
+            ),
+          ],
+        ),
       );
+      if (topUp == true && context.mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AddMoneyScreen(loan: loan, presetAmount: due),
+          ),
+        );
+      }
       return;
     }
 
     final pin = await confirmWithPin(
       context,
-      title: 'Settle early',
+      title: 'Pay off the whole loan',
       amountLabel: 'Clearing your ${loan.purpose} loan',
       amount: due,
       details: [
-        ('Outstanding', loan.outstanding.asNaira),
-        ('Early-settlement rebate', '-${rebate.asNaira}'),
-        ('You pay', due.asNaira),
+        ('Still owed', loan.outstanding.asNaira),
+        ('From your wallet', due.asNaira),
       ],
     );
     if (pin == null || !context.mounted) return;
 
     final result = await app.payOffEarly(loan.id, pin: pin);
     if (!context.mounted) return;
+    if (result.paid <= 0) {
+      showToast(context, app.lastError ?? 'The loan was not settled.', error: true);
+      return;
+    }
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => ResultScreen(
           title: 'Loan cleared',
-          message:
-              'Your ${loan.purpose} loan is fully settled and you saved ${result.rebate.asNaira} in interest by paying early.',
+          message: 'Your ${loan.purpose} loan is fully settled.',
           details: [
             ('Amount paid', result.paid.asNaira),
-            ('Interest saved', result.rebate.asNaira),
-            ('Credit limit restored', loan.principal.asNaira),
+            if (result.rebate > 0) ('Rebate', result.rebate.asNaira),
           ],
         ),
       ),
@@ -347,7 +410,8 @@ class _Hero extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${loan.installmentsPaid} of ${loan.tenureMonths} instalments paid',
+                '${loan.installmentsPaid} of ${loan.installmentCount} '
+                '${loan.frequency.adjective} instalments paid',
                 style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,
@@ -399,57 +463,30 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _RebateBanner extends StatelessWidget {
-  const _RebateBanner({
-    required this.rebate,
-    required this.payoff,
-    required this.onTap,
-  });
-
-  final double rebate;
-  final double payoff;
-  final VoidCallback onTap;
+/// Said plainly at the top of an overdue loan, with what to do about it.
+class _OverdueNote extends StatelessWidget {
+  const _OverdueNote();
 
   @override
-  Widget build(BuildContext context) => KCard(
-    onTap: onTap,
-    gradient: AppColors.cardGradient,
-    borderColor: AppColors.success.withValues(alpha: 0.32),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: AppColors.dangerWash,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+    ),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        IconBadge(
-          icon: Icons.savings_rounded,
-          color: AppColors.success,
-          size: 44,
-        ),
+        Icon(Icons.priority_high_rounded, size: 16, color: AppColors.danger),
         const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Settle early, save ${rebate.asNaira}',
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.success,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Clear the whole loan today for ${payoff.asNaira}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
+          child: Text(
+            'This loan is overdue. Pay what is due as soon as you can. If '
+            'something has changed, tell your loan officer or write to us from '
+            'Help & complaints — we would rather agree a plan.',
+            style: TextStyle(fontSize: 12, height: 1.45, color: AppColors.textSecondary),
           ),
-        ),
-        Icon(
-          Icons.chevron_right_rounded,
-          color: AppColors.success,
-          size: 20,
         ),
       ],
     ),
@@ -573,6 +610,11 @@ class _InstallmentRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (item.fee > 0)
+                Text(
+                  '${item.base.asNaira} + ${item.fee.asNaira} fee',
+                  style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary),
+                ),
               Text(
                 item.amount.asNaira,
                 style: TextStyle(
@@ -655,9 +697,9 @@ class _Sep extends StatelessWidget {
 }
 
 
-/// Explains why a transfer needs a receipt while a wallet payment does not.
-class _TransferNote extends StatelessWidget {
-  const _TransferNote();
+/// Says where a payment goes and how fast.
+class _PayNote extends StatelessWidget {
+  const _PayNote();
 
   @override
   Widget build(BuildContext context) => Container(
@@ -674,7 +716,9 @@ class _TransferNote extends StatelessWidget {
         SizedBox(width: AppSpacing.md),
         Expanded(
           child: Text(
-            'Transfer to the Kudi9ja account, upload the receipt, and we apply it to this loan once the payment is confirmed.',
+            'Pay by card, bank transfer or USSD through Paystack. It comes off '
+            'what you owe the moment Paystack confirms it — no receipt, no '
+            'waiting.',
             style: TextStyle(
               fontSize: 11.5,
               height: 1.45,

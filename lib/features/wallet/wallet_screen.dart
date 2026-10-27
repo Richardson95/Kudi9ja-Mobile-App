@@ -7,10 +7,11 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
+import '../../data/models/withdrawal.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 import '../shell/home_shell.dart';
-import 'pay_in_screen.dart';
+import 'add_money_screen.dart';
 import 'transaction_list.dart';
 import 'change_payout_screen.dart';
 import 'withdraw_screen.dart';
@@ -30,6 +31,14 @@ class _WalletScreenState extends State<WalletScreen> {
     final app = context.watch<AppState>();
     final txns = app.transactions.where(_filter.matches).toList();
     final grouped = _groupByDay(txns);
+    // Withdrawals still on their way — or turned back — say so up front; the
+    // ledger shows only that money left. On the Withdrawals filter, all of them.
+    final payouts = _filter == TxFilter.withdrawals
+        ? app.myWithdrawals
+        : app.myWithdrawals
+              .where((w) => w.isPending || w.isSending || w.bounced)
+              .where((w) => DateTime.now().difference(w.requestedAt).inDays < 14)
+              .toList();
 
     return SafeArea(
       bottom: false,
@@ -80,6 +89,11 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+
+          if (payouts.isNotEmpty) ...[
+            SliverToBoxAdapter(child: _Payouts(items: payouts)),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
+          ],
 
           if (txns.isEmpty)
             const SliverToBoxAdapter(
@@ -163,6 +177,107 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 }
 
+/// Withdrawals and where each payout has got to.
+class _Payouts extends StatelessWidget {
+  const _Payouts({required this.items});
+  final List<WithdrawalRequest> items;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Text(
+            'WITHDRAWALS',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ),
+        KCard(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.xs,
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) const HairLine(indent: 52),
+                _PayoutRow(w: items[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PayoutRow extends StatelessWidget {
+  const _PayoutRow({required this.w});
+  final WithdrawalRequest w;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = w.bounced || w.status == WithdrawalStatus.declined
+        ? AppColors.danger
+        : w.isPending || w.isSending
+        ? AppColors.gold
+        : AppColors.success;
+    final why = w.payoutFailure.isNotEmpty ? w.payoutFailure : w.note;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconBadge(icon: Icons.north_east_rounded, color: color, size: 40),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'To ${w.bank} ${w.destinationAccount.length > 4 ? '••${w.destinationAccount.substring(w.destinationAccount.length - 4)}' : w.destinationAccount}',
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  w.requestedAt.asDayTime,
+                  style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+                ),
+                if (why.isNotEmpty && (w.bounced || w.status == WithdrawalStatus.declined)) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    why,
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                w.amount.asNaira,
+                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              StatusPill(label: w.stateLabel, color: color, dense: true),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BalanceStrip extends StatelessWidget {
   const _BalanceStrip({required this.app});
   final AppState app;
@@ -198,7 +313,7 @@ class _BalanceStrip extends StatelessWidget {
                   label: 'Add',
                   onTap: () => Navigator.of(
                     context,
-                  ).push(slideRoute(const PayInScreen())),
+                  ).push(slideRoute(const AddMoneyScreen())),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

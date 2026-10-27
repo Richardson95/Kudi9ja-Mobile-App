@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/models/loan_application.dart';
+import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/company_account.dart';
 import '../../widgets/inputs.dart';
@@ -33,11 +34,15 @@ class LoanApplicationScreen extends StatefulWidget {
     super.key,
     required this.principal,
     required this.months,
+    this.frequency = RepaymentFrequency.monthly,
     required this.purpose,
   });
 
   final double principal;
   final int months;
+
+  /// Weekly or monthly, as chosen on the screen before.
+  final RepaymentFrequency frequency;
   final String purpose;
 
   @override
@@ -108,6 +113,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       amount: widget.principal,
       details: [
         ('Over', '${widget.months} ${widget.months == 1 ? 'month' : 'months'}'),
+        ('Repaid', widget.frequency.label),
         ('Purpose', widget.purpose),
         ('Documents attached', '5'),
         ('Guarantor', '1'),
@@ -122,6 +128,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       application = await context.read<AppState>().submitLoanApplication(
             principal: widget.principal,
             months: widget.months,
+            frequency: widget.frequency,
             purpose: widget.purpose,
             businessName: _businessName.text.trim(),
             businessAddress: _businessAddress.text.trim(),
@@ -154,6 +161,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           details: [
             ('You asked for', application.amount.asNaira),
             ('Over', '${application.tenureMonths} months'),
+            ('Repaid', application.repaymentFrequency.label),
             ('Purpose', application.purpose),
             ('Business', application.businessName),
             ('Status', application.status.label),

@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/formatters.dart';
+import '../../data/api/api_exception.dart';
 import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
@@ -67,13 +68,46 @@ class _SignInScreenState extends State<SignInScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
 
-    final ok = await context.read<AppState>().signInWithPassword(
+    final app = context.read<AppState>();
+    final ok = await app.signInWithPassword(
       _email.text,
       _password.text,
     );
     setState(() => _busy = false);
-    if (!ok && mounted) {
-      showToast(context, 'Email or password is incorrect', error: true);
+    if (ok || !mounted) return;
+
+    switch (app.lastSignInRefusal) {
+      // Kudi9ja opened this account for a loan customer. It is taken over by
+      // signing up with the BVN on it — another password would never work.
+      case ApiErrorCode.accountNotActivated:
+        final signUp = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Your account is waiting for you'),
+            content: Text(app.lastError ??
+                'Kudi9ja set this account up for you. Sign up with your BVN '
+                'to start using it — your loan and details will be waiting.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Not now'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Sign up'),
+              ),
+            ],
+          ),
+        );
+        if (signUp == true && mounted) {
+          await Navigator.of(context).push(slideRoute(const SignupFlow()));
+        }
+      case null || ApiErrorCode.badCredentials || ApiErrorCode.validationFailed:
+        showToast(context, 'Email or password is incorrect', error: true);
+      default:
+        // Locked, closed, frozen, or the server out of reach — each says
+        // which in its own words.
+        showToast(context, app.lastError ?? 'Email or password is incorrect', error: true);
     }
   }
 
