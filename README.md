@@ -1,6 +1,6 @@
 # Kudi9ja — Mobile App
 
-**Pay smart. Pay global.**
+**Easy money.**
 
 A Flutter microlending and high-yield savings app. Gold-on-black, built around two
 promises: **17% a year on savings, paid the moment you lock**, and **up to ₦5,000,000
