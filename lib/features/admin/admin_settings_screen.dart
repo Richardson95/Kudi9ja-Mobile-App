@@ -14,6 +14,7 @@ import '../../state/app_state.dart';
 import '../../widgets/inputs.dart';
 import '../../widgets/primitives.dart';
 import 'admin_group_terms_screen.dart';
+import 'admin_number_field.dart';
 import 'admin_shell.dart';
 
 /// Every rate, limit and switch that shapes the product. Changes take effect
@@ -41,9 +42,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     text: settings.companyAccountNumber,
   );
   late final _bank = TextEditingController(text: settings.companyBank);
-
-  /// Which tenure's rate the slider below the picker is editing.
-  int _rateTenure = 1;
 
   @override
   void dispose() {
@@ -93,10 +91,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _draft.minCircleMembers != settings.minCircleMembers ||
       _draft.maxCircleMembers != settings.maxCircleMembers ||
       _draft.otpResendSeconds != settings.otpResendSeconds;
-
-  /// A rate for a slider label: no decimal point unless there is one.
-  static String _ratePct(double pct) =>
-      '${pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1)}%';
 
   /// Human-readable list of what this save will change — goes to the audit log.
   List<String> get _changes {
@@ -382,6 +376,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     showToast(context, 'Settings applied across the app');
   }
 
+  /// The draft with its longest loan term set to [months], and a rate for
+  /// every month that brings in.
+  PlatformSettings _withLoanTenure(int months) => _draft.copyWith(
+    maxLoanTenureMonths: months,
+    loanRates: ratesUpTo(_draft.loanRates, months),
+  );
+
   Future<void> _editGroupTerms(bool canEdit) async {
     final next = await Navigator.of(context).push<LendingTerms>(
       MaterialPageRoute(
@@ -432,8 +433,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               label: 'Fixed Savings rate',
               helper:
                   'Paid to the customer upfront, pro-rated over the lock period',
-              valueLabel:
-                  '${_draft.savingsRatePct.toStringAsFixed(_draft.savingsRatePct % 1 == 0 ? 0 : 1)}%',
               value: _draft.savingsRatePct,
               min: 1,
               max: 40,
@@ -449,7 +448,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             _RateCard(
               label: 'Target bonus — 3 to 5 months',
               helper: 'Paid on the final day, forfeited if the plan is broken',
-              valueLabel: '${_draft.targetShortPct.toStringAsFixed(1)}%',
               value: _draft.targetShortPct,
               min: 0.5,
               max: 20,
@@ -465,7 +463,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             _RateCard(
               label: 'Target bonus — 6 to 11 months',
               helper: 'The middle tier',
-              valueLabel: '${_draft.targetMediumPct.toStringAsFixed(1)}%',
               value: _draft.targetMediumPct,
               min: 0.5,
               max: 30,
@@ -481,7 +478,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             _RateCard(
               label: 'Target bonus — 1 year and above',
               helper: 'The top tier, however long the term runs',
-              valueLabel: '${_draft.targetLongPct.toStringAsFixed(1)}%',
               value: _draft.targetLongPct,
               min: 0.5,
               max: 40,
@@ -685,33 +681,53 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
             const SizedBox(height: AppSpacing.xxl),
             const AdminSectionLabel('LENDING'),
-            _TenureRatePicker(
-              draft: _draft,
-              selected: _rateTenure,
-              onSelect: (t) => setState(() => _rateTenure = t),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _RateCard(
-              label:
-                  'Loan interest — $_rateTenure '
-                  '${_rateTenure == 1 ? 'month' : 'months'}',
-              helper:
-                  'One flat charge on the amount borrowed. Every tenure is '
-                  'priced on its own — pick one above and set its rate here.',
-              valueLabel: _ratePct(_draft.loanRatePctFor(_rateTenure)),
-              value: _draft.loanRatePctFor(_rateTenure).clamp(1, 200),
-              min: 1,
-              max: 200,
-              divisions: 398,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.withLoanRate(_rateTenure, v / 100),
+            KCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Flat rate by term',
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Text(
+                        _draft.loanRateRange,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'One flat charge on the amount borrowed. Every month from 1 '
+                    'to ${_draft.maxLoanTenureMonths} is priced on its own.',
+                    style: TextStyle(fontSize: 11.5, height: 1.45, color: AppColors.textTertiary),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  RateByTermGrid(
+                    rates: _draft.loanRates,
+                    maxTenureMonths: _draft.maxLoanTenureMonths,
+                    enabled: canEdit,
+                    onChanged: (m, r) => setState(() => _draft = _draft.withLoanRate(m, r)),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    '₦200,000 over 3 months repays '
+                    '${(200000 * (1 + _draft.loanRateFor(3))).asNairaFlat}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
-              example:
-                  '₦200,000 repays '
-                  '${(200000 * (1 + _draft.loanRateFor(_rateTenure))).asNairaFlat} '
-                  'over $_rateTenure ${_rateTenure == 1 ? 'month' : 'months'} — '
-                  '${(_draft.loanRatePctFor(_rateTenure) / _rateTenure).toStringAsFixed(2)}% a month',
             ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
@@ -727,16 +743,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     )
                   : null,
               onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  maxLoanTenureMonths: _draft.maxLoanTenureMonths + 1,
-                ),
+                () => _draft = _withLoanTenure(_draft.maxLoanTenureMonths + 1),
               ),
               typedValue: _draft.maxLoanTenureMonths,
               unit: ' months',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(maxLoanTenureMonths: v.toInt()),
-              ),
+              min: 1,
+              onTyped: (v) =>
+                  setState(() => _draft = _withLoanTenure(v.toInt())),
             ),
             const SizedBox(height: AppSpacing.md),
             _AmountCard(
@@ -786,7 +799,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               helper:
                   'Charged on the whole loan amount — not on the part above '
                   'the threshold — the moment a loan exceeds it',
-              valueLabel: '${_draft.feeRatePct.toStringAsFixed(2)}%',
               value: _draft.feeRatePct,
               min: 0,
               max: 5,
@@ -806,7 +818,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   'money. Added to every instalment, weekly or monthly, and '
                   'rounded up to the naira. Frozen onto a loan when it is '
                   'paid out.',
-              valueLabel: '${(_draft.loanRepaymentFeeRate * 100).toStringAsFixed(2)}%',
               value: (_draft.loanRepaymentFeeRate * 100).clamp(0, 20),
               min: 0,
               max: 20,
@@ -1222,291 +1233,9 @@ class _ReadOnlyNote extends StatelessWidget {
   );
 }
 
-/// The whole rate table at a glance: one tile per tenure, showing what that
-/// tenure currently charges. Tapping a tile points the slider below at it, so
-/// a 17-month rate is as reachable as a 1-month one.
-class _TenureRatePicker extends StatelessWidget {
-  const _TenureRatePicker({
-    required this.draft,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final PlatformSettings draft;
-  final int selected;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) => KCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Interest by tenure',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-              ),
-            ),
-            Text(
-              draft.loanRateRange,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.gold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        Text(
-          'Every month from 1 to ${draft.maxLoanTenureMonths} is priced '
-          'separately. Tap one to edit it.',
-          style: TextStyle(
-            fontSize: 11.5,
-            height: 1.45,
-            color: AppColors.textTertiary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            for (final months in draft.loanTenures)
-              GestureDetector(
-                onTap: () => onSelect(months),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  width: 64,
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  decoration: BoxDecoration(
-                    color: months == selected
-                        ? AppColors.goldWash
-                        : AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(
-                      color: months == selected
-                          ? AppColors.gold
-                          : AppColors.stroke,
-                      width: months == selected ? 1.4 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${months}m',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: months == selected
-                              ? AppColors.gold
-                              : AppColors.textTertiary,
-                        ),
-                      ),
-                      Text(
-                        draft.loanRateLabelFor(months),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: months == selected
-                              ? AppColors.gold
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-/// Types a value in, for admins who would rather not nudge a slider two
-/// hundred times to get from 17 to 85.
-///
-/// Every control on this screen routes here when its value is tapped, so
-/// there is no setting that can only be reached by dragging.
-Future<double?> editNumber(
-  BuildContext context, {
-  required String label,
-  required double value,
-  String unit = '',
-  String? helper,
-  double? min,
-  double? max,
-  bool integer = false,
-  bool money = false,
-}) async {
-  final controller = TextEditingController(
-    text: money
-        ? value.round().asPlain
-        : integer
-            ? value.round().toString()
-            : _trimZeros(value.toStringAsFixed(4)),
-  );
-
-  final result = await showModalBottomSheet<double>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) {
-      String? error;
-
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          void save() {
-            // The separators the field inserts are not part of the number.
-            final typed = double.tryParse(
-                controller.text.trim().replaceAll(',', ''));
-            if (typed == null) {
-              setSheetState(() => error = 'Type a number.');
-              return;
-            }
-            if (min != null && typed < min) {
-              setSheetState(() => error = 'Cannot go below ${_trimZeros(min.toString())}$unit.');
-              return;
-            }
-            if (max != null && typed > max) {
-              setSheetState(() => error = 'Cannot go above ${_trimZeros(max.toString())}$unit.');
-              return;
-            }
-            Navigator.pop(sheetContext, integer ? typed.roundToDouble() : typed);
-          }
-
-          return Padding(
-            padding: EdgeInsets.only(
-              left: AppSpacing.xl,
-              right: AppSpacing.xl,
-              top: AppSpacing.lg,
-              bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.titleLarge),
-                if (helper != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    helper,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.45,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  keyboardType: TextInputType.numberWithOptions(
-                    decimal: !integer,
-                  ),
-                  inputFormatters: [
-                    // An amount is grouped as it is typed; a rate of 0.45 and a
-                    // tenure of 12 are not amounts and would read worse for it.
-                    if (money)
-                      ThousandsFormatter()
-                    else
-                      FilteringTextInputFormatter.allow(
-                        integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]'),
-                      ),
-                  ],
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.6,
-                  ),
-                  onSubmitted: (_) => save(),
-                  decoration: InputDecoration(
-                    suffixText: unit.isEmpty ? null : unit,
-                    errorText: error,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.lg,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(color: AppColors.stroke),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(color: AppColors.gold),
-                    ),
-                  ),
-                ),
-                if (min != null || max != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Allowed: '
-                    '${min == null ? 'any' : _trimZeros(min.toString())}'
-                    ' to '
-                    '${max == null ? 'any' : _trimZeros(max.toString())}$unit',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                GoldButton(label: 'Save', onPressed: save),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-
-  controller.dispose();
-  return result;
-}
-
-String _trimZeros(String v) => v.contains('.')
-    ? v.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '')
-    : v;
-
-/// Makes a figure tappable, and says so — a dotted underline, so an admin
-/// can see which numbers can be typed rather than having to guess.
-class _TypeTarget extends StatelessWidget {
-  const _TypeTarget({
-    required this.child,
-    required this.onTap,
-    required this.enabled,
-  });
-
-  final Widget child;
-  final VoidCallback onTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: enabled ? onTap : null,
-    behavior: HitTestBehavior.opaque,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.xs),
-        border: Border.all(
-          color: enabled
-              ? AppColors.gold.withValues(alpha: 0.35)
-              : Colors.transparent,
-        ),
-      ),
-      child: child,
-    ),
-  );
-}
-
 class _RateCard extends StatelessWidget {
   const _RateCard({
     required this.label,
-    required this.valueLabel,
     required this.value,
     required this.min,
     required this.max,
@@ -1518,7 +1247,8 @@ class _RateCard extends StatelessWidget {
   });
 
   final String label;
-  final String valueLabel;
+
+  /// As a percentage: 17.5, not 0.175.
   final double value;
   final double min;
   final double max;
@@ -1544,31 +1274,15 @@ class _RateCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Tap the figure to type it. Dragging from 17 to 85 is not a
-            // reasonable thing to ask of anyone.
-            _TypeTarget(
+            const SizedBox(width: AppSpacing.md),
+            // Typed, as on the web. The slider below is a shortcut, and
+            // stops at its ends; the field does not.
+            AdminNumberField(
+              value: value / 100,
+              kind: AdminNumberKind.percent,
+              width: 104,
               enabled: enabled,
-              onTap: () async {
-                final typed = await editNumber(
-                  context,
-                  label: label,
-                  value: value,
-                  unit: '%',
-                  helper: helper,
-                  min: min,
-                  max: max,
-                );
-                if (typed != null) onChanged(typed);
-              },
-              child: Text(
-                valueLabel,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
-                  color: AppColors.gold,
-                ),
-              ),
+              onChanged: (fraction) => onChanged(fraction * 100),
             ),
           ],
         ),
@@ -1621,57 +1335,40 @@ class _AmountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => KCard(
     padding: const EdgeInsets.all(AppSpacing.md),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              _TypeTarget(
-                enabled: enabled,
-                onTap: () async {
-                  final typed = await editNumber(
-                    context,
-                    label: label,
-                    value: value,
-                    unit: ' naira',
-                    integer: true,
-                    money: true,
-                    min: 0,
-                  );
-                  if (typed != null) onChanged(typed);
-                },
-                child: Text(
-                  value.asNairaFlat,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                    color: AppColors.gold,
-                  ),
-                ),
-              ),
-            ],
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        _StepButton(
-          icon: Icons.remove_rounded,
-          onTap: enabled && value - step >= 0
-              ? () => onChanged(value - step)
-              : null,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        _StepButton(
-          icon: Icons.add_rounded,
-          onTap: enabled ? () => onChanged(value + step) : null,
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: AdminNumberField(
+                value: value,
+                kind: AdminNumberKind.money,
+                enabled: enabled,
+                onChanged: onChanged,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _StepButton(
+              icon: Icons.remove_rounded,
+              onTap: enabled && value - step >= 0
+                  ? () => onChanged(value - step)
+                  : null,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _StepButton(
+              icon: Icons.add_rounded,
+              onTap: enabled ? () => onChanged(value + step) : null,
+            ),
+          ],
         ),
       ],
     ),
@@ -1683,22 +1380,22 @@ class _StepperCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.enabled,
+    required this.typedValue,
+    required this.onTyped,
     this.onMinus,
     this.onPlus,
-    this.typedValue,
-    this.onTyped,
     this.unit = '',
     this.min,
   });
 
   final String label;
 
-  /// The value as it is shown — '30 days', '5 tries'.
+  /// The value as it reads — '30 days (1 month)', '15 min idle'. Shown under
+  /// the field when it says more than the number and its unit.
   final String value;
 
-  /// The same value as a number, so it can be typed instead of stepped.
-  final num? typedValue;
-  final ValueChanged<num>? onTyped;
+  final num typedValue;
+  final ValueChanged<num> onTyped;
   final String unit;
   final num? min;
 
@@ -1707,53 +1404,49 @@ class _StepperCard extends StatelessWidget {
   final VoidCallback? onPlus;
 
   @override
-  Widget build(BuildContext context) => KCard(
-    padding: const EdgeInsets.all(AppSpacing.md),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final plain = '$typedValue$unit';
+    return KCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: AdminNumberField(
+                  value: typedValue.toDouble(),
+                  suffix: unit.trim(),
+                  min: min?.toDouble(),
+                  enabled: enabled,
+                  onChanged: (v) => onTyped(v.round()),
                 ),
               ),
-              const SizedBox(height: 2),
-              _TypeTarget(
-                enabled: enabled && onTyped != null,
-                onTap: () async {
-                  final typed = await editNumber(
-                    context,
-                    label: label,
-                    value: (typedValue ?? 0).toDouble(),
-                    unit: unit,
-                    integer: true,
-                    min: min?.toDouble(),
-                  );
-                  if (typed != null) onTyped!(typed.round());
-                },
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.gold,
-                  ),
-                ),
-              ),
+              const SizedBox(width: AppSpacing.sm),
+              _StepButton(icon: Icons.remove_rounded, onTap: enabled ? onMinus : null),
+              const SizedBox(width: AppSpacing.sm),
+              _StepButton(icon: Icons.add_rounded, onTap: enabled ? onPlus : null),
             ],
           ),
-        ),
-        _StepButton(icon: Icons.remove_rounded, onTap: enabled ? onMinus : null),
-        const SizedBox(width: AppSpacing.sm),
-        _StepButton(icon: Icons.add_rounded, onTap: enabled ? onPlus : null),
-      ],
-    ),
-  );
+          if (value != plain) ...[
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _StepButton extends StatelessWidget {

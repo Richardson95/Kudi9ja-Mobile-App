@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/models.dart';
 import '../../widgets/primitives.dart';
+import 'admin_number_field.dart';
 import 'admin_shell.dart';
 
 /// What changes between two sets of loan-group terms, one line each, for the
@@ -55,43 +56,18 @@ class AdminGroupTermsScreen extends StatefulWidget {
 
 class _AdminGroupTermsScreenState extends State<AdminGroupTermsScreen> {
   late LendingTerms _t = widget.terms;
-  int _tenure = 1;
 
   void _set(LendingTerms next) => setState(() => _t = next);
 
-  Future<void> _typeAmount(String label, double current, ValueChanged<double> apply) async {
-    final controller = TextEditingController(text: current.round().asPlain);
-    final value = await showDialog<double>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(label),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [ThousandsFormatter()],
-          decoration: const InputDecoration(prefixText: '₦ '),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, parseAmount(controller.text)),
-            child: const Text('Set'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (value != null && value >= 0) apply(value);
-  }
+  /// The longest term set to [months], with a rate for every month it adds.
+  void _setTenure(int months) => _set(_t.copyWith(
+    maxTenureMonths: months,
+    rates: ratesUpTo(_t.rates, months),
+  ));
 
   @override
   Widget build(BuildContext context) {
     final edit = widget.canEdit;
-    if (_tenure > _t.maxTenureMonths) _tenure = _t.maxTenureMonths;
     final changed = !_t.sameAs(widget.terms);
 
     return Scaffold(
@@ -152,33 +128,11 @@ class _AdminGroupTermsScreenState extends State<AdminGroupTermsScreen> {
                       style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        for (final m in _t.tenures)
-                          ChoiceChip(
-                            label: Text('${m}m'),
-                            selected: _tenure == m,
-                            onSelected: (_) => setState(() => _tenure = m),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      '$_tenure ${_tenure == 1 ? 'month' : 'months'}: '
-                      '${(_t.rateFor(_tenure) * 100).toStringAsFixed(1)}% flat'
-                      '${widget.standard.rateFor(_tenure) != _t.rateFor(_tenure) ? '  (standard ${(widget.standard.rateFor(_tenure) * 100).toStringAsFixed(1)}%)' : ''}',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-                    ),
-                    Slider(
-                      value: (_t.rateFor(_tenure) * 100).clamp(1, 200),
-                      min: 1,
-                      max: 200,
-                      divisions: 398,
-                      onChanged: edit
-                          ? (v) => _set(_t.copyWith(rates: {..._t.rates, _tenure: v / 100}))
-                          : null,
+                    RateByTermGrid(
+                      rates: _t.rates,
+                      maxTenureMonths: _t.maxTenureMonths,
+                      enabled: edit,
+                      onChanged: (m, r) => _set(_t.copyWith(rates: {..._t.rates, m: r})),
                     ),
                   ],
                 ),
@@ -186,55 +140,39 @@ class _AdminGroupTermsScreenState extends State<AdminGroupTermsScreen> {
               const SizedBox(height: AppSpacing.md),
               _Stepper(
                 label: 'Longest term',
-                value: '${_t.maxTenureMonths} months',
+                value: _t.maxTenureMonths,
+                enabled: edit,
+                onChanged: (v) => _setTenure(v),
                 onMinus: edit && _t.maxTenureMonths > 1
-                    ? () => _set(_t.copyWith(maxTenureMonths: _t.maxTenureMonths - 1))
+                    ? () => _setTenure(_t.maxTenureMonths - 1)
                     : null,
-                onPlus: edit
-                    ? () {
-                        final next = _t.maxTenureMonths + 1;
-                        // Every tenure offered must be priced: a new month
-                        // starts at the rate of the one before it.
-                        _set(_t.copyWith(
-                          maxTenureMonths: next,
-                          rates: {..._t.rates, next: _t.rates[next] ?? _t.rateFor(next)},
-                        ));
-                      }
-                    : null,
+                onPlus: edit ? () => _setTenure(_t.maxTenureMonths + 1) : null,
               ),
               const SizedBox(height: AppSpacing.xl),
               const AdminSectionLabel('LIMITS AND FEES'),
               _Amount(
                 label: 'Smallest group loan',
                 value: _t.minAmount,
-                onTap: edit
-                    ? () => _typeAmount('Smallest group loan', _t.minAmount,
-                        (v) => _set(_t.copyWith(minAmount: v)))
-                    : null,
+                enabled: edit,
+                onChanged: (v) => _set(_t.copyWith(minAmount: v)),
               ),
               _Amount(
                 label: 'Largest group loan',
                 value: _t.maxAmount,
-                onTap: edit
-                    ? () => _typeAmount('Largest group loan', _t.maxAmount,
-                        (v) => _set(_t.copyWith(maxAmount: v)))
-                    : null,
+                enabled: edit,
+                onChanged: (v) => _set(_t.copyWith(maxAmount: v)),
               ),
               _Amount(
                 label: 'Flat management fee',
                 value: _t.flatProcessingFee,
-                onTap: edit
-                    ? () => _typeAmount('Flat management fee', _t.flatProcessingFee,
-                        (v) => _set(_t.copyWith(flatProcessingFee: v)))
-                    : null,
+                enabled: edit,
+                onChanged: (v) => _set(_t.copyWith(flatProcessingFee: v)),
               ),
               _Amount(
                 label: 'Flat fee up to',
                 value: _t.processingFeeThreshold,
-                onTap: edit
-                    ? () => _typeAmount('Flat fee up to', _t.processingFeeThreshold,
-                        (v) => _set(_t.copyWith(processingFeeThreshold: v)))
-                    : null,
+                enabled: edit,
+                onChanged: (v) => _set(_t.copyWith(processingFeeThreshold: v)),
               ),
               const SizedBox(height: AppSpacing.md),
               _Percent(
@@ -242,7 +180,8 @@ class _AdminGroupTermsScreenState extends State<AdminGroupTermsScreen> {
                 value: _t.processingFeeRate,
                 max: 0.05,
                 divisions: 50,
-                onChanged: edit ? (v) => _set(_t.copyWith(processingFeeRate: v)) : null,
+                enabled: edit,
+                onChanged: (v) => _set(_t.copyWith(processingFeeRate: v)),
               ),
               const SizedBox(height: AppSpacing.md),
               _Percent(
@@ -250,7 +189,8 @@ class _AdminGroupTermsScreenState extends State<AdminGroupTermsScreen> {
                 value: _t.repaymentFeeRate,
                 max: 0.2,
                 divisions: 80,
-                onChanged: edit ? (v) => _set(_t.copyWith(repaymentFeeRate: v)) : null,
+                enabled: edit,
+                onChanged: (v) => _set(_t.copyWith(repaymentFeeRate: v)),
               ),
               const SizedBox(height: AppSpacing.xl),
               const AdminSectionLabel('REPAYMENT'),
@@ -298,9 +238,18 @@ class _AdminGroupTermsScreenState extends State<AdminGroupTermsScreen> {
 }
 
 class _Stepper extends StatelessWidget {
-  const _Stepper({required this.label, required this.value, this.onMinus, this.onPlus});
+  const _Stepper({
+    required this.label,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+    this.onMinus,
+    this.onPlus,
+  });
   final String label;
-  final String value;
+  final int value;
+  final bool enabled;
+  final ValueChanged<int> onChanged;
   final VoidCallback? onMinus;
   final VoidCallback? onPlus;
 
@@ -311,8 +260,15 @@ class _Stepper extends StatelessWidget {
         Expanded(
           child: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
         ),
+        AdminNumberField(
+          value: value.toDouble(),
+          suffix: 'months',
+          width: 120,
+          min: 1,
+          enabled: enabled,
+          onChanged: (v) => onChanged(v.round()),
+        ),
         IconButton(onPressed: onMinus, icon: const Icon(Icons.remove_rounded)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
         IconButton(onPressed: onPlus, icon: const Icon(Icons.add_rounded)),
       ],
     ),
@@ -320,26 +276,34 @@ class _Stepper extends StatelessWidget {
 }
 
 class _Amount extends StatelessWidget {
-  const _Amount({required this.label, required this.value, this.onTap});
+  const _Amount({
+    required this.label,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
   final String label;
   final double value;
-  final VoidCallback? onTap;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
     child: KCard(
-      onTap: onTap,
       child: Row(
         children: [
           Expanded(
             child: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
           ),
-          Text(value.asNairaFlat, style: const TextStyle(fontWeight: FontWeight.w800)),
-          if (onTap != null) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.edit_outlined, size: 16, color: AppColors.textTertiary),
-          ],
+          const SizedBox(width: AppSpacing.md),
+          AdminNumberField(
+            value: value,
+            kind: AdminNumberKind.money,
+            width: 150,
+            enabled: enabled,
+            onChanged: onChanged,
+          ),
         ],
       ),
     ),
@@ -352,14 +316,18 @@ class _Percent extends StatelessWidget {
     required this.value,
     required this.max,
     required this.divisions,
-    this.onChanged,
+    required this.enabled,
+    required this.onChanged,
   });
 
   final String label;
+
+  /// A fraction: 0.02 for 2%.
   final double value;
   final double max;
   final int divisions;
-  final ValueChanged<double>? onChanged;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) => KCard(
@@ -371,9 +339,13 @@ class _Percent extends StatelessWidget {
             Expanded(
               child: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
             ),
-            Text(
-              '${(value * 100).toStringAsFixed(2)}%',
-              style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.gold),
+            const SizedBox(width: AppSpacing.md),
+            AdminNumberField(
+              value: value,
+              kind: AdminNumberKind.percent,
+              width: 104,
+              enabled: enabled,
+              onChanged: onChanged,
             ),
           ],
         ),
@@ -382,7 +354,7 @@ class _Percent extends StatelessWidget {
           min: 0,
           max: max,
           divisions: divisions,
-          onChanged: onChanged,
+          onChanged: enabled ? onChanged : null,
         ),
       ],
     ),
