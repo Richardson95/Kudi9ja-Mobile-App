@@ -131,8 +131,13 @@ String lockPeriodShort(int days) {
 double parseAmount(String raw) =>
     double.tryParse(raw.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
 
-String maskTail(String value) =>
-    value.length <= 4 ? value : '******${value.substring(value.length - 4)}';
+/// The last four digits behind a mask, as the web writes a BVN or NIN.
+///
+/// The server sends only the last four, so a value that is already four
+/// digits still needs the mask in front; shown bare it reads as the number.
+String maskTail(String value) => value.isEmpty
+    ? ''
+    : '••••••• ${value.length <= 4 ? value : value.substring(value.length - 4)}';
 
 String initialsOf(String name) {
   final parts = name

@@ -86,6 +86,13 @@ class AdminApi {
   Future<List<Loan>> customerLoans(String id) async =>
       loansFromApi(await _client.get('/admin/customers/$id/loans'));
 
+  /// The full BVN and NIN. The record carries only the last four; the server
+  /// writes every call here to the audit log as a data access.
+  Future<({String bvn, String nin})> customerIdentityNumbers(String id) async {
+    final j = _obj(await _client.get('/admin/customers/$id/identity-numbers'));
+    return (bvn: '${j['bvn'] ?? ''}', nin: '${j['nin'] ?? ''}');
+  }
+
   /// The payment references this customer has copied.
   ///
   /// What an admin compares against the narration on a bank statement. It is

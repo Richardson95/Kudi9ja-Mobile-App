@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
 
-/// Who at Kudi9ja looks after this customer's loan, and how to reach them.
+/// Who at Kudi9ja looks after this customer's loan: names only, as on the
+/// web. The officers' email and phone stay with the team.
 ///
 /// Nothing at all when nobody is assigned: a card saying "no officer" tells a
 /// borrower nothing they can act on.
@@ -72,11 +72,7 @@ class LoanOfficersCard extends StatelessWidget {
                             ],
                           ),
                           Text(
-                            [
-                              officers[i].email,
-                              if (officers[i].phone.isNotEmpty) officers[i].phone,
-                            ].join(' · '),
-                            overflow: TextOverflow.ellipsis,
+                            'Looks after your loans',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
@@ -84,17 +80,6 @@ class LoanOfficersCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                    ),
-                    if (officers[i].phone.isNotEmpty)
-                      IconButton(
-                        tooltip: 'Call',
-                        icon: Icon(Icons.call_rounded, size: 20, color: AppColors.gold),
-                        onPressed: () => _open(Uri(scheme: 'tel', path: officers[i].phone)),
-                      ),
-                    IconButton(
-                      tooltip: 'Email',
-                      icon: Icon(Icons.mail_outline_rounded, size: 20, color: AppColors.gold),
-                      onPressed: () => _open(Uri(scheme: 'mailto', path: officers[i].email)),
                     ),
                   ],
                 ),
@@ -104,13 +89,5 @@ class LoanOfficersCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static Future<void> _open(Uri uri) async {
-    try {
-      await launchUrl(uri);
-    } catch (_) {
-      // No dialler or mail app on this phone; the address is on screen.
-    }
   }
 }

@@ -79,26 +79,16 @@ class AssignedOfficer {
   );
 }
 
-/// An officer as the customer sees them: who to talk to about their loan.
+/// An officer as the customer sees them: the name only, never their email or
+/// phone.
 class MyOfficer {
-  const MyOfficer({
-    required this.name,
-    required this.email,
-    this.phone = '',
-    this.lead = false,
-  });
+  const MyOfficer({required this.name, this.lead = false});
 
   final String name;
-  final String email;
-  final String phone;
   final bool lead;
 
-  static MyOfficer fromApi(Map<String, dynamic> j) => MyOfficer(
-    name: str(j['name']),
-    email: str(j['email']),
-    phone: str(j['phone']),
-    lead: boolean(j['lead']),
-  );
+  static MyOfficer fromApi(Map<String, dynamic> j) =>
+      MyOfficer(name: str(j['name']), lead: boolean(j['lead']));
 }
 
 /// One borrower in an officer's book.

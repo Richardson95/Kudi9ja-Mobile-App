@@ -293,6 +293,79 @@ class _AdminCustomerDetailScreenState
   List<DepositClaim> _payIns = const [];
   bool _loaded = false;
 
+  /// The full BVN and NIN, once an admin has tapped Show. Fetched once for
+  /// both rows, because every fetch is a logged reveal, and kept on this
+  /// screen only.
+  ({String bvn, String nin})? _ids;
+  bool _revealing = false;
+  bool _bvnShown = false;
+  bool _ninShown = false;
+
+  Future<bool> _revealIds() async {
+    if (_ids != null) return true;
+    final app = context.read<AppState>();
+    setState(() => _revealing = true);
+    final numbers = await app.revealIdentityNumbers(widget.customer.id);
+    if (!mounted) return false;
+    setState(() {
+      _revealing = false;
+      _ids = numbers;
+    });
+    if (numbers == null) {
+      showToast(
+        context,
+        app.lastError ?? 'The full numbers could not be shown.',
+        error: true,
+      );
+    }
+    return numbers != null;
+  }
+
+  /// A BVN or NIN row: masked, with Show beside it when there is a number and
+  /// a server to ask. Hide masks it again without asking twice.
+  Widget _identityRow(
+    String label,
+    String last4,
+    String? full,
+    bool shown,
+    ValueChanged<bool> setShown,
+  ) {
+    if (last4.isEmpty) return _Detail(label, '-');
+    final online = context.read<AppState>().isOnline;
+    final visible = shown && full != null && full.isNotEmpty;
+    return _Detail(
+      label,
+      visible ? full : maskTail(last4),
+      trailing: online
+          ? TextButton.icon(
+              onPressed: _revealing
+                  ? null
+                  : () async => setShown(!visible && await _revealIds()),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.gold,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: Icon(
+                visible
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 16,
+              ),
+              label: Text(
+                visible ? 'Hide' : 'Show',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -406,8 +479,20 @@ class _AdminCustomerDetailScreenState
                     _Detail('Gender', c.gender.isEmpty ? '-' : c.gender),
                     _Detail('Address', c.address.isEmpty ? '-' : c.address),
                     _Detail('State', c.state.isEmpty ? '-' : c.state),
-                    _Detail('BVN', c.bvn.isEmpty ? '-' : maskTail(c.bvn)),
-                    _Detail('NIN', c.nin.isEmpty ? '-' : maskTail(c.nin)),
+                    _identityRow(
+                      'BVN',
+                      c.bvn,
+                      _ids?.bvn,
+                      _bvnShown,
+                      (v) => setState(() => _bvnShown = v),
+                    ),
+                    _identityRow(
+                      'NIN',
+                      c.nin,
+                      _ids?.nin,
+                      _ninShown,
+                      (v) => setState(() => _ninShown = v),
+                    ),
                     _Detail('Joined', c.joinedAt.asDay),
                     if (c.accountStatusLabel.isNotEmpty)
                       _Detail(
@@ -1116,10 +1201,11 @@ class _ActionRow extends StatelessWidget {
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail(this.label, this.value, {this.last = false});
+  const _Detail(this.label, this.value, {this.last = false, this.trailing});
   final String label;
   final String value;
   final bool last;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -1146,6 +1232,7 @@ class _Detail extends StatelessWidget {
               ),
             ),
           ),
+          ?trailing,
         ],
       ),
       if (!last)

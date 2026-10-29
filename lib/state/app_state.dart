@@ -1298,6 +1298,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// A customer's full BVN and NIN, for an admin who tapped Show. Each call
+  /// is one logged reveal on the server, so the screen keeps the answer.
+  Future<({String bvn, String nin})?> revealIdentityNumbers(String id) async {
+    final admin = _admin;
+    if (admin == null) return null;
+    try {
+      final numbers = await admin.customerIdentityNumbers(id);
+      _lastError = null;
+      return numbers;
+    } on ApiException catch (e) {
+      _lastError = e.message;
+      notifyListeners();
+      return null;
+    }
+  }
+
   /// Puts the server's version of a plan in place of the local one.
   void _replacePlan(SavingsPlan plan) {
     final i = _plans.indexWhere((p) => p.id == plan.id);
