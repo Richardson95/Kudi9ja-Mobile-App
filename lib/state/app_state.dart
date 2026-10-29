@@ -262,6 +262,12 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
+  /// Applications whose terms the team changed, waiting for this customer to
+  /// agree or turn them down. At most one in practice, since only one can be
+  /// open.
+  List<LoanApplication> get offeredLoanApplications =>
+      _applications.where((a) => a.isOffered).toList();
+
   /// The most recent refusal, so the borrow screen can lead with what to fix.
   LoanApplication? get lastDeclinedApplication {
     for (final a in _applications) {
@@ -1111,10 +1117,21 @@ class AppState extends ChangeNotifier {
             'The audit log',
             () async => _audit = (await admin.audit(size: 200)).items,
             failures),
+        // The open ones, asked for by name. Unfiltered, the server answers
+        // newest first and at most 100 to a page, so an application left with
+        // a customer for a week could fall off the end of the queue.
         _loadIntoPanel(
             'Loan applications',
-            () async =>
-                _adminApplications = (await admin.loanApplications(size: 200)).items,
+            () async {
+              final pages = await Future.wait([
+                for (final status in const [
+                  LoanApplicationStatus.pending,
+                  LoanApplicationStatus.offered,
+                ])
+                  admin.loanApplications(size: 100, status: status),
+              ]);
+              _adminApplications = [for (final page in pages) ...page.items];
+            },
             failures),
         _loadIntoPanel(
             'The book',
@@ -2341,6 +2358,79 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Agrees to the terms the team changed. The application goes back to them
+  /// for a decision, now priced on those terms. The server checks [pin].
+  Future<bool> agreeToLoanTerms(String id, {required String pin}) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final updated = await api.agreeToLoanTerms(id, pin: pin);
+        _replaceApplication(updated);
+        _lastError = null;
+        notifyListeners();
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return false;
+      }
+    }
+    _answerTermsLocally(id, agreed: true);
+    return true;
+  }
+
+  /// Turns the changed terms down. That closes the application; nothing is
+  /// lent and the customer is free to apply again.
+  Future<bool> turnDownLoanTerms(String id) async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final updated = await api.turnDownLoanTerms(id);
+        _replaceApplication(updated);
+        _lastError = null;
+        notifyListeners();
+        return true;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return false;
+      }
+    }
+    _answerTermsLocally(id, agreed: false);
+    await _notify(
+      NotifyKind.general,
+      'Loan application closed',
+      'You turned down the new terms, so nothing was lent. You are welcome '
+          'to apply again.',
+    );
+    return true;
+  }
+
+  void _replaceApplication(LoanApplication updated) {
+    _applications = [
+      for (final a in _applications) if (a.id == updated.id) updated else a,
+    ];
+  }
+
+  /// The customer's answer, on a device with no server behind it. Written to
+  /// both lists, since here the panel and the customer share one.
+  void _answerTermsLocally(String id, {required bool agreed}) {
+    LoanApplication answer(LoanApplication a) => a.copyWith(
+          status: agreed
+              ? LoanApplicationStatus.pending
+              : LoanApplicationStatus.termsDeclined,
+          reviewedAt: agreed ? null : DateTime.now(),
+          offer: agreed ? a.offer?.agree(DateTime.now()) : null,
+        );
+    _applications = [
+      for (final a in _applications) if (a.id == id) answer(a) else a,
+    ];
+    _adminApplications = [
+      for (final a in _adminApplications) if (a.id == id) answer(a) else a,
+    ];
+    notifyListeners();
+  }
+
   Future<void> repayLoan(String loanId, double amount, {String? pin}) async {
     final api = _api;
     if (api != null) {
@@ -2399,9 +2489,10 @@ class AppState extends ChangeNotifier {
     );
     final loan = await _disburseLocally(
       principal: approved.amount,
-      months: approved.tenureMonths,
+      months: approved.pricedMonths,
       frequency: approved.repaymentFrequency,
       purpose: approved.purpose,
+      agreed: approved.hasAgreedTerms ? approved.offer : null,
     );
     _adminApplications = [
       for (final a in _adminApplications)
@@ -2441,16 +2532,18 @@ class AppState extends ChangeNotifier {
     required int months,
     RepaymentFrequency frequency = RepaymentFrequency.monthly,
     required String purpose,
+    TermsOffer? agreed,
   }) async {
     final now = DateTime.now();
     final terms = settings.lending;
-    final fee = Finance.processingFee(principal, terms);
+    // Changed terms the customer agreed to price this loan alone.
+    final fee = agreed?.managementFee ?? Finance.processingFee(principal, terms);
     final count = frequency.installments(months, now);
     final loan = Loan(
       id: _uuid.v4(),
       principal: principal,
       tenureMonths: months,
-      flatRate: terms.rateFor(months),
+      flatRate: agreed?.flatRate ?? terms.rateFor(months),
       processingFee: fee,
       purpose: purpose,
       disbursedAt: now,
@@ -2459,7 +2552,7 @@ class AppState extends ChangeNotifier {
       installmentCount: count,
       // Priced as the server prices a loan today: whole naira, with the
       // transaction fee on every instalment.
-      repaymentFeeRate: terms.repaymentFeeRate,
+      repaymentFeeRate: agreed?.repaymentFeeRate ?? terms.repaymentFeeRate,
       wholeNaira: true,
     );
 
@@ -2483,9 +2576,9 @@ class AppState extends ChangeNotifier {
     await _notify(
       NotifyKind.general,
       'Loan disbursed',
-      '${Finance.netDisbursed(principal).toStringAsFixed(0)} reached your wallet '
+      '${(principal - fee).toStringAsFixed(0)} reached your wallet '
           'after the ${fee.toStringAsFixed(0)} processing fee.',
-      amount: Finance.netDisbursed(principal),
+      amount: principal - fee,
     );
     return loan;
   }
@@ -2511,6 +2604,76 @@ class AppState extends ChangeNotifier {
     await refreshAdminPanel();
     return true;
   }
+
+  /// Changes the rate, fees or months and sends them to the customer.
+  ///
+  /// Rates are fractions here, as everywhere in the app: 0.3 for 30%. Returns
+  /// the application as it now stands, or null with [lastError] set when the
+  /// server refused — terms identical to what it is priced on, say.
+  Future<LoanApplication?> offerLoanApplicationTerms(
+    String id, {
+    required int months,
+    required double flatRate,
+    required double managementFee,
+    required double repaymentFeeRate,
+    String note = '',
+  }) async {
+    final admin = _admin;
+    if (admin != null) {
+      try {
+        final updated = await admin.offerLoanApplicationTerms(
+          id,
+          months: months,
+          // Percentages on the wire, as an admin types them.
+          interestRatePct: _pct(flatRate),
+          managementFee: managementFee,
+          transactionFeePct: _pct(repaymentFeeRate),
+          note: note.trim().isEmpty ? null : note.trim(),
+        );
+        _lastError = null;
+        await refreshAdminPanel();
+        return updated;
+      } on ApiException catch (e) {
+        _lastError = e.message;
+        notifyListeners();
+        return null;
+      }
+    }
+
+    final offer = TermsOffer(
+      months: months,
+      flatRate: flatRate,
+      managementFee: managementFee,
+      repaymentFeeRate: repaymentFeeRate,
+      note: note.trim(),
+      offeredAt: DateTime.now(),
+      offeredBy: currentAdmin?.name ?? 'Admin',
+    );
+    LoanApplication offered(LoanApplication a) =>
+        a.copyWith(status: LoanApplicationStatus.offered, offer: offer);
+    LoanApplication? result;
+    _adminApplications = [
+      for (final a in _adminApplications)
+        if (a.id == id) result = offered(a) else a,
+    ];
+    _applications = [
+      for (final a in _applications) if (a.id == id) offered(a) else a,
+    ];
+    await _notify(
+      NotifyKind.general,
+      'New terms for your loan application',
+      'We have reviewed your application and can offer it on changed terms. '
+          'Open Loans to agree to them or turn them down. Nothing is lent '
+          'until you agree.',
+    );
+    notifyListeners();
+    return result;
+  }
+
+  /// A fraction as the percentage an admin would type, without float dust:
+  /// 0.175 is 17.5, not 17.499999999999996.
+  static double _pct(double fraction) =>
+      (fraction * 1000000).roundToDouble() / 10000;
 
   Future<bool> rejectLoanApplication(String id, String reason) async {
     final admin = _admin;
@@ -4026,15 +4189,24 @@ class AppState extends ChangeNotifier {
   /// debited when they asked, so approval only settles the record.
   ///
   /// With Paystack switched on, approving sends the transfer itself, and the
-  /// payout reads "sending" until the bank confirms it. Without it, the
-  /// transfer is made by hand and [payoutReference] is the bank's reference
-  /// for it. Leaves [lastError] set when the server refused.
-  Future<void> approveWithdrawal(String id, {String? payoutReference}) async {
+  /// payout reads "sending" until the bank confirms it. [paidByHand] records
+  /// a transfer already made from the company account instead — Paystack
+  /// sends nothing, and [payoutReference] is the bank's reference for it.
+  /// Leaves [lastError] set when the server refused.
+  Future<void> approveWithdrawal(
+    String id, {
+    String? payoutReference,
+    bool paidByHand = false,
+  }) async {
     final admin = _admin;
     if (admin != null) {
       _lastError = null;
       try {
-        await admin.approveWithdrawal(id, payoutReference: payoutReference);
+        await admin.approveWithdrawal(
+          id,
+          payoutReference: payoutReference,
+          paidByHand: paidByHand,
+        );
         await refreshAdminPanel();
       } on ApiException catch (e) {
         _lastError = e.message;

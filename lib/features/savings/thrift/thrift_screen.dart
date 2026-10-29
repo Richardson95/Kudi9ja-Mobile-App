@@ -216,7 +216,7 @@ class CircleTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${circle.size} members • ${circle.contribution.asShortNaira} ${circle.frequency.adverb}',
+                      '${circle.size} members • ${circle.contribution.asNaira} ${circle.frequency.adverb}',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
@@ -240,7 +240,7 @@ class CircleTile extends StatelessWidget {
               Expanded(
                 child: _Metric(
                   label: 'Pot each round',
-                  value: circle.potSize.asShortNaira,
+                  value: circle.potSize.asNaira,
                 ),
               ),
               Expanded(

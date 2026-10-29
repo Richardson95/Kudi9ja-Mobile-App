@@ -1162,15 +1162,23 @@ abstract final class Finance {
     RepaymentFrequency frequency = RepaymentFrequency.monthly,
     LendingTerms? terms,
     DateTime? start,
+    double? flatRate,
+    double? managementFee,
+    double? repaymentFeeRate,
   }) {
+    // [flatRate], [managementFee] and [repaymentFeeRate] are prices an admin
+    // set on this one loan, in place of what [terms] would charge.
     final t = terms ?? settings.lending;
-    final rate = t.rateFor(months);
-    final loanTotal = Finance.loanTotal(principal, months, t);
+    final rate = flatRate ?? t.rateFor(months);
+    final loanTotal =
+        principal <= 0 ? 0.0 : ceilNaira(principal * (1 + rate));
+    final feeRate = repaymentFeeRate ?? t.repaymentFeeRate;
     final count = frequency.installments(months, start);
-    final plan = instalmentPlan(loanTotal, count, t.repaymentFeeRate);
+    final plan = instalmentPlan(loanTotal, count, feeRate);
     final fees = plan.fold(0.0, (sum, p) => sum + p.fee);
     final first = plan.isEmpty ? const InstalmentPart(0, 0) : plan.first;
-    final fee = principal > 0 ? t.processingFeeFor(principal) : 0.0;
+    final fee = managementFee ??
+        (principal > 0 ? t.processingFeeFor(principal) : 0.0);
     return LoanPreview(
       rate: rate,
       interest: (loanTotal - principal).clamp(0, double.infinity).toDouble(),
@@ -1182,7 +1190,7 @@ abstract final class Finance {
       each: first.total,
       base: first.base,
       instalmentFee: first.fee,
-      feeRate: t.repaymentFeeRate,
+      feeRate: feeRate,
       fee: fee,
       net: principal - fee,
     );

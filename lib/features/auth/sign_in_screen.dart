@@ -134,7 +134,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     .scale(begin: const Offset(0.8, 0.8)),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  signingIn ? 'Welcome back' : 'Money that works\nas hard as you do',
+                  signingIn ? 'Welcome back' : 'Easy Money,\nthat resolves your needs!',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayMedium,
                 ).animate(delay: 100.ms).fadeIn().slideY(begin: 0.2),
@@ -142,7 +142,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 Text(
                   signingIn
                       ? 'Sign in to continue to your dashboard'
-                      : 'Save at ${settings.savingsRatePct.toStringAsFixed(0)}% paid upfront. Borrow up to ${settings.maxLoanAmount.asNairaFlat}.',
+                      : 'Loans for staff before payday, personal loans up to '
+                          '${settings.maxLoanAmount.asNairaFlat}, and '
+                          '${settings.savingsRatePct.toStringAsFixed(0)}% a year on savings, paid upfront.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,

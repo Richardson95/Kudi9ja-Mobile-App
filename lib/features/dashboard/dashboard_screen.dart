@@ -72,7 +72,16 @@ class DashboardScreen extends StatelessWidget {
             // customer lands on. It was only on the Borrow tab, which is the
             // one place somebody who has just been declined has no reason to
             // go — so a refusal, and the reason they could act on, sat unseen.
-            if (app.pendingLoanApplication != null) ...[
+            // New terms waiting on the customer come first: nothing moves
+            // until they answer.
+            if (app.offeredLoanApplications.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: ApplicationBanner(
+                  application: app.offeredLoanApplications.first,
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            ] else if (app.pendingLoanApplication != null) ...[
               SliverToBoxAdapter(
                 child: ApplicationBanner(application: app.pendingLoanApplication!),
               ),
@@ -299,7 +308,7 @@ class _EarningsStrip extends StatelessWidget {
         Expanded(
           child: _MiniStat(
             label: 'Locked away',
-            value: app.hideBalance ? '••••' : app.totalSaved.asShortNaira,
+            value: app.hideBalance ? '••••' : app.totalSaved.asNaira,
             icon: Icons.lock_outline_rounded,
             tint: AppColors.info,
           ),
@@ -308,7 +317,7 @@ class _EarningsStrip extends StatelessWidget {
         Expanded(
           child: _MiniStat(
             label: 'Interest earned',
-            value: app.hideBalance ? '••••' : app.totalInterestEarned.asShortNaira,
+            value: app.hideBalance ? '••••' : app.totalInterestEarned.asNaira,
             icon: Icons.trending_up_rounded,
             tint: AppColors.success,
           ),
@@ -317,7 +326,7 @@ class _EarningsStrip extends StatelessWidget {
         Expanded(
           child: _MiniStat(
             label: 'You owe',
-            value: app.hideBalance ? '••••' : app.totalOwed.asShortNaira,
+            value: app.hideBalance ? '••••' : app.totalOwed.asNaira,
             icon: Icons.receipt_outlined,
             tint: app.totalOwed > 0 ? AppColors.gold : AppColors.textTertiary,
           ),
@@ -562,7 +571,7 @@ class PlanTile extends StatelessWidget {
                       isGoal
                           ? (plan.goalReached
                                 ? 'Target reached'
-                                : '${plan.amountLeftToTarget.asShortNaira} to go')
+                                : '${plan.amountLeftToTarget.asNaira} to go')
                           : (mature
                                 ? 'Ready to withdraw'
                                 : plan.maturityDate.countdown),
@@ -580,7 +589,7 @@ class PlanTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    plan.principal.asShortNaira,
+                    plan.principal.asNaira,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -588,7 +597,7 @@ class PlanTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '+${plan.interestPaid.asShortNaira} paid',
+                    '+${plan.interestPaid.asNaira} paid',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -655,7 +664,7 @@ class _CreditSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${settings.minLoanAmount.asNairaFlat} to ${settings.maxLoanAmount.asShortNaira} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
+                          '${settings.minLoanAmount.asNairaFlat} to ${settings.maxLoanAmount.asNairaFlat} • from ${settings.loanRateLabelFor(1)} flat over 1 month',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiary,
@@ -737,7 +746,7 @@ class LoanTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    loan.outstanding.asShortNaira,
+                    loan.outstanding.asNaira,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,

@@ -11,9 +11,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/loan_application.dart';
+import '../../data/models/models.dart';
+import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/company_account.dart';
 import '../../widgets/primitives.dart';
+import 'admin_change_terms_sheet.dart';
 
 /// Applications waiting on a decision.
 ///
@@ -28,7 +31,12 @@ class AdminLoanApplicationsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final pending = app.adminLoanApplications.where((a) => a.isPending).toList();
+    // Open ones, whichever side they wait on: the team, or a customer
+    // answering changed terms. To decide first, then with the customer.
+    final pending = [
+      ...app.adminLoanApplications.where((a) => a.isPending),
+      ...app.adminLoanApplications.where((a) => a.isOffered),
+    ];
 
     if (pending.isEmpty) {
       return const SizedBox.shrink();
@@ -80,11 +88,24 @@ class _ApplicationRow extends StatelessWidget {
                   ),
                 ),
                 StatusPill(
-                  label: application.status.label.toUpperCase(),
-                  color: AppColors.gold,
+                  label: application.isOffered
+                      ? 'WITH CUSTOMER'
+                      : application.status.label.toUpperCase(),
+                  color: application.isOffered ? AppColors.info : AppColors.gold,
                 ),
               ],
             ),
+            if (application.isPending && application.hasAgreedTerms) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Customer agreed to changed terms',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.success,
+                ),
+              ),
+            ],
             const SizedBox(height: 4),
             Text(
               '${application.customerName} · ${application.businessName}',
@@ -157,19 +178,51 @@ class AdminLoanApplicationScreen extends StatefulWidget {
 class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen> {
   bool _busy = false;
 
-  LoanApplication get _a => widget.application;
+  /// Replaced when changed terms are sent, so the screen shows the offer.
+  late LoanApplication _a = widget.application;
+
+  /// The terms the applicant borrows on: the loan group's, or the standard.
+  LendingTerms get _terms =>
+      _a.groupPricing ? settings.groupLending : settings.lending;
+
+  /// What it is priced on now: changed terms once sent, agreed or waiting,
+  /// else the terms in force for what was asked.
+  LoanPreview get _preview {
+    final offer = _a.offer;
+    return Finance.loanPreview(
+      _a.amount,
+      _a.pricedMonths,
+      frequency: _a.repaymentFrequency,
+      terms: _terms,
+      flatRate: offer?.flatRate,
+      managementFee: offer?.managementFee,
+      repaymentFeeRate: offer?.repaymentFeeRate,
+    );
+  }
+
+  Future<void> _changeTerms() async {
+    final updated = await showChangeTermsSheet(
+      context,
+      application: _a,
+      terms: _terms,
+    );
+    if (updated != null && mounted) setState(() => _a = updated);
+  }
 
   Future<void> _approve() async {
+    final p = _preview;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Approve this loan?'),
+        title: Text('Approve ${_a.amount.asNaira} for ${_a.customerName}?'),
         content: Text(
-          '${_a.amount.asNaira} goes into ${_a.customerName}’s wallet as soon '
-          'as you confirm, less the management fee. There is no undo: once '
-          'the money is in the wallet, the loan is repaid in full, with '
-          'interest.',
+          '${_a.hasAgreedTerms ? 'On the changed terms they agreed to. ' : ''}'
+          '${p.net.asNaira} goes into their Kudi9ja wallet now, after the '
+          '${p.fee.asNaira} management fee. They repay ${p.each.asNaira} a '
+          '${p.frequency.unit} (${p.base.asNaira} + ${p.instalmentFee.asNaira} '
+          'transaction fee) — ${p.frequency.paymentsPhrase(_a.pricedMonths)}, '
+          '${p.total.asNaira} in all. There is no undo.',
           style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
         actions: [
@@ -219,6 +272,112 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
       showToast(context, app.lastError ?? 'That could not be declined.',
           error: true);
     }
+  }
+
+  /// Where changed terms stand, if any were sent.
+  List<Widget> _offerNotice() {
+    final offer = _a.offer;
+    if (offer == null) return const [];
+    final (Color color, String title, String body) = switch (_a.status) {
+      LoanApplicationStatus.offered => (
+          AppColors.info,
+          'Waiting for the customer',
+          'Changed terms were sent ${offer.offeredAt.asDayTime}'
+              '${offer.offeredBy.isEmpty ? '' : ' by ${offer.offeredBy}'}. '
+              'It comes back here to approve once they agree; if they turn '
+              'them down, it closes.',
+        ),
+      LoanApplicationStatus.pending when offer.agreed => (
+          AppColors.success,
+          'The customer agreed to the changed terms',
+          'Agreed ${offer.agreedAt!.asDayTime}. Approving lends on these terms.',
+        ),
+      LoanApplicationStatus.termsDeclined => (
+          AppColors.textSecondary,
+          'The customer turned down the changed terms',
+          'Nothing was lent and the application is closed.',
+        ),
+      _ => (AppColors.textSecondary, '', ''),
+    };
+    if (title.isEmpty) return const [];
+    return [
+      KCard(
+        borderColor: color.withValues(alpha: 0.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              body,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (offer.note.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Note sent: ${offer.note}',
+                style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+              ),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: AppSpacing.lg),
+    ];
+  }
+
+  /// The loan as it would be lent, on what it is priced on now.
+  Widget _loanCard() {
+    final p = _preview;
+    final offer = _a.offer;
+    final freq = _a.repaymentFrequency;
+    final pricedOn = offer != null
+        ? 'Changed terms${offer.agreed ? ', agreed' : _a.isOffered ? ', waiting for the customer' : ''}'
+        : _a.groupPricing
+            ? 'Loan group terms'
+            : 'Standard terms';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'The loan'),
+        const SizedBox(height: AppSpacing.sm),
+        KCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Row('Term', freq.length(_a.pricedMonths)),
+              if (offer != null && offer.months != _a.tenureMonths)
+                _Row('Asked for', freq.length(_a.tenureMonths)),
+              _Row('Priced on', pricedOn),
+              _Row('Repaid', freq.paymentsPhrase(_a.pricedMonths)),
+              _Row(offer != null ? 'Rate' : 'Rate today',
+                  '${fractionPct(p.rate)} flat'),
+              _Row(
+                'Each ${freq.unit}',
+                '${p.each.asNaira} (${p.base.asNaira} + '
+                    '${p.instalmentFee.asNaira} fee)',
+              ),
+              _Row('Transaction fees (${fractionPct(p.feeRate)} of each repayment)',
+                  p.fees.asNaira),
+              _Row('Total to repay', p.total.asNaira),
+              _Row('Management fee', p.fee.asNaira),
+              _Row('Paid out', p.net.asNaira),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -320,6 +479,9 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          ..._offerNotice(),
+          _loanCard(),
+          const SizedBox(height: AppSpacing.lg),
 
           const SectionHeader(title: 'The business'),
           const SizedBox(height: AppSpacing.sm),
@@ -365,11 +527,21 @@ class _AdminLoanApplicationScreenState extends State<AdminLoanApplicationScreen>
           ],
           const SizedBox(height: AppSpacing.xl),
 
-          if (_a.isPending) ...[
-            GoldButton(
-              label: 'Approve and disburse',
-              loading: _busy,
-              onPressed: _busy ? null : _approve,
+          if (_a.status.isOpen) ...[
+            // With the customer, it can only be re-offered or declined: it
+            // comes back here to approve once they agree.
+            if (_a.isPending) ...[
+              GoldButton(
+                label: 'Approve and disburse',
+                loading: _busy,
+                onPressed: _busy ? null : _approve,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            GhostButton(
+              label: _a.isOffered ? 'Change the offer' : 'Change terms',
+              icon: Icons.tune_rounded,
+              onPressed: _busy ? null : _changeTerms,
             ),
             const SizedBox(height: AppSpacing.md),
             GhostButton(

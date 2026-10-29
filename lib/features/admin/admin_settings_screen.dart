@@ -888,8 +888,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                         Text(
                           '${_draft.groupLending.rateRange} over up to '
                           '${_draft.groupLending.maxTenureMonths} months · '
-                          '${_draft.groupLending.minAmount.asShortNaira} to '
-                          '${_draft.groupLending.maxAmount.asShortNaira} · '
+                          '${_draft.groupLending.minAmount.asNairaFlat} to '
+                          '${_draft.groupLending.maxAmount.asNairaFlat} · '
                           '${_draft.groupLending.repaymentFeeLabel} per repayment',
                           style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
                         ),

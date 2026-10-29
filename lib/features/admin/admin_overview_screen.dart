@@ -117,7 +117,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Wallet deposits',
-                value: m.deposits.asShortNaira,
+                value: m.deposits.asNaira,
                 icon: Icons.account_balance_wallet_outlined,
               ),
             ),
@@ -129,7 +129,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Locked in savings',
-                value: m.saved.asShortNaira,
+                value: m.saved.asNaira,
                 icon: Icons.lock_outline_rounded,
                 tint: AppColors.info,
                 footnote: '${m.activePlans} plans',
@@ -139,7 +139,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Out on loan',
-                value: m.lent.asShortNaira,
+                value: m.lent.asNaira,
                 icon: Icons.request_quote_outlined,
                 tint: AppColors.gold,
                 // A paper loan whose borrower has not signed up is on nobody's
@@ -158,7 +158,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Interest paid out',
-                value: m.interestPaid.asShortNaira,
+                value: m.interestPaid.asNaira,
                 icon: Icons.trending_up_rounded,
                 tint: AppColors.success,
                 footnote: 'to savers',
@@ -168,7 +168,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Interest charged',
-                value: m.interestCharged.asShortNaira,
+                value: m.interestCharged.asNaira,
                 icon: Icons.percent_rounded,
                 tint: AppColors.gold,
                 footnote: 'on every loan paid out',
@@ -182,7 +182,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Overdue',
-                value: m.overdue.asShortNaira,
+                value: m.overdue.asNaira,
                 icon: Icons.warning_amber_rounded,
                 tint: m.overdue > 0 ? AppColors.danger : AppColors.textTertiary,
                 // Owed on every instalment past its day — not only on loans
@@ -196,7 +196,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Fees charged',
-                value: m.feesCharged.asShortNaira,
+                value: m.feesCharged.asNaira,
                 icon: Icons.receipt_long_outlined,
                 tint: AppColors.gold,
                 footnote: 'management and transaction',
@@ -397,11 +397,11 @@ class _RatesCard extends StatelessWidget {
         ),
         _Line(
           'Loan range',
-          '${settings.minLoanAmount.asNairaFlat} - ${settings.maxLoanAmount.asShortNaira}',
+          '${settings.minLoanAmount.asNairaFlat} - ${settings.maxLoanAmount.asNairaFlat}',
         ),
         _Line(
           'Management fee',
-          'Flat ${settings.flatProcessingFee.asShortNaira} to ${settings.processingFeeThreshold.asShortNaira}, then ${PlatformSettings.ratePct(settings.feeRatePct)}',
+          'Flat ${settings.flatProcessingFee.asNairaFlat} to ${settings.processingFeeThreshold.asNairaFlat}, then ${PlatformSettings.ratePct(settings.feeRatePct)}',
         ),
         _Line(
           'Transaction fee',
@@ -537,7 +537,7 @@ class _BalanceChart extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Text(
-                    value.asShortNaira,
+                    value.asNaira,
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,

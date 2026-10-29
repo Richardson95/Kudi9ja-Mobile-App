@@ -318,7 +318,7 @@ class QuickAmounts extends StatelessWidget {
               border: Border.all(color: AppColors.stroke),
             ),
             child: Text(
-              a.asShortNaira,
+              a.asNairaFlat,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

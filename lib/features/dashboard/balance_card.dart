@@ -109,7 +109,7 @@ class BalanceCard extends StatelessWidget {
                     Expanded(
                       child: _Sub(
                         label: 'Net worth',
-                        value: hidden ? '••••' : app.netWorth.asShortNaira,
+                        value: hidden ? '••••' : app.netWorth.asNaira,
                       ),
                     ),
                     Container(
@@ -126,7 +126,7 @@ class BalanceCard extends StatelessWidget {
                         label: 'Earned so far',
                         value: hidden
                             ? '••••'
-                            : app.totalInterestEarned.asShortNaira,
+                            : app.totalInterestEarned.asNaira,
                         valueColor: app.totalInterestEarned > 0
                             ? AppColors.success
                             : null,
@@ -194,13 +194,18 @@ class _Sub extends StatelessWidget {
         style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
       ),
       const SizedBox(height: 3),
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.4,
-          color: valueColor ?? AppColors.textPrimary,
+      // Full amounts, kobo and all, run long: shrink rather than clip.
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+            color: valueColor ?? AppColors.textPrimary,
+          ),
         ),
       ),
     ],

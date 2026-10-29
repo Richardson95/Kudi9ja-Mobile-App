@@ -236,7 +236,7 @@ class _CustomerTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              customer.netWorth.asShortNaira,
+              customer.netWorth.asNaira,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -245,7 +245,7 @@ class _CustomerTile extends StatelessWidget {
             ),
             Text(
               customer.totalOwed > 0
-                  ? 'owes ${customer.totalOwed.asShortNaira}'
+                  ? 'owes ${customer.totalOwed.asNaira}'
                   : 'no debt',
               style: TextStyle(
                 fontSize: 10.5,
@@ -350,7 +350,7 @@ class _AdminCustomerDetailScreenState
                   Expanded(
                     child: MetricTile(
                       label: 'Wallet',
-                      value: c.balance.asShortNaira,
+                      value: c.balance.asNaira,
                       icon: Icons.account_balance_wallet_outlined,
                     ),
                   ),
@@ -358,7 +358,7 @@ class _AdminCustomerDetailScreenState
                   Expanded(
                     child: MetricTile(
                       label: 'Locked away',
-                      value: c.totalSaved.asShortNaira,
+                      value: c.totalSaved.asNaira,
                       icon: Icons.lock_outline_rounded,
                       tint: AppColors.info,
                     ),
@@ -371,7 +371,7 @@ class _AdminCustomerDetailScreenState
                   Expanded(
                     child: MetricTile(
                       label: 'Owed on loans',
-                      value: c.totalOwed.asShortNaira,
+                      value: c.totalOwed.asNaira,
                       icon: Icons.request_quote_outlined,
                       tint: c.totalOwed > 0
                           ? AppColors.gold
@@ -382,7 +382,7 @@ class _AdminCustomerDetailScreenState
                   Expanded(
                     child: MetricTile(
                       label: 'Interest paid to them',
-                      value: c.interestPaid.asShortNaira,
+                      value: c.interestPaid.asNaira,
                       icon: Icons.trending_up_rounded,
                       tint: AppColors.success,
                     ),
@@ -844,7 +844,7 @@ class _LiveRecords extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  p.principal.asShortNaira,
+                  p.principal.asNaira,
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -883,7 +883,7 @@ class _LiveRecords extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      l.outstanding.asShortNaira,
+                      l.outstanding.asNaira,
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,

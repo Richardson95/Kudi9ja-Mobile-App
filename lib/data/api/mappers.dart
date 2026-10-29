@@ -746,6 +746,22 @@ LoanApplication loanApplicationFromApi(Map<String, dynamic> j) => LoanApplicatio
           _list(j['businessPhotos']).map(applicationDocumentFromApi).toList(),
       repaymentFrequency: RepaymentFrequency.fromWire(j['repaymentFrequency']),
       groupPricing: _bool(j['groupPricing']),
+      offer: j['offer'] is Map
+          ? termsOfferFromApi((j['offer'] as Map).cast<String, dynamic>())
+          : null,
+      termsAgreed: _bool(j['termsAgreed']),
+    );
+
+/// Changed terms on an application. Rates arrive as fractions: 0.3 for 30%.
+TermsOffer termsOfferFromApi(Map<String, dynamic> j) => TermsOffer(
+      months: _int(j['months']),
+      flatRate: _money(j['flatRate']),
+      managementFee: _money(j['managementFee']),
+      repaymentFeeRate: _money(j['repaymentFeeRate']),
+      note: _str(j['note']),
+      offeredAt: _date(j['offeredAt']),
+      offeredBy: _str(j['offeredBy']),
+      agreedAt: _dateOrNull(j['agreedAt']),
     );
 
 Guarantor guarantorFromApi(Map<String, dynamic> j) => Guarantor(

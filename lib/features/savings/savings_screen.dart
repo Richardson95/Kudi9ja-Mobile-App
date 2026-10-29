@@ -90,7 +90,7 @@ class SavingsScreen extends StatelessWidget {
                 icon: Icons.savings_outlined,
                 title: 'No plans yet',
                 message:
-                    'Lock any amount from ${settings.minSavingsAmount.asShortNaira} for as little as one month and collect your 17% straight away.',
+                    'Lock any amount from ${settings.minSavingsAmount.asNairaFlat} for as little as one month and collect your 17% straight away.',
                 action: SizedBox(
                   width: 220,
                   child: GoldButton(
@@ -259,7 +259,7 @@ class _GrowthChart extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  running.asShortNaira,
+                  running.asNaira,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -368,7 +368,7 @@ class _ClosedTile extends StatelessWidget {
             ),
           ),
           Text(
-            plan.principal.asShortNaira,
+            plan.principal.asNaira,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -468,7 +468,7 @@ class _AutoSaveSection extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${(p.autoAmount ?? 0).asShortNaira} ${p.autoFrequency?.adverb ?? ''} • next ${p.nextAutoRun?.asDay ?? '-'}',
+                            '${(p.autoAmount ?? 0).asNaira} ${p.autoFrequency?.adverb ?? ''} • next ${p.nextAutoRun?.asDay ?? '-'}',
                             style: TextStyle(
                               fontSize: 11.5,
                               color: AppColors.textTertiary,

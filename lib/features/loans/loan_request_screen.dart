@@ -338,7 +338,7 @@ class _RangeCard extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '${terms.minAmount.asNairaFlat} to ${terms.maxAmount.asShortNaira}',
+          '${terms.minAmount.asNairaFlat} to ${terms.maxAmount.asNairaFlat}',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,

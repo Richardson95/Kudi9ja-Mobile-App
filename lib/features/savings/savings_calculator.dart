@@ -392,7 +392,7 @@ class _Comparison extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'One year on ${principal.asShortNaira}',
+            'One year on ${principal.asNairaFlat}',
             style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.lg),

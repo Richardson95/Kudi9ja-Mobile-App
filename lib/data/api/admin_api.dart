@@ -163,7 +163,7 @@ class AdminApi {
   }) async =>
       Page.fromApi(
         await _client.get('/admin/loan-applications', query: {
-          if (status != null) 'status': status.name.toUpperCase(),
+          if (status != null) 'status': status.wire,
           'page': page,
           'size': size,
         }),
@@ -183,6 +183,30 @@ class AdminApi {
       loanApplicationFromApi(_obj(await _client.post(
         '/admin/loan-applications/$id/approve',
         body: {if (note != null && note.isNotEmpty) 'note': note},
+      )));
+
+  /// Changes the rate, fees or months and sends them to the customer to
+  /// agree to or turn down. Nothing is lent until they agree; it then comes
+  /// back here for approval, priced on them.
+  ///
+  /// Rates go as percentages, as an admin types them: 30 for 30%.
+  Future<LoanApplication> offerLoanApplicationTerms(
+    String id, {
+    required int months,
+    required double interestRatePct,
+    required double managementFee,
+    required double transactionFeePct,
+    String? note,
+  }) async =>
+      loanApplicationFromApi(_obj(await _client.post(
+        '/admin/loan-applications/$id/offer',
+        body: {
+          'months': months,
+          'interestRatePct': interestRatePct,
+          'managementFee': managementFee,
+          'transactionFeePct': transactionFeePct,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
       )));
 
   /// Declines, with a reason the customer is shown word for word.
@@ -244,15 +268,17 @@ class AdminApi {
         adminWithdrawalFromApi,
       );
 
-  /// Marks a withdrawal as paid.
+  /// Approves a withdrawal. With Paystack on, the server sends the transfer.
   ///
-  /// The transfer itself is made by hand from the collection account; this
-  /// records that it was. [payoutReference] is the bank's own reference for
-  /// that transfer, which is what ties the two together if it is ever queried.
+  /// [paidByHand] records a transfer an admin already made from the company
+  /// account instead: Paystack is not called, and [payoutReference] — the
+  /// bank's own reference for that transfer, required then — is what ties the
+  /// record to the statement if it is ever queried.
   Future<WithdrawalRequest> approveWithdrawal(
     String id, {
     String? payoutReference,
     String? note,
+    bool paidByHand = false,
   }) async =>
       adminWithdrawalFromApi(_obj(await _client.post(
         '/admin/withdrawals/$id/approve',
@@ -260,6 +286,7 @@ class AdminApi {
         body: {
           if (payoutReference != null) 'payoutReference': payoutReference,
           if (note != null) 'note': note,
+          if (paidByHand) 'paidByHand': true,
         },
       )));
 

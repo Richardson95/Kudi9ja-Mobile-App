@@ -763,6 +763,19 @@ class Kudi9jaApi {
       loanApplicationFromApi(
           _asMap(await _client.post('/loans/applications/$id/withdraw')));
 
+  /// Agrees to the terms the team changed. The PIN is checked on this call;
+  /// the application goes back to the team for a decision, priced on them.
+  Future<LoanApplication> agreeToLoanTerms(String id, {required String pin}) async =>
+      loanApplicationFromApi(_asMap(await _client.post(
+        '/loans/applications/$id/agree',
+        body: {'pin': pin},
+      )));
+
+  /// Turns the changed terms down. That ends the application.
+  Future<LoanApplication> turnDownLoanTerms(String id) async =>
+      loanApplicationFromApi(
+          _asMap(await _client.post('/loans/applications/$id/turn-down')));
+
   Future<Map<String, dynamic>> repayLoan(String id,
           {required double amount, required String pin}) async =>
       _asMap(await _client.post(

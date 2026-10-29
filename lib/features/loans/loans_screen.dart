@@ -18,6 +18,7 @@ import '../wallet/add_money_screen.dart';
 import 'loan_detail_screen.dart';
 import 'loan_officers_card.dart';
 import 'loan_request_screen.dart';
+import 'terms_offer_card.dart';
 import '../../data/models/platform_settings.dart';
 
 class LoansScreen extends StatelessWidget {
@@ -72,7 +73,18 @@ class LoansScreen extends StatelessWidget {
           // What happened to the last application, before anything else. A
           // customer waiting on a decision, or holding a refusal they could
           // act on, should not have to go looking for either.
-          if (app.pendingLoanApplication != null) ...[
+          // Changed terms are answered here, where the loan was asked for.
+          if (app.offeredLoanApplications.isNotEmpty) ...[
+            for (final offered in app.offeredLoanApplications) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: TermsOfferCard(application: offered),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+            ],
+          ] else if (app.pendingLoanApplication != null) ...[
             SliverToBoxAdapter(
               child: ApplicationBanner(application: app.pendingLoanApplication!),
             ),
@@ -114,7 +126,7 @@ class LoansScreen extends StatelessWidget {
                 icon: Icons.bolt_rounded,
                 title: 'No active loans',
                 message:
-                    'Borrow ${terms.minAmount.asNairaFlat} to ${terms.maxAmount.asShortNaira} over 1 to ${terms.maxTenureMonths} months, and repay weekly or monthly. Interest is flat and set by the tenure — ${PlatformSettings.ratePct(terms.rateFor(1) * 100)} over 1 month, ${PlatformSettings.ratePct(terms.rateFor(3) * 100)} over 3. A ${terms.flatProcessingFee.asShortNaira} management fee comes out of the amount you receive, and each repayment carries a ${terms.repaymentFeeLabel} transaction fee.',
+                    'Borrow ${terms.minAmount.asNairaFlat} to ${terms.maxAmount.asNairaFlat} over 1 to ${terms.maxTenureMonths} months, and repay weekly or monthly. Interest is flat and set by the tenure — ${PlatformSettings.ratePct(terms.rateFor(1) * 100)} over 1 month, ${PlatformSettings.ratePct(terms.rateFor(3) * 100)} over 3. A ${terms.flatProcessingFee.asNairaFlat} management fee comes out of the amount you receive, and each repayment carries a ${terms.repaymentFeeLabel} transaction fee.',
                 action: SizedBox(
                   width: 220,
                   child: GoldButton(
@@ -198,7 +210,7 @@ class _CreditCard extends StatelessWidget {
             // out from savings: a customer asks for what they need and a
             // person reads the application and decides.
             Text(
-              '${terms.minAmount.asNairaFlat} – ${terms.maxAmount.asShortNaira}',
+              '${terms.minAmount.asNairaFlat} – ${terms.maxAmount.asNairaFlat}',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
@@ -277,7 +289,7 @@ class _ActiveLoanCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Borrowed ${loan.principal.asShortNaira} • ${loan.termPhrase}',
+                      'Borrowed ${loan.principal.asNaira} • ${loan.termPhrase}',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
@@ -336,7 +348,7 @@ class _ActiveLoanCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${loan.amountRepaid.asShortNaira} of ${loan.totalRepayable.asShortNaira}',
+                '${loan.amountRepaid.asNaira} of ${loan.totalRepayable.asNaira}',
                 style: TextStyle(
                   fontSize: 11.5,
                   color: AppColors.textTertiary,

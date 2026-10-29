@@ -442,7 +442,7 @@ class _Breakdown extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Text(
-                    entries[i].value.asShortNaira,
+                    entries[i].value.asNaira,
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,

@@ -26,7 +26,29 @@ class _Slide {
 /// for a while after it became ₦5,000,000. A headline figure that a customer
 /// reads before signing up should come from the same place the product
 /// reads it.
+/// In the order the web's sign-in panel makes its promises: staff loans,
+/// personal loans, savings, then the two keys.
 List<_Slide> get _slides => [
+  _Slide(
+    Icons.business_center_outlined,
+    'STAFF LOANS',
+    'Loans for staff,\nbefore payday.',
+    'Your employer guarantees the loan, so you can get money for what you '
+        'need before your salary comes in.',
+    'Employer',
+    'guaranteed employee loans',
+  ),
+  _Slide(
+    Icons.account_balance_wallet_outlined,
+    'BORROW',
+    'Personal loans,\nin your own name.',
+    'Borrow up to ${settings.maxLoanAmount.asNairaFlat} at a flat rate set '
+        'by the tenure you choose, and repay monthly or weekly. Approved '
+        'loans land in your Kudi9ja wallet, with a repayment plan you can '
+        'read at a glance.',
+    settings.maxLoanAmount.asShortNaira,
+    'maximum personal loan',
+  ),
   _Slide(
     Icons.savings_outlined,
     'SAVE',
@@ -36,16 +58,6 @@ List<_Slide> get _slides => [
         'return the same second the plan starts. No waiting for maturity.',
     '${settings.savingsRatePct.toStringAsFixed(0)}%',
     'per annum, paid instantly',
-  ),
-  _Slide(
-    Icons.account_balance_wallet_outlined,
-    'BORROW',
-    'Credit that moves\nat your speed.',
-    'Access up to ${settings.maxLoanAmount.asNairaFlat} with a transparent '
-        'flat rate, a clear repayment plan and money in your wallet in '
-        'minutes — not days.',
-    settings.maxLoanAmount.asShortNaira,
-    'maximum credit line',
   ),
   _Slide(
     Icons.verified_user_outlined,

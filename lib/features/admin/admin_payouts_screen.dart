@@ -68,7 +68,7 @@ class _AdminPayoutsScreenState extends State<AdminPayoutsScreen> {
                     ? AppColors.gold
                     : AppColors.textTertiary,
                 footnote: app.pendingDepositCount > 0
-                    ? app.pendingDepositValue.asShortNaira
+                    ? app.pendingDepositValue.asNaira
                     : null,
               ),
             ),
@@ -82,7 +82,7 @@ class _AdminPayoutsScreenState extends State<AdminPayoutsScreen> {
                     ? AppColors.gold
                     : AppColors.textTertiary,
                 footnote: app.pendingWithdrawalCount > 0
-                    ? app.pendingWithdrawalValue.asShortNaira
+                    ? app.pendingWithdrawalValue.asNaira
                     : null,
               ),
             ),
@@ -94,7 +94,7 @@ class _AdminPayoutsScreenState extends State<AdminPayoutsScreen> {
             Expanded(
               child: MetricTile(
                 label: 'Collected to date',
-                value: collected.asShortNaira,
+                value: collected.asNaira,
                 icon: Icons.savings_rounded,
                 tint: AppColors.success,
               ),
@@ -103,7 +103,7 @@ class _AdminPayoutsScreenState extends State<AdminPayoutsScreen> {
             Expanded(
               child: MetricTile(
                 label: 'Released to date',
-                value: released.asShortNaira,
+                value: released.asNaira,
                 icon: Icons.task_alt_rounded,
                 tint: AppColors.info,
               ),
@@ -549,6 +549,16 @@ class _RequestCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.sm),
+            // Money already sent from the company account. Approving it the
+            // ordinary way would have Paystack send it a second time.
+            GhostButton(
+              label: 'Paid by hand',
+              icon: Icons.receipt_long_rounded,
+              onPressed: canAct
+                  ? () => _paidByHand(context, app, request)
+                  : null,
+            ),
             if (!canAct)
               Padding(
                 padding: EdgeInsets.only(top: AppSpacing.sm),
@@ -571,29 +581,15 @@ class _RequestCard extends StatelessWidget {
     AppState app,
     WithdrawalRequest w,
   ) async {
-    final reference = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Release this payout?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${w.amount.asNaira} will be sent to ${w.customerName} at '
-              '${w.bank} ${w.destinationAccount}. With Paystack on, approving '
-              'sends the transfer now. This cannot be undone.',
-              style: TextStyle(color: AppColors.textSecondary, height: 1.5),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: reference,
-              decoration: const InputDecoration(
-                hintText: 'Bank reference, if you paid it by hand',
-              ),
-            ),
-          ],
+        title: Text('Send ${w.amount.asNaira} to ${w.customerName}?'),
+        content: Text(
+          'Paystack transfers it to ${w.bank} ${w.destinationAccount}. If the '
+          'bank refuses it, the full amount goes back to their wallet '
+          'automatically. Already paid it yourself? Use Paid by hand instead.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -606,18 +602,16 @@ class _RequestCard extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
-              'Approve',
+              'Approve and send',
               style: TextStyle(color: AppColors.success),
             ),
           ),
         ],
       ),
     );
-    final ref = reference.text.trim();
-    reference.dispose();
     if (confirmed != true || !context.mounted) return;
 
-    await app.approveWithdrawal(w.id, payoutReference: ref.isEmpty ? null : ref);
+    await app.approveWithdrawal(w.id);
     if (!context.mounted) return;
     final error = app.lastError;
     if (error != null) {
@@ -626,7 +620,36 @@ class _RequestCard extends StatelessWidget {
       showToast(context, error, error: true);
       return;
     }
-    showToast(context, '${w.amount.asNaira} released to ${w.customerName}');
+    showToast(context, 'Approved — Paystack is sending it');
+  }
+
+  /// Records a transfer an admin already made from the company account.
+  ///
+  /// Paystack sends nothing. The bank's reference is required, so the record
+  /// can be matched to the statement.
+  Future<void> _paidByHand(
+    BuildContext context,
+    AppState app,
+    WithdrawalRequest w,
+  ) async {
+    final reference = await showDialog<String>(
+      context: context,
+      builder: (_) => _PaidByHandDialog(request: w),
+    );
+    if (reference == null || !context.mounted) return;
+
+    await app.approveWithdrawal(
+      w.id,
+      payoutReference: reference,
+      paidByHand: true,
+    );
+    if (!context.mounted) return;
+    final error = app.lastError;
+    if (error != null) {
+      showToast(context, error, error: true);
+      return;
+    }
+    showToast(context, 'Recorded as paid by hand');
   }
 
   Future<void> _decline(
@@ -699,6 +722,77 @@ class _RequestCard extends StatelessWidget {
       context,
       '${w.amount.asNaira} refunded to ${w.customerName}',
       error: true,
+    );
+  }
+}
+
+/// Asks for the bank's reference before a hand-made transfer is recorded.
+class _PaidByHandDialog extends StatefulWidget {
+  const _PaidByHandDialog({required this.request});
+
+  final WithdrawalRequest request;
+
+  @override
+  State<_PaidByHandDialog> createState() => _PaidByHandDialogState();
+}
+
+class _PaidByHandDialogState extends State<_PaidByHandDialog> {
+  final _reference = TextEditingController();
+
+  @override
+  void dispose() {
+    _reference.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.request;
+    final enough = _reference.text.trim().length >= 3;
+    return AlertDialog(
+      title: Text('Already paid ${w.customerName}?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Use this only if ${w.amount.asNaira} was already transferred to '
+            '${w.bank} ${w.destinationAccount} by hand. It is recorded as paid '
+            'and Paystack sends nothing.',
+            style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _reference,
+            autofocus: true,
+            maxLength: 120,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              hintText: 'Bank transfer reference',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+        TextButton(
+          onPressed: enough
+              ? () => Navigator.pop(context, _reference.text.trim())
+              : null,
+          child: Text(
+            'Record as paid',
+            style: TextStyle(
+              color: enough ? AppColors.success : AppColors.textTertiary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

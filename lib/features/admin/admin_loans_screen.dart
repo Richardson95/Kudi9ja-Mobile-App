@@ -124,7 +124,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
             Expanded(
               child: MetricTile(
                 label: 'Total disbursed',
-                value: disbursed.asShortNaira,
+                value: disbursed.asNaira,
                 icon: Icons.upload_rounded,
               ),
             ),
@@ -132,7 +132,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
             Expanded(
               child: MetricTile(
                 label: 'Outstanding',
-                value: outstanding.asShortNaira,
+                value: outstanding.asNaira,
                 icon: Icons.hourglass_bottom_rounded,
                 tint: AppColors.info,
               ),
@@ -145,7 +145,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
             Expanded(
               child: MetricTile(
                 label: 'Collected',
-                value: collected.asShortNaira,
+                value: collected.asNaira,
                 icon: Icons.download_rounded,
                 tint: AppColors.success,
               ),
@@ -154,7 +154,7 @@ class _AdminLoansScreenState extends State<AdminLoansScreen> {
             Expanded(
               child: MetricTile(
                 label: 'Fee income',
-                value: fees.asShortNaira,
+                value: fees.asNaira,
                 icon: Icons.percent_rounded,
                 tint: AppColors.gold,
               ),
@@ -317,7 +317,7 @@ class _WaitingLoansCardState extends State<_WaitingLoansCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${widget.outstanding.asShortNaira} owed, entered from the '
+                      '${widget.outstanding.asNaira} owed, entered from the '
                       'paper records. Each lands on its account the day that '
                       'person signs up.',
                       style: TextStyle(
@@ -374,7 +374,7 @@ class _WaitingLoansCardState extends State<_WaitingLoansCard> {
                       ),
                     ),
                     Text(
-                      l.outstanding.asShortNaira,
+                      l.outstanding.asNaira,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -454,7 +454,7 @@ class _AdminLoanTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${loan.customerRef} • ${loan.purpose} • '
-                      '${loan.principal.asShortNaira} over ${loan.tenureMonths} '
+                      '${loan.principal.asNaira} over ${loan.tenureMonths} '
                       '${loan.tenureMonths == 1 ? 'month' : 'months'}, '
                       '${loan.frequency.adjective}',
                       maxLines: 1,
@@ -480,19 +480,19 @@ class _AdminLoanTile extends StatelessWidget {
               Expanded(
                 child: _Cell(
                   label: 'Outstanding',
-                  value: loan.outstanding.asShortNaira,
+                  value: loan.outstanding.asNaira,
                 ),
               ),
               Expanded(
                 child: _Cell(
                   label: 'Collected',
-                  value: loan.amountRepaid.asShortNaira,
+                  value: loan.amountRepaid.asNaira,
                 ),
               ),
               Expanded(
                 child: _Cell(
                   label: 'Fee taken',
-                  value: loan.processingFee.asShortNaira,
+                  value: loan.processingFee.asNaira,
                 ),
               ),
               Expanded(

@@ -80,7 +80,7 @@ class LoanDetailScreen extends StatelessWidget {
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: GhostButton(
-                        label: 'Pay ${nextDue.asShortNaira}',
+                        label: 'Pay ${nextDue.asNaira}',
                         onPressed: () => _repay(context, loan, nextDue),
                       ),
                     ),

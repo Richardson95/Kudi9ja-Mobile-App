@@ -8,7 +8,24 @@ library;
 
 import 'platform_settings.dart';
 
-enum LoanApplicationStatus { pending, approved, rejected, cancelled }
+/// Where an application stands.
+///
+/// [offered] and [termsDeclined] are last so that applications saved on the
+/// device by index before they existed still read back as what they were.
+enum LoanApplicationStatus {
+  pending,
+  approved,
+  rejected,
+  cancelled,
+
+  /// The reviewing admin changed the terms and sent them back. Waiting for
+  /// the customer to agree, which returns it to [pending], or to turn them
+  /// down, which ends it.
+  offered,
+
+  /// The customer turned down the changed terms. Nothing was lent.
+  termsDeclined,
+}
 
 extension LoanApplicationStatusX on LoanApplicationStatus {
   String get label => switch (this) {
@@ -16,9 +33,110 @@ extension LoanApplicationStatusX on LoanApplicationStatus {
         LoanApplicationStatus.approved => 'Approved',
         LoanApplicationStatus.rejected => 'Declined',
         LoanApplicationStatus.cancelled => 'Withdrawn',
+        LoanApplicationStatus.offered => 'New terms to answer',
+        LoanApplicationStatus.termsDeclined => 'Terms turned down',
       };
 
-  bool get isOpen => this == LoanApplicationStatus.pending;
+  /// As the server spells it: `TERMS_DECLINED`, not `TERMSDECLINED`.
+  String get wire => switch (this) {
+        LoanApplicationStatus.termsDeclined => 'TERMS_DECLINED',
+        _ => name.toUpperCase(),
+      };
+
+  /// Still waiting on someone: the team, or the customer's answer.
+  bool get isOpen =>
+      this == LoanApplicationStatus.pending ||
+      this == LoanApplicationStatus.offered;
+}
+
+/// A fraction as a percentage, to two places at most: "30%", "2.25%".
+///
+/// An admin can type any rate into an offer, and a customer agreeing to one
+/// has to see exactly that rate, not one rounded to a whole point.
+String fractionPct(double fraction) {
+  final v = ((fraction * 10000).roundToDouble() / 100).toStringAsFixed(2);
+  return '${v.replaceFirst(RegExp(r'\.?0+$'), '')}%';
+}
+
+/// Terms the reviewing admin changed, as a whole set — changed or not, so
+/// the loan is priced from one place.
+///
+/// Kept on the application alone and frozen onto its loan at approval; the
+/// standard pricing is untouched. Nothing is lent on them until the customer
+/// agrees.
+class TermsOffer {
+  const TermsOffer({
+    required this.months,
+    required this.flatRate,
+    required this.managementFee,
+    required this.repaymentFeeRate,
+    required this.offeredAt,
+    this.note = '',
+    this.offeredBy = '',
+    this.agreedAt,
+  });
+
+  final int months;
+
+  /// Flat interest for the whole loan, as a fraction: 0.3 for 30%.
+  final double flatRate;
+
+  /// In naira, taken from the payout.
+  final double managementFee;
+
+  /// On each repayment, as a fraction of the instalment: 0.02 for 2%.
+  final double repaymentFeeRate;
+
+  /// What the admin told the customer about the change.
+  final String note;
+  final DateTime offeredAt;
+
+  /// Which admin sent it. Empty on the customer's view: they are told by the
+  /// team, not by a person's email.
+  final String offeredBy;
+
+  /// When the customer agreed; null while they have not.
+  final DateTime? agreedAt;
+
+  bool get agreed => agreedAt != null;
+
+  TermsOffer agree(DateTime at) => TermsOffer(
+        months: months,
+        flatRate: flatRate,
+        managementFee: managementFee,
+        repaymentFeeRate: repaymentFeeRate,
+        offeredAt: offeredAt,
+        note: note,
+        offeredBy: offeredBy,
+        agreedAt: at,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'months': months,
+        'flatRate': flatRate,
+        'managementFee': managementFee,
+        'repaymentFeeRate': repaymentFeeRate,
+        'note': note,
+        'offeredAt': offeredAt.toIso8601String(),
+        'offeredBy': offeredBy,
+        'agreedAt': agreedAt?.toIso8601String(),
+      };
+
+  static TermsOffer? fromJson(Object? value) {
+    if (value is! Map) return null;
+    final j = value.cast<String, dynamic>();
+    return TermsOffer(
+      months: (j['months'] as num?)?.toInt() ?? 0,
+      flatRate: (j['flatRate'] as num?)?.toDouble() ?? 0,
+      managementFee: (j['managementFee'] as num?)?.toDouble() ?? 0,
+      repaymentFeeRate: (j['repaymentFeeRate'] as num?)?.toDouble() ?? 0,
+      note: j['note'] as String? ?? '',
+      offeredAt:
+          DateTime.tryParse(j['offeredAt'] as String? ?? '') ?? DateTime.now(),
+      offeredBy: j['offeredBy'] as String? ?? '',
+      agreedAt: DateTime.tryParse(j['agreedAt'] as String? ?? ''),
+    );
+  }
 }
 
 /// Somebody who vouches for the borrower.
@@ -155,6 +273,8 @@ class LoanApplication {
     this.businessPhotos = const [],
     this.repaymentFrequency = RepaymentFrequency.monthly,
     this.groupPricing = false,
+    this.offer,
+    this.termsAgreed = false,
   });
 
   final String id;
@@ -167,6 +287,14 @@ class LoanApplication {
   /// Admin's view only: whether the applicant borrows on the loan-group
   /// terms rather than the standard ones.
   final bool groupPricing;
+
+  /// Terms the reviewing admin changed, if they did. Null on an application
+  /// priced as asked.
+  final TermsOffer? offer;
+
+  /// The queue's view only, which carries no [offer]: whether the customer
+  /// agreed to changed terms.
+  final bool termsAgreed;
   final String purpose;
   final LoanApplicationStatus status;
   final DateTime submittedAt;
@@ -206,6 +334,16 @@ class LoanApplication {
   bool get isPending => status == LoanApplicationStatus.pending;
   bool get wasDeclined => status == LoanApplicationStatus.rejected;
 
+  /// Changed terms are with the customer, waiting for their answer.
+  bool get isOffered => status == LoanApplicationStatus.offered;
+
+  /// Back with the team on changed terms the customer agreed to. Approving it
+  /// lends on those.
+  bool get hasAgreedTerms => offer?.agreed ?? termsAgreed;
+
+  /// The months it is priced on: the changed terms once sent, else as asked.
+  int get pricedMonths => offer?.months ?? tenureMonths;
+
   /// Every document on it, the statement first. Empty on a customer's view.
   List<ApplicationDocument> get documents => [
         if (bankStatement != null) bankStatement!,
@@ -219,6 +357,7 @@ class LoanApplication {
     String? reviewedBy,
     String? rejectionReason,
     String? loanId,
+    TermsOffer? offer,
   }) =>
       LoanApplication(
         id: id,
@@ -245,6 +384,8 @@ class LoanApplication {
         businessPhotos: businessPhotos,
         repaymentFrequency: repaymentFrequency,
         groupPricing: groupPricing,
+        offer: offer ?? this.offer,
+        termsAgreed: offer?.agreed ?? termsAgreed,
       );
 
   Map<String, dynamic> toJson() => {
@@ -266,6 +407,7 @@ class LoanApplication {
         'customerName': customerName,
         'customerRef': customerRef,
         'repaymentFrequency': repaymentFrequency.wire,
+        if (offer != null) 'offer': offer!.toJson(),
       };
 
   static LoanApplication fromJson(Map<String, dynamic> j) => LoanApplication(
@@ -292,5 +434,6 @@ class LoanApplication {
         customerName: j['customerName'] as String? ?? '',
         customerRef: j['customerRef'] as String? ?? '',
         repaymentFrequency: RepaymentFrequency.fromWire(j['repaymentFrequency']),
+        offer: TermsOffer.fromJson(j['offer']),
       );
 }
