@@ -31,7 +31,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   String _query = '';
   String _filter = 'All';
 
-  static const _filters = ['All', 'Savers', 'Borrowers', 'Overdue risk'];
+  static const _filters = ['All', /* 'Savers', */ 'Borrowers', 'Overdue risk']; // savings is switched off for now
 
   @override
   void dispose() {
@@ -50,7 +50,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (!hit) return false;
     }
     return switch (_filter) {
-      'Savers' => c.totalSaved > 0,
+      // Savings and Ajo circles are switched off for now.
+      // 'Savers' => c.totalSaved > 0,
       'Borrowers' => c.totalOwed > 0,
       'Overdue risk' => c.totalOwed > c.netWorth,
       _ => true,
@@ -288,7 +289,7 @@ class _AdminCustomerDetailScreenState
 
   /// This customer's own records, fetched for the person being looked at.
   List<Loan> _loans = const [];
-  List<SavingsPlan> _plans = const [];
+  final List<SavingsPlan> _plans = const []; // savings plans are switched off for now
   List<Transaction> _ledger = const [];
   List<DepositClaim> _payIns = const [];
   bool _loaded = false;
@@ -380,13 +381,15 @@ class _AdminCustomerDetailScreenState
     if (mounted && detail != null) setState(() => _full = detail);
 
     final loans = await app.loadCustomerLoans(id);
-    final plans = await app.loadCustomerPlans(id);
+    // Savings and Ajo circles are switched off for now.
+    // final plans = await app.loadCustomerPlans(id);
     final ledger = await app.loadCustomerTransactions(id);
     final payIns = await app.loadCustomerPayIns(id);
     if (!mounted) return;
     setState(() {
       _loans = loans;
-      _plans = plans;
+      // Savings and Ajo circles are switched off for now.
+      // _plans = plans;
       _ledger = ledger;
       _payIns = payIns;
       _loaded = true;
@@ -427,15 +430,16 @@ class _AdminCustomerDetailScreenState
                       icon: Icons.account_balance_wallet_outlined,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: MetricTile(
-                      label: 'Locked away',
-                      value: c.totalSaved.asNaira,
-                      icon: Icons.lock_outline_rounded,
-                      tint: AppColors.info,
-                    ),
-                  ),
+                  // Savings and Ajo circles are switched off for now.
+                  // const SizedBox(width: AppSpacing.md),
+                  // Expanded(
+                  //   child: MetricTile(
+                  //     label: 'Locked away',
+                  //     value: c.totalSaved.asNaira,
+                  //     icon: Icons.lock_outline_rounded,
+                  //     tint: AppColors.info,
+                  //   ),
+                  // ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
@@ -451,15 +455,16 @@ class _AdminCustomerDetailScreenState
                           : AppColors.textTertiary,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: MetricTile(
-                      label: 'Interest paid to them',
-                      value: c.interestPaid.asNaira,
-                      icon: Icons.trending_up_rounded,
-                      tint: AppColors.success,
-                    ),
-                  ),
+                  // Savings and Ajo circles are switched off for now.
+                  // const SizedBox(width: AppSpacing.md),
+                  // Expanded(
+                  //   child: MetricTile(
+                  //     label: 'Interest paid to them',
+                  //     value: c.interestPaid.asNaira,
+                  //     icon: Icons.trending_up_rounded,
+                  //     tint: AppColors.success,
+                  //   ),
+                  // ),
                 ],
               ),
 
@@ -516,7 +521,8 @@ class _AdminCustomerDetailScreenState
               KCard(
                 child: Column(
                   children: [
-                    _Detail('Savings plans', '${c.plansCount}'),
+                    // Savings and Ajo circles are switched off for now.
+                    // _Detail('Savings plans', '${c.plansCount}'),
                     _Detail('Loans taken', '${c.loansCount}', last: true),
                   ],
                 ),
@@ -532,9 +538,9 @@ class _AdminCustomerDetailScreenState
                 const AdminSectionLabel('PAY-INS'),
                 _PayIns(claims: payIns),
               ],
-              if (_plans.isNotEmpty || _loans.isNotEmpty || !_loaded) ...[
+              if (_loans.isNotEmpty || !_loaded) ...[ // savings plans are switched off for now
                 const SizedBox(height: AppSpacing.xl),
-                const AdminSectionLabel('PLANS AND LOANS'),
+                const AdminSectionLabel('LOANS'),
                 _LiveRecords(plans: _plans, loans: _loans),
               ],
 

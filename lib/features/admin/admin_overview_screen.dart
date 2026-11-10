@@ -9,9 +9,11 @@ import '../../core/utils/formatters.dart';
 import '../../data/models/platform_settings.dart';
 import '../../state/app_state.dart';
 import '../../widgets/primitives.dart';
+import 'admin_book_detail_screen.dart';
 import 'admin_repayments_screen.dart';
 import 'admin_shell.dart';
 import 'admin_support_screen.dart';
+import 'admin_users_screen.dart';
 
 class AdminOverviewScreen extends StatelessWidget {
   const AdminOverviewScreen({super.key});
@@ -76,6 +78,7 @@ class AdminOverviewScreen extends StatelessWidget {
               Expanded(
                 child: MetricTile(
                   label: 'Still owed on running loans',
+                onTap: () => _openBook(context, BookView.outstanding),
                   value: book.outstanding.asNaira,
                   icon: Icons.account_balance_outlined,
                   tint: AppColors.gold,
@@ -108,6 +111,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Customers',
+                onTap: () => _openCustomers(context),
                 value: '${m.customers}',
                 icon: Icons.people_alt_outlined,
                 tint: AppColors.info,
@@ -117,6 +121,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Wallet deposits',
+                onTap: () => _openBook(context, BookView.held),
                 value: m.deposits.asNaira,
                 icon: Icons.account_balance_wallet_outlined,
               ),
@@ -126,19 +131,21 @@ class AdminOverviewScreen extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            Expanded(
-              child: MetricTile(
-                label: 'Locked in savings',
-                value: m.saved.asNaira,
-                icon: Icons.lock_outline_rounded,
-                tint: AppColors.info,
-                footnote: '${m.activePlans} plans',
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
+            // Savings and Ajo circles are switched off for now.
+            // Expanded(
+            //   child: MetricTile(
+            //     label: 'Locked in savings',
+            //     value: m.saved.asNaira,
+            //     icon: Icons.lock_outline_rounded,
+            //     tint: AppColors.info,
+            //     footnote: '${m.activePlans} plans',
+            //   ),
+            // ),
+            // const SizedBox(width: AppSpacing.md),
             Expanded(
               child: MetricTile(
                 label: 'Out on loan',
+                onTap: () => _openBook(context, BookView.lent),
                 value: m.lent.asNaira,
                 icon: Icons.request_quote_outlined,
                 tint: AppColors.gold,
@@ -155,19 +162,21 @@ class AdminOverviewScreen extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            Expanded(
-              child: MetricTile(
-                label: 'Interest paid out',
-                value: m.interestPaid.asNaira,
-                icon: Icons.trending_up_rounded,
-                tint: AppColors.success,
-                footnote: 'to savers',
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
+            // Savings and Ajo circles are switched off for now.
+            // Expanded(
+            //   child: MetricTile(
+            //     label: 'Interest paid out',
+            //     value: m.interestPaid.asNaira,
+            //     icon: Icons.trending_up_rounded,
+            //     tint: AppColors.success,
+            //     footnote: 'to savers',
+            //   ),
+            // ),
+            // const SizedBox(width: AppSpacing.md),
             Expanded(
               child: MetricTile(
                 label: 'Interest charged',
+                onTap: () => _openBook(context, BookView.interest),
                 value: m.interestCharged.asNaira,
                 icon: Icons.percent_rounded,
                 tint: AppColors.gold,
@@ -182,6 +191,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Overdue',
+                onTap: () => _openBook(context, BookView.overdue),
                 value: m.overdue.asNaira,
                 icon: Icons.warning_amber_rounded,
                 tint: m.overdue > 0 ? AppColors.danger : AppColors.textTertiary,
@@ -196,6 +206,7 @@ class AdminOverviewScreen extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 label: 'Fees charged',
+                onTap: () => _openBook(context, BookView.fees),
                 value: m.feesCharged.asNaira,
                 icon: Icons.receipt_long_outlined,
                 tint: AppColors.gold,
@@ -210,7 +221,7 @@ class AdminOverviewScreen extends StatelessWidget {
         _RatesCard().animate(delay: 100.ms).fadeIn().slideY(begin: 0.08),
 
         const SizedBox(height: AppSpacing.xxl),
-        const AdminSectionLabel('SAVED VS LENT'),
+        const AdminSectionLabel('LENT VS WALLETS'), // was SAVED VS LENT
         _BalanceChart(saved: m.saved, lent: m.lent, deposits: m.deposits)
             .animate(delay: 160.ms)
             .fadeIn()
@@ -296,7 +307,7 @@ class _MaintenanceBanner extends StatelessWidget {
               ),
               SizedBox(height: 2),
               Text(
-                'Customers cannot open plans or take loans until you switch it off in Controls.',
+                'Customers cannot take loans until you switch it off in Controls.',
                 style: TextStyle(
                   fontSize: 12,
                   height: 1.4,
@@ -321,38 +332,39 @@ class _RatesCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Savings rate',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${settings.savingsRatePct.toStringAsFixed(settings.savingsRatePct % 1 == 0 ? 0 : 1)}%',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1,
-                      color: AppColors.gold,
-                    ),
-                  ),
-                  Text(
-                    'per annum, paid upfront',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(width: 1, height: 46, color: AppColors.strokeSoft),
+            // Savings and Ajo circles are switched off for now.
+            // Expanded(
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //     children: [
+            //       Text(
+            //         'Savings rate',
+            //         style: TextStyle(
+            //           fontSize: 11.5,
+            //           color: AppColors.textTertiary,
+            //         ),
+            //       ),
+            //       const SizedBox(height: 3),
+            //       Text(
+            //         '${settings.savingsRatePct.toStringAsFixed(settings.savingsRatePct % 1 == 0 ? 0 : 1)}%',
+            //         style: TextStyle(
+            //           fontSize: 26,
+            //           fontWeight: FontWeight.w800,
+            //           letterSpacing: -1,
+            //           color: AppColors.gold,
+            //         ),
+            //       ),
+            //       Text(
+            //         'per annum, paid upfront',
+            //         style: TextStyle(
+            //           fontSize: 10.5,
+            //           color: AppColors.textTertiary,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            // Container(width: 1, height: 46, color: AppColors.strokeSoft),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(left: AppSpacing.lg),
@@ -391,10 +403,11 @@ class _RatesCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         const HairLine(),
         const SizedBox(height: AppSpacing.md),
-        _Line(
-          'Lock range',
-          '${settings.minLockDays} - ${settings.maxLockDays} days',
-        ),
+        // Savings and Ajo circles are switched off for now.
+        // _Line(
+        //   'Lock range',
+        //   '${settings.minLockDays} - ${settings.maxLockDays} days',
+        // ),
         _Line(
           'Loan range',
           '${settings.minLoanAmount.asNairaFlat} - ${settings.maxLoanAmount.asNairaFlat}',
@@ -414,14 +427,15 @@ class _RatesCard extends StatelessWidget {
             if (settings.loanMonthlyAllowed) 'Monthly',
           ].join(' or '),
         ),
-        _Line(
-          'Target bonus tiers',
-          '${settings.targetShortPct.toStringAsFixed(1)}% / ${settings.targetMediumPct.toStringAsFixed(1)}% / ${settings.targetLongPct.toStringAsFixed(1)}%',
-        ),
-        _Line(
-          'Target Savings minimum',
-          '${settings.minTargetMonths} months',
-        ),
+        // Savings and Ajo circles are switched off for now.
+        // _Line(
+        //   'Target bonus tiers',
+        //   '${settings.targetShortPct.toStringAsFixed(1)}% / ${settings.targetMediumPct.toStringAsFixed(1)}% / ${settings.targetLongPct.toStringAsFixed(1)}%',
+        // ),
+        // _Line(
+        //   'Target Savings minimum',
+        //   '${settings.minTargetMonths} months',
+        // ),
       ],
     ),
   );
@@ -468,7 +482,8 @@ class _BalanceChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <(String, double, Color)>[
-      ('Locked in savings', saved, AppColors.info),
+      // Savings and Ajo circles are switched off for now.
+      // ('Locked in savings', saved, AppColors.info),
       ('Out on loan', lent, AppColors.gold),
       ('Sitting in wallets', deposits, AppColors.success),
     ];
@@ -556,9 +571,11 @@ class _SwitchSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <(String, bool, IconData)>[
-      ('Savings', settings.savingsEnabled, Icons.savings_outlined),
+      // Savings and Ajo circles are switched off for now.
+      // ('Savings', settings.savingsEnabled, Icons.savings_outlined),
       ('Lending', settings.lendingEnabled, Icons.bolt_rounded),
-      ('Ajo circles', settings.thriftEnabled, Icons.groups_outlined),
+      // Savings and Ajo circles are switched off for now.
+      // ('Ajo circles', settings.thriftEnabled, Icons.groups_outlined),
     ];
 
     return KCard(
@@ -661,3 +678,17 @@ class _PayoutCallout extends StatelessWidget {
     );
   }
 }
+
+
+void _openBook(BuildContext context, BookView view) => Navigator.of(context).push(
+  MaterialPageRoute(builder: (_) => AdminBookDetailScreen(view: view)),
+);
+
+void _openCustomers(BuildContext context) => Navigator.of(context).push(
+  MaterialPageRoute(
+    builder: (_) => Scaffold(
+      appBar: AppBar(title: const Text('Customers')),
+      body: const AdminUsersScreen(),
+    ),
+  ),
+);

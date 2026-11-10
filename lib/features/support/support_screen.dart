@@ -284,8 +284,10 @@ class _NewConversationSheetState extends State<_NewConversationSheet> {
     'Paying in',
     'Withdrawals',
     'Loans',
-    'Savings',
-    'Ajo circles',
+    // Savings and Ajo circles are switched off for now.
+    // 'Savings',
+    // Savings and Ajo circles are switched off for now.
+    // 'Ajo circles',
     'My account',
     'Something else',
   ];

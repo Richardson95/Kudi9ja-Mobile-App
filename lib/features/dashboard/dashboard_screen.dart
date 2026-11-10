@@ -17,9 +17,10 @@ import '../loans/loan_detail_screen.dart';
 import '../loans/loan_request_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../reviews/reviews_screen.dart';
-import '../savings/create_plan_screen.dart';
-import '../savings/new_plan_sheet.dart';
-import '../savings/plan_detail_screen.dart';
+// Savings and Ajo circles are switched off for now.
+// import '../savings/create_plan_screen.dart';
+// import '../savings/new_plan_sheet.dart';
+// import '../savings/plan_detail_screen.dart';
 import '../support/support_screen.dart';
 import '../wallet/add_money_screen.dart';
 import '../wallet/transaction_list.dart';
@@ -94,8 +95,9 @@ class DashboardScreen extends StatelessWidget {
             ],
             SliverToBoxAdapter(child: _EarningsStrip(app: app)),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
-            SliverToBoxAdapter(child: _SavingsSection(app: app)),
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            // Savings and Ajo circles are switched off for now.
+            // SliverToBoxAdapter(child: _SavingsSection(app: app)),
+            // const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
             if (app.nextRepayment != null) ...[
               SliverToBoxAdapter(child: _DueBanner(app: app)),
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
@@ -243,7 +245,8 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = <(IconData, String, Widget)>[
       (Icons.add_rounded, 'Add money', const AddMoneyScreen()),
-      (Icons.savings_outlined, 'Save', const CreatePlanScreen()),
+      // Savings and Ajo circles are switched off for now.
+      // (Icons.savings_outlined, 'Save', const CreatePlanScreen()),
       (Icons.bolt_rounded, 'Borrow', const LoanRequestScreen()),
       (Icons.account_balance_rounded, 'Payout account', const ChangePayoutScreen()),
       (Icons.north_east_rounded, 'Withdraw', const WithdrawScreen()),
@@ -305,24 +308,25 @@ class _EarningsStrip extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
     child: Row(
       children: [
-        Expanded(
-          child: _MiniStat(
-            label: 'Locked away',
-            value: app.hideBalance ? '••••' : app.totalSaved.asNaira,
-            icon: Icons.lock_outline_rounded,
-            tint: AppColors.info,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: _MiniStat(
-            label: 'Interest earned',
-            value: app.hideBalance ? '••••' : app.totalInterestEarned.asNaira,
-            icon: Icons.trending_up_rounded,
-            tint: AppColors.success,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
+        // Savings and Ajo circles are switched off for now.
+        // Expanded(
+        //   child: _MiniStat(
+        //     label: 'Locked away',
+        //     value: app.hideBalance ? '••••' : app.totalSaved.asNaira,
+        //     icon: Icons.lock_outline_rounded,
+        //     tint: AppColors.info,
+        //   ),
+        // ),
+        // const SizedBox(width: AppSpacing.md),
+        // Expanded(
+        //   child: _MiniStat(
+        //     label: 'Interest earned',
+        //     value: app.hideBalance ? '••••' : app.totalInterestEarned.asNaira,
+        //     icon: Icons.trending_up_rounded,
+        //     tint: AppColors.success,
+        //   ),
+        // ),
+        // const SizedBox(width: AppSpacing.md),
         Expanded(
           child: _MiniStat(
             label: 'You owe',
@@ -384,42 +388,43 @@ class _MiniStat extends StatelessWidget {
   );
 }
 
-// ── Savings ───────────────────────────────────────────────────────────────
-
-class _SavingsSection extends StatelessWidget {
-  const _SavingsSection({required this.app});
-  final AppState app;
-
-  @override
-  Widget build(BuildContext context) {
-    final plans = app.activePlans;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: 'Your savings',
-            actionLabel: plans.isEmpty ? null : 'New plan',
-            onAction: () => showNewPlanSheet(context),
-          ),
-          if (plans.isEmpty)
-            _SavingsPitch()
-          else
-            ...plans
-                .take(2)
-                .map(
-                  (p) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: PlanTile(plan: p),
-                  ),
-                ),
-        ],
-      ),
-    ).animate(delay: 260.ms).fadeIn().slideY(begin: 0.1);
-  }
-}
+// Savings and Ajo circles are switched off for now.
+// // ── Savings ───────────────────────────────────────────────────────────────
+//
+// class _SavingsSection extends StatelessWidget {
+//   const _SavingsSection({required this.app});
+//   final AppState app;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final plans = app.activePlans;
+//
+//     return Padding(
+//       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           SectionHeader(
+//             title: 'Your savings',
+//             actionLabel: plans.isEmpty ? null : 'New plan',
+//             onAction: () => showNewPlanSheet(context),
+//           ),
+//           if (plans.isEmpty)
+//             _SavingsPitch()
+//           else
+//             ...plans
+//                 .take(2)
+//                 .map(
+//                   (p) => Padding(
+//                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
+//                     child: PlanTile(plan: p),
+//                   ),
+//                 ),
+//         ],
+//       ),
+//     ).animate(delay: 260.ms).fadeIn().slideY(begin: 0.1);
+//   }
+// }
 
 /// The headline rating, the latest couple of reviews, and the way to add
 /// one. The full list is a tap away.
@@ -471,160 +476,161 @@ class _ReviewsSection extends StatelessWidget {
   }
 }
 
-class _SavingsPitch extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => KCard(
-    gradient: AppColors.cardGradient,
-    borderColor: AppColors.gold.withValues(alpha: 0.22),
-    onTap: () => showNewPlanSheet(context),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              StatusPill(
-                label: '17% PAID UPFRONT',
-                color: AppColors.gold,
-                icon: Icons.bolt_rounded,
-                dense: true,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Start your first plan',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Lock from 1 month to 5 years. We pay your full return the moment it starts.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Icon(
-          Icons.arrow_forward_rounded,
-          color: AppColors.gold,
-          size: 20,
-        ),
-      ],
-    ),
-  );
-}
-
-/// Compact savings-plan row, reused on the dashboard and the savings tab.
-class PlanTile extends StatelessWidget {
-  const PlanTile({super.key, required this.plan});
-  final SavingsPlan plan;
-
-  @override
-  Widget build(BuildContext context) {
-    final mature = plan.status == SavingsStatus.matured;
-    final isGoal = plan.targetAmount != null;
-    final ring = isGoal ? plan.goalProgress : plan.progress;
-
-    return KCard(
-      onTap: () =>
-          Navigator.of(context).push(slideRoute(PlanDetailScreen(planId: plan.id))),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              if (plan.isTarget)
-                SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: Center(
-                    child: Text(
-                      plan.emoji,
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                  ),
-                )
-              else
-                IconBadge(
-                  icon: mature ? Icons.lock_open_rounded : Icons.lock_rounded,
-                  color: mature ? AppColors.success : AppColors.gold,
-                  size: 42,
-                ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plan.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isGoal
-                          ? (plan.goalReached
-                                ? 'Target reached'
-                                : '${plan.amountLeftToTarget.asNaira} to go')
-                          : (mature
-                                ? 'Ready to withdraw'
-                                : plan.maturityDate.countdown),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: mature || plan.goalReached
-                            ? AppColors.success
-                            : AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    plan.principal.asNaira,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                  Text(
-                    '+${plan.interestPaid.asNaira} paid',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(9),
-            child: LinearProgressIndicator(
-              value: ring,
-              minHeight: 5,
-              backgroundColor: AppColors.surfaceHigh,
-              valueColor: AlwaysStoppedAnimation(
-                mature ? AppColors.success : AppColors.gold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// Savings and Ajo circles are switched off for now.
+// class _SavingsPitch extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) => KCard(
+//     gradient: AppColors.cardGradient,
+//     borderColor: AppColors.gold.withValues(alpha: 0.22),
+//     onTap: () => showNewPlanSheet(context),
+//     child: Row(
+//       children: [
+//         Expanded(
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               StatusPill(
+//                 label: '17% PAID UPFRONT',
+//                 color: AppColors.gold,
+//                 icon: Icons.bolt_rounded,
+//                 dense: true,
+//               ),
+//               const SizedBox(height: AppSpacing.md),
+//               Text(
+//                 'Start your first plan',
+//                 style: Theme.of(context).textTheme.titleLarge,
+//               ),
+//               const SizedBox(height: 4),
+//               Text(
+//                 'Lock from 1 month to 5 years. We pay your full return the moment it starts.',
+//                 style: TextStyle(
+//                   fontSize: 12.5,
+//                   height: 1.45,
+//                   color: AppColors.textSecondary,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//         const SizedBox(width: AppSpacing.md),
+//         Icon(
+//           Icons.arrow_forward_rounded,
+//           color: AppColors.gold,
+//           size: 20,
+//         ),
+//       ],
+//     ),
+//   );
+// }
+//
+// /// Compact savings-plan row, reused on the dashboard and the savings tab.
+// class PlanTile extends StatelessWidget {
+//   const PlanTile({super.key, required this.plan});
+//   final SavingsPlan plan;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final mature = plan.status == SavingsStatus.matured;
+//     final isGoal = plan.targetAmount != null;
+//     final ring = isGoal ? plan.goalProgress : plan.progress;
+//
+//     return KCard(
+//       onTap: () =>
+//           Navigator.of(context).push(slideRoute(PlanDetailScreen(planId: plan.id))),
+//       child: Column(
+//         children: [
+//           Row(
+//             children: [
+//               if (plan.isTarget)
+//                 SizedBox(
+//                   width: 42,
+//                   height: 42,
+//                   child: Center(
+//                     child: Text(
+//                       plan.emoji,
+//                       style: const TextStyle(fontSize: 24),
+//                     ),
+//                   ),
+//                 )
+//               else
+//                 IconBadge(
+//                   icon: mature ? Icons.lock_open_rounded : Icons.lock_rounded,
+//                   color: mature ? AppColors.success : AppColors.gold,
+//                   size: 42,
+//                 ),
+//               const SizedBox(width: AppSpacing.md),
+//               Expanded(
+//                 child: Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     Text(
+//                       plan.title,
+//                       maxLines: 1,
+//                       overflow: TextOverflow.ellipsis,
+//                       style: const TextStyle(
+//                         fontSize: 15,
+//                         fontWeight: FontWeight.w700,
+//                       ),
+//                     ),
+//                     const SizedBox(height: 2),
+//                     Text(
+//                       isGoal
+//                           ? (plan.goalReached
+//                                 ? 'Target reached'
+//                                 : '${plan.amountLeftToTarget.asNaira} to go')
+//                           : (mature
+//                                 ? 'Ready to withdraw'
+//                                 : plan.maturityDate.countdown),
+//                       style: TextStyle(
+//                         fontSize: 12,
+//                         color: mature || plan.goalReached
+//                             ? AppColors.success
+//                             : AppColors.textTertiary,
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//               Column(
+//                 crossAxisAlignment: CrossAxisAlignment.end,
+//                 children: [
+//                   Text(
+//                     plan.principal.asNaira,
+//                     style: const TextStyle(
+//                       fontSize: 16,
+//                       fontWeight: FontWeight.w800,
+//                       letterSpacing: -0.4,
+//                     ),
+//                   ),
+//                   Text(
+//                     '+${plan.interestPaid.asNaira} paid',
+//                     style: TextStyle(
+//                       fontSize: 11,
+//                       fontWeight: FontWeight.w600,
+//                       color: AppColors.success,
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: AppSpacing.md),
+//           ClipRRect(
+//             borderRadius: BorderRadius.circular(9),
+//             child: LinearProgressIndicator(
+//               value: ring,
+//               minHeight: 5,
+//               backgroundColor: AppColors.surfaceHigh,
+//               valueColor: AlwaysStoppedAnimation(
+//                 mature ? AppColors.success : AppColors.gold,
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 // ── Credit ────────────────────────────────────────────────────────────────
 

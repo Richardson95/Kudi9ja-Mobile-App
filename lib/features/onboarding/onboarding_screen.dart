@@ -49,16 +49,17 @@ List<_Slide> get _slides => [
     settings.maxLoanAmount.asShortNaira,
     'maximum personal loan',
   ),
-  _Slide(
-    Icons.savings_outlined,
-    'SAVE',
-    'Earn ${settings.savingsRatePct.toStringAsFixed(0)}%.\nPaid upfront.',
-    'Lock any amount from ${settings.minLockDays} days to '
-        '${lockPeriodShort(settings.maxLockDays)} and we credit your full '
-        'return the same second the plan starts. No waiting for maturity.',
-    '${settings.savingsRatePct.toStringAsFixed(0)}%',
-    'per annum, paid instantly',
-  ),
+  // Savings and Ajo circles are switched off for now.
+  // _Slide(
+  //   Icons.savings_outlined,
+  //   'SAVE',
+  //   'Earn ${settings.savingsRatePct.toStringAsFixed(0)}%.\nPaid upfront.',
+  //   'Lock any amount from ${settings.minLockDays} days to '
+  //       '${lockPeriodShort(settings.maxLockDays)} and we credit your full '
+  //       'return the same second the plan starts. No waiting for maturity.',
+  //   '${settings.savingsRatePct.toStringAsFixed(0)}%',
+  //   'per annum, paid instantly',
+  // ),
   _Slide(
     Icons.verified_user_outlined,
     'PROTECT',

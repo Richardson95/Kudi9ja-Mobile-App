@@ -109,7 +109,7 @@ class _PasscodeStepState extends State<PasscodeStep> {
 
     final subhead = _isSignIn
         ? 'You will type this every time you open Kudi9ja. Six digits, no repeats, no straight runs.'
-        : 'A separate four-digit PIN that authorises every transfer, saving and repayment.';
+        : 'A separate four-digit PIN that authorises every transfer and repayment.';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),

@@ -428,258 +428,259 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 child: _ReadOnlyNote(),
               ),
 
-            const AdminSectionLabel('SAVINGS'),
-            _RateCard(
-              label: 'Fixed Savings rate',
-              helper:
-                  'Paid to the customer upfront, pro-rated over the lock period',
-              value: _draft.savingsRatePct,
-              min: 1,
-              max: 40,
-              divisions: 78,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(savingsAnnualRate: v / 100),
-              ),
-              example:
-                  '₦100,000 for a year pays ${(100000 * _draft.savingsAnnualRate).asNairaFlat} on day one',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _RateCard(
-              label: 'Target bonus — 3 to 5 months',
-              helper: 'Paid on the final day, forfeited if the plan is broken',
-              value: _draft.targetShortPct,
-              min: 0.5,
-              max: 20,
-              divisions: 39,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(targetRateShort: v / 100),
-              ),
-              example:
-                  '₦100,000 saved over 3 months pays ${(100000 * _draft.targetRateShort).asNairaFlat}',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _RateCard(
-              label: 'Target bonus — 6 to 11 months',
-              helper: 'The middle tier',
-              value: _draft.targetMediumPct,
-              min: 0.5,
-              max: 30,
-              divisions: 59,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(targetRateMedium: v / 100),
-              ),
-              example:
-                  '₦100,000 saved over 6 months pays ${(100000 * _draft.targetRateMedium).asNairaFlat}',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _RateCard(
-              label: 'Target bonus — 1 year and above',
-              helper: 'The top tier, however long the term runs',
-              value: _draft.targetLongPct,
-              min: 0.5,
-              max: 40,
-              divisions: 79,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(targetRateLong: v / 100),
-              ),
-              example:
-                  '₦100,000 saved over a year pays ${(100000 * _draft.targetRateLong).asNairaFlat}',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Target Savings minimum term',
-              value:
-                  '${_draft.minTargetMonths} ${_draft.minTargetMonths == 1 ? 'month' : 'months'}',
-              enabled: canEdit,
-              onMinus: _draft.minTargetMonths > 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        minTargetMonths: _draft.minTargetMonths - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  minTargetMonths: _draft.minTargetMonths + 1,
-                ),
-              ),
-              typedValue: _draft.minTargetMonths,
-              unit: ' months',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(minTargetMonths: v.toInt()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Minimum lock',
-              value: lockPeriodLabel(_draft.minLockDays),
-              enabled: canEdit,
-              onMinus: _draft.minLockDays > 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        minLockDays: _draft.minLockDays - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  minLockDays: _draft.minLockDays + 1,
-                ),
-              ),
-              typedValue: _draft.minLockDays,
-              unit: ' days',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(minLockDays: v.toInt()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Maximum lock',
-              value: lockPeriodLabel(_draft.maxLockDays),
-              enabled: canEdit,
-              onMinus: _draft.maxLockDays > _draft.minLockDays + 30
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        maxLockDays: _draft.maxLockDays - 30,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  maxLockDays: _draft.maxLockDays + 30,
-                ),
-              ),
-              typedValue: _draft.maxLockDays,
-              unit: ' days',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(maxLockDays: v.toInt()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Days the annual rate spreads over',
-              value: '${_draft.daysPerYear} days',
-              enabled: canEdit,
-              onMinus: _draft.daysPerYear > 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        daysPerYear: _draft.daysPerYear - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  daysPerYear: _draft.daysPerYear + 1,
-                ),
-              ),
-              typedValue: _draft.daysPerYear,
-              unit: ' days',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(daysPerYear: v.toInt()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _AmountCard(
-              label: 'Minimum to open a plan',
-              value: _draft.minSavingsAmount,
-              enabled: canEdit,
-              onChanged: (v) =>
-                  setState(() => _draft = _draft.copyWith(minSavingsAmount: v)),
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-            _AmountCard(
-              label: 'Maximum for a single plan',
-              value: _draft.maxSavingsAmount,
-              step: 1000000,
-              enabled: canEdit,
-              onChanged: (v) =>
-                  setState(() => _draft = _draft.copyWith(maxSavingsAmount: v)),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Target bonus: middle tier starts at',
-              value: '${_draft.targetTierMedium} months',
-              enabled: canEdit,
-              onMinus: _draft.targetTierMedium > _draft.minTargetMonths + 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        targetTierMedium: _draft.targetTierMedium - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: _draft.targetTierMedium < _draft.targetTierLong - 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        targetTierMedium: _draft.targetTierMedium + 1,
-                      ),
-                    )
-                  : null,
-              typedValue: _draft.targetTierMedium,
-              unit: ' months',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(targetTierMedium: v.toInt()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Target bonus: top tier starts at',
-              value: '${_draft.targetTierLong} months',
-              enabled: canEdit,
-              onMinus: _draft.targetTierLong > _draft.targetTierMedium + 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        targetTierLong: _draft.targetTierLong - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  targetTierLong: _draft.targetTierLong + 1,
-                ),
-              ),
-              typedValue: _draft.targetTierLong,
-              unit: ' months',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(targetTierLong: v.toInt()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Days counted as a Target month',
-              value: '${_draft.daysPerSavingsMonth} days',
-              enabled: canEdit,
-              onMinus: _draft.daysPerSavingsMonth > 1
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        daysPerSavingsMonth: _draft.daysPerSavingsMonth - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  daysPerSavingsMonth: _draft.daysPerSavingsMonth + 1,
-                ),
-              ),
-              typedValue: _draft.daysPerSavingsMonth,
-              unit: ' days',
-              min: 0,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(daysPerSavingsMonth: v.toInt()),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.xxl),
+            // Savings and Ajo circles are switched off for now.
+            // const AdminSectionLabel('SAVINGS'),
+            // _RateCard(
+            //   label: 'Fixed Savings rate',
+            //   helper:
+            //       'Paid to the customer upfront, pro-rated over the lock period',
+            //   value: _draft.savingsRatePct,
+            //   min: 1,
+            //   max: 40,
+            //   divisions: 78,
+            //   enabled: canEdit,
+            //   onChanged: (v) => setState(
+            //     () => _draft = _draft.copyWith(savingsAnnualRate: v / 100),
+            //   ),
+            //   example:
+            //       '₦100,000 for a year pays ${(100000 * _draft.savingsAnnualRate).asNairaFlat} on day one',
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _RateCard(
+            //   label: 'Target bonus — 3 to 5 months',
+            //   helper: 'Paid on the final day, forfeited if the plan is broken',
+            //   value: _draft.targetShortPct,
+            //   min: 0.5,
+            //   max: 20,
+            //   divisions: 39,
+            //   enabled: canEdit,
+            //   onChanged: (v) => setState(
+            //     () => _draft = _draft.copyWith(targetRateShort: v / 100),
+            //   ),
+            //   example:
+            //       '₦100,000 saved over 3 months pays ${(100000 * _draft.targetRateShort).asNairaFlat}',
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _RateCard(
+            //   label: 'Target bonus — 6 to 11 months',
+            //   helper: 'The middle tier',
+            //   value: _draft.targetMediumPct,
+            //   min: 0.5,
+            //   max: 30,
+            //   divisions: 59,
+            //   enabled: canEdit,
+            //   onChanged: (v) => setState(
+            //     () => _draft = _draft.copyWith(targetRateMedium: v / 100),
+            //   ),
+            //   example:
+            //       '₦100,000 saved over 6 months pays ${(100000 * _draft.targetRateMedium).asNairaFlat}',
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _RateCard(
+            //   label: 'Target bonus — 1 year and above',
+            //   helper: 'The top tier, however long the term runs',
+            //   value: _draft.targetLongPct,
+            //   min: 0.5,
+            //   max: 40,
+            //   divisions: 79,
+            //   enabled: canEdit,
+            //   onChanged: (v) => setState(
+            //     () => _draft = _draft.copyWith(targetRateLong: v / 100),
+            //   ),
+            //   example:
+            //       '₦100,000 saved over a year pays ${(100000 * _draft.targetRateLong).asNairaFlat}',
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Target Savings minimum term',
+            //   value:
+            //       '${_draft.minTargetMonths} ${_draft.minTargetMonths == 1 ? 'month' : 'months'}',
+            //   enabled: canEdit,
+            //   onMinus: _draft.minTargetMonths > 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             minTargetMonths: _draft.minTargetMonths - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       minTargetMonths: _draft.minTargetMonths + 1,
+            //     ),
+            //   ),
+            //   typedValue: _draft.minTargetMonths,
+            //   unit: ' months',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(minTargetMonths: v.toInt()),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Minimum lock',
+            //   value: lockPeriodLabel(_draft.minLockDays),
+            //   enabled: canEdit,
+            //   onMinus: _draft.minLockDays > 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             minLockDays: _draft.minLockDays - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       minLockDays: _draft.minLockDays + 1,
+            //     ),
+            //   ),
+            //   typedValue: _draft.minLockDays,
+            //   unit: ' days',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(minLockDays: v.toInt()),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Maximum lock',
+            //   value: lockPeriodLabel(_draft.maxLockDays),
+            //   enabled: canEdit,
+            //   onMinus: _draft.maxLockDays > _draft.minLockDays + 30
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             maxLockDays: _draft.maxLockDays - 30,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       maxLockDays: _draft.maxLockDays + 30,
+            //     ),
+            //   ),
+            //   typedValue: _draft.maxLockDays,
+            //   unit: ' days',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(maxLockDays: v.toInt()),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Days the annual rate spreads over',
+            //   value: '${_draft.daysPerYear} days',
+            //   enabled: canEdit,
+            //   onMinus: _draft.daysPerYear > 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             daysPerYear: _draft.daysPerYear - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       daysPerYear: _draft.daysPerYear + 1,
+            //     ),
+            //   ),
+            //   typedValue: _draft.daysPerYear,
+            //   unit: ' days',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(daysPerYear: v.toInt()),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _AmountCard(
+            //   label: 'Minimum to open a plan',
+            //   value: _draft.minSavingsAmount,
+            //   enabled: canEdit,
+            //   onChanged: (v) =>
+            //       setState(() => _draft = _draft.copyWith(minSavingsAmount: v)),
+            // ),
+            //
+            // const SizedBox(height: AppSpacing.md),
+            // _AmountCard(
+            //   label: 'Maximum for a single plan',
+            //   value: _draft.maxSavingsAmount,
+            //   step: 1000000,
+            //   enabled: canEdit,
+            //   onChanged: (v) =>
+            //       setState(() => _draft = _draft.copyWith(maxSavingsAmount: v)),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Target bonus: middle tier starts at',
+            //   value: '${_draft.targetTierMedium} months',
+            //   enabled: canEdit,
+            //   onMinus: _draft.targetTierMedium > _draft.minTargetMonths + 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             targetTierMedium: _draft.targetTierMedium - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: _draft.targetTierMedium < _draft.targetTierLong - 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             targetTierMedium: _draft.targetTierMedium + 1,
+            //           ),
+            //         )
+            //       : null,
+            //   typedValue: _draft.targetTierMedium,
+            //   unit: ' months',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(targetTierMedium: v.toInt()),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Target bonus: top tier starts at',
+            //   value: '${_draft.targetTierLong} months',
+            //   enabled: canEdit,
+            //   onMinus: _draft.targetTierLong > _draft.targetTierMedium + 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             targetTierLong: _draft.targetTierLong - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       targetTierLong: _draft.targetTierLong + 1,
+            //     ),
+            //   ),
+            //   typedValue: _draft.targetTierLong,
+            //   unit: ' months',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(targetTierLong: v.toInt()),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Days counted as a Target month',
+            //   value: '${_draft.daysPerSavingsMonth} days',
+            //   enabled: canEdit,
+            //   onMinus: _draft.daysPerSavingsMonth > 1
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             daysPerSavingsMonth: _draft.daysPerSavingsMonth - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       daysPerSavingsMonth: _draft.daysPerSavingsMonth + 1,
+            //     ),
+            //   ),
+            //   typedValue: _draft.daysPerSavingsMonth,
+            //   unit: ' days',
+            //   min: 0,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(daysPerSavingsMonth: v.toInt()),
+            //   ),
+            // ),
+            //
+            // const SizedBox(height: AppSpacing.xxl),
             const AdminSectionLabel('LENDING'),
             KCard(
               child: Column(
@@ -988,65 +989,66 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               ),
             ),
 
-            const SizedBox(height: AppSpacing.xxl),
-            const AdminSectionLabel('THRIFT CIRCLES'),
-            _AmountCard(
-              label: 'Minimum contribution per cycle',
-              value: _draft.minCircleContribution,
-              step: 500,
-              enabled: canEdit,
-              onChanged: (v) => setState(
-                () => _draft = _draft.copyWith(minCircleContribution: v),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Smallest circle',
-              value: '${_draft.minCircleMembers} members',
-              enabled: canEdit,
-              typedValue: _draft.minCircleMembers,
-              unit: ' members',
-              min: 2,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(minCircleMembers: v.toInt()),
-              ),
-              onMinus: _draft.minCircleMembers > 2
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        minCircleMembers: _draft.minCircleMembers - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  minCircleMembers: _draft.minCircleMembers + 1,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _StepperCard(
-              label: 'Largest circle',
-              value: '${_draft.maxCircleMembers} members',
-              enabled: canEdit,
-              typedValue: _draft.maxCircleMembers,
-              unit: ' members',
-              min: 2,
-              onTyped: (v) => setState(
-                () => _draft = _draft.copyWith(maxCircleMembers: v.toInt()),
-              ),
-              onMinus: _draft.maxCircleMembers > _draft.minCircleMembers
-                  ? () => setState(
-                      () => _draft = _draft.copyWith(
-                        maxCircleMembers: _draft.maxCircleMembers - 1,
-                      ),
-                    )
-                  : null,
-              onPlus: () => setState(
-                () => _draft = _draft.copyWith(
-                  maxCircleMembers: _draft.maxCircleMembers + 1,
-                ),
-              ),
-            ),
+            // Savings and Ajo circles are switched off for now.
+            // const SizedBox(height: AppSpacing.xxl),
+            // const AdminSectionLabel('THRIFT CIRCLES'),
+            // _AmountCard(
+            //   label: 'Minimum contribution per cycle',
+            //   value: _draft.minCircleContribution,
+            //   step: 500,
+            //   enabled: canEdit,
+            //   onChanged: (v) => setState(
+            //     () => _draft = _draft.copyWith(minCircleContribution: v),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Smallest circle',
+            //   value: '${_draft.minCircleMembers} members',
+            //   enabled: canEdit,
+            //   typedValue: _draft.minCircleMembers,
+            //   unit: ' members',
+            //   min: 2,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(minCircleMembers: v.toInt()),
+            //   ),
+            //   onMinus: _draft.minCircleMembers > 2
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             minCircleMembers: _draft.minCircleMembers - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       minCircleMembers: _draft.minCircleMembers + 1,
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
+            // _StepperCard(
+            //   label: 'Largest circle',
+            //   value: '${_draft.maxCircleMembers} members',
+            //   enabled: canEdit,
+            //   typedValue: _draft.maxCircleMembers,
+            //   unit: ' members',
+            //   min: 2,
+            //   onTyped: (v) => setState(
+            //     () => _draft = _draft.copyWith(maxCircleMembers: v.toInt()),
+            //   ),
+            //   onMinus: _draft.maxCircleMembers > _draft.minCircleMembers
+            //       ? () => setState(
+            //           () => _draft = _draft.copyWith(
+            //             maxCircleMembers: _draft.maxCircleMembers - 1,
+            //           ),
+            //         )
+            //       : null,
+            //   onPlus: () => setState(
+            //     () => _draft = _draft.copyWith(
+            //       maxCircleMembers: _draft.maxCircleMembers + 1,
+            //     ),
+            //   ),
+            // ),
             const SizedBox(height: AppSpacing.md),
             _StepperCard(
               label: 'One-time code resend delay',
@@ -1126,15 +1128,16 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
             const SizedBox(height: AppSpacing.xxl),
             const AdminSectionLabel('PRODUCT SWITCHES'),
-            _SwitchCard(
-              label: 'Savings',
-              helper: 'Customers can open new savings plans',
-              value: _draft.savingsEnabled,
-              enabled: canEdit,
-              onChanged: (v) =>
-                  setState(() => _draft = _draft.copyWith(savingsEnabled: v)),
-            ),
-            const SizedBox(height: AppSpacing.md),
+            // Savings and Ajo circles are switched off for now.
+            // _SwitchCard(
+            //   label: 'Savings',
+            //   helper: 'Customers can open new savings plans',
+            //   value: _draft.savingsEnabled,
+            //   enabled: canEdit,
+            //   onChanged: (v) =>
+            //       setState(() => _draft = _draft.copyWith(savingsEnabled: v)),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
             _SwitchCard(
               label: 'Lending',
               helper: 'Customers can request new loans',
@@ -1144,18 +1147,19 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   setState(() => _draft = _draft.copyWith(lendingEnabled: v)),
             ),
             const SizedBox(height: AppSpacing.md),
-            _SwitchCard(
-              label: 'Ajo circles',
-              helper: 'Customers can create or join savings circles',
-              value: _draft.thriftEnabled,
-              enabled: canEdit,
-              onChanged: (v) =>
-                  setState(() => _draft = _draft.copyWith(thriftEnabled: v)),
-            ),
-            const SizedBox(height: AppSpacing.md),
+            // Savings and Ajo circles are switched off for now.
+            // _SwitchCard(
+            //   label: 'Ajo circles',
+            //   helper: 'Customers can create or join savings circles',
+            //   value: _draft.thriftEnabled,
+            //   enabled: canEdit,
+            //   onChanged: (v) =>
+            //       setState(() => _draft = _draft.copyWith(thriftEnabled: v)),
+            // ),
+            // const SizedBox(height: AppSpacing.md),
             _SwitchCard(
               label: 'Maintenance mode',
-              helper: 'Pauses every new plan and loan across the app',
+              helper: 'Pauses every new loan across the app',
               value: _draft.maintenanceMode,
               danger: true,
               enabled: canEdit,

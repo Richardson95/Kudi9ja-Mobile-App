@@ -136,7 +136,7 @@ class _IdentityStepState extends State<IdentityStep> {
       child: StepScaffold(
         headline: 'Verify your\nidentity',
         subhead:
-            'Your BVN and NIN confirm you are who you say you are. This is what unlocks lending and your full savings limits.',
+            'Your BVN and NIN confirm you are who you say you are. This is what unlocks lending.',
         actionLabel: _checking ? 'Verifying...' : 'Verify identity',
         loading: _checking,
         onAction: _checking ? null : _runCheck,

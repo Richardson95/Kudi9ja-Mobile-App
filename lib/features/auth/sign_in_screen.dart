@@ -142,9 +142,10 @@ class _SignInScreenState extends State<SignInScreen> {
                 Text(
                   signingIn
                       ? 'Sign in to continue to your dashboard'
-                      : 'Loans for staff before payday, personal loans up to '
-                          '${settings.maxLoanAmount.asNairaFlat}, and '
-                          '${settings.savingsRatePct.toStringAsFixed(0)}% a year on savings, paid upfront.',
+                      : 'Loans for staff before payday, and personal loans up to '
+                          '${settings.maxLoanAmount.asNairaFlat}.',
+                          // Savings is switched off for now. It used to add:
+                          // '${settings.savingsRatePct.toStringAsFixed(0)}% a year on savings, paid upfront.'
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
@@ -265,10 +266,10 @@ class _SignInScreenState extends State<SignInScreen> {
           // is the only place it exists and removing it really is final.
           context.read<AppState>().isOnline
               ? 'This signs you out and clears everything Kudi9ja keeps on this '
-                  'phone. Your account, savings and history are safe — sign back '
+                  'phone. Your account and history are safe — sign back '
                   'in with your email and password to see them again.'
               : 'This clears the Kudi9ja account stored on this device, '
-                  'including its savings plans and history. This cannot be undone.',
+                  'including its history. This cannot be undone.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [

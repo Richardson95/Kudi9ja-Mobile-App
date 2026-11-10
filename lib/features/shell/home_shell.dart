@@ -9,7 +9,8 @@ import '../../widgets/agreement_update_sheet.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../loans/loans_screen.dart';
 import '../profile/profile_screen.dart';
-import '../savings/savings_screen.dart';
+// Savings and Ajo circles are switched off for now.
+// import '../savings/savings_screen.dart';
 import '../wallet/wallet_screen.dart';
 
 class HomeShell extends StatefulWidget {
@@ -40,7 +41,8 @@ class _HomeShellState extends State<HomeShell> {
 
   static const _tabs = [
     (Icons.grid_view_rounded, Icons.grid_view_outlined, 'Home'),
-    (Icons.savings_rounded, Icons.savings_outlined, 'Save'),
+    // Savings and Ajo circles are switched off for now.
+    // (Icons.savings_rounded, Icons.savings_outlined, 'Save'),
     (Icons.credit_score_rounded, Icons.credit_score_outlined, 'Borrow'),
     (Icons.receipt_long_rounded, Icons.receipt_long_outlined, 'Wallet'),
     (Icons.person_rounded, Icons.person_outline_rounded, 'Profile'),
@@ -79,7 +81,8 @@ class _HomeShellState extends State<HomeShell> {
         index: _index,
         children: const [
           DashboardScreen(),
-          SavingsScreen(),
+          // Savings and Ajo circles are switched off for now.
+          // SavingsScreen(),
           LoansScreen(),
           WalletScreen(),
           ProfileScreen(),

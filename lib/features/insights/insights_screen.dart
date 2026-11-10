@@ -44,7 +44,7 @@ class InsightsScreen extends StatelessWidget {
                   icon: Icons.insights_rounded,
                   title: 'Nothing to analyse yet',
                   message:
-                      'Once you start saving and spending, your patterns show up here.',
+                      'Once money moves through your wallet, your patterns show up here.',
                 )
               : ListView(
                   padding: const EdgeInsets.all(AppSpacing.xl),
@@ -108,13 +108,14 @@ class _NetWorthCard extends StatelessWidget {
           total: app.netWorth,
           color: AppColors.gold,
         ),
-        const SizedBox(height: AppSpacing.md),
-        _Bar(
-          label: 'Locked in savings',
-          value: app.totalSaved,
-          total: app.netWorth,
-          color: AppColors.info,
-        ),
+        // Savings and Ajo circles are switched off for now.
+        // const SizedBox(height: AppSpacing.md),
+        // _Bar(
+        //   label: 'Locked in savings',
+        //   value: app.totalSaved,
+        //   total: app.netWorth,
+        //   color: AppColors.info,
+        // ),
         if (app.totalOwed > 0) ...[
           const SizedBox(height: AppSpacing.lg),
           const HairLine(),

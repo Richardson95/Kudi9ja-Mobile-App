@@ -149,7 +149,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                           if (loans.isNotEmpty) ...[
                             KOptionTile(
                               title: 'Fund my wallet',
-                              subtitle: 'Save, join a circle, or keep it',
+                              subtitle: 'Repay from it, or keep it',
                               icon: Icons.account_balance_wallet_outlined,
                               selected: !repaying,
                               onTap: () => setState(() => _purpose = DepositPurpose.wallet),

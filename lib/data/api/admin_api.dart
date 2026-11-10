@@ -40,6 +40,11 @@ class AdminApi {
   /// The book-wide totals, counted by the server across every customer.
   Future<PlatformBook> book() async => platformBookFromApi(await overview());
 
+  /// Every loan and wallet the Overview figures are added up from, so each
+  /// figure can open the list behind it.
+  Future<BookDetail> bookDetail() async =>
+      BookDetail.fromApi(_obj(await _client.get('/admin/overview/book')));
+
   Future<Map<String, dynamic>> whoAmI() async =>
       _obj(await _client.get('/admin/team/me'));
 

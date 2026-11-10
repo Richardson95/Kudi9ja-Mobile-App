@@ -902,3 +902,166 @@ class ExportReport {
         .toList(),
   );
 }
+
+// ── The rows behind the Overview figures ──────────────────────────────────
+
+/// One loan behind the Overview figures: on a customer's account, or entered
+/// by hand and not yet claimed by its borrower.
+class BookDetailLoan {
+  const BookDetailLoan({
+    required this.offline,
+    required this.id,
+    this.customerId,
+    required this.customerName,
+    required this.customerRef,
+    this.phone,
+    this.officers = const [],
+    this.principal = 0,
+    this.flatRate = 0,
+    this.interest = 0,
+    this.managementFee = 0,
+    this.transactionFee = 0,
+    this.repaymentFees = 0,
+    this.fees = 0,
+    this.totalRepayable = 0,
+    this.amountRepaid = 0,
+    this.outstanding = 0,
+    this.pastDue = 0,
+    this.missedInstalments = 0,
+    this.oldestMissedDue,
+    this.daysBehind = 0,
+    this.installmentCount = 0,
+    this.installmentsPaid = 0,
+    this.nextDue,
+    this.nextDueAmount,
+    this.open = false,
+    this.status = '',
+    this.statusLabel = '',
+    this.weekly = false,
+    this.tenureMonths = 0,
+    this.purpose = '',
+    this.disbursedAt,
+    this.dueDate,
+  });
+
+  final bool offline;
+  final String id;
+  final String? customerId;
+  final String customerName;
+  final String customerRef;
+  final String? phone;
+  final List<String> officers;
+  final double principal;
+  final double flatRate;
+  final double interest;
+  final double managementFee;
+  final double transactionFee;
+  final double repaymentFees;
+  final double fees;
+  final double totalRepayable;
+  final double amountRepaid;
+  final double outstanding;
+  final double pastDue;
+  final int missedInstalments;
+  final DateTime? oldestMissedDue;
+  final int daysBehind;
+  final int installmentCount;
+  final int installmentsPaid;
+  final DateTime? nextDue;
+  final double? nextDueAmount;
+  final bool open;
+  final String status;
+  final String statusLabel;
+  final bool weekly;
+  final int tenureMonths;
+  final String purpose;
+  final DateTime? disbursedAt;
+  final DateTime? dueDate;
+
+  /// What reached the borrower: the loan less the fees taken off the payout.
+  double get paidOut => principal - managementFee - transactionFee;
+
+  factory BookDetailLoan.fromApi(Map<String, dynamic> j) => BookDetailLoan(
+    offline: str(j['source']) == 'OFFLINE',
+    id: str(j['id']),
+    customerId: j['customerId'] is String ? j['customerId'] as String : null,
+    customerName: str(j['customerName'], 'Unknown'),
+    customerRef: str(j['customerRef']),
+    phone: j['phone'] is String ? j['phone'] as String : null,
+    officers: (j['officers'] is List)
+        ? (j['officers'] as List).whereType<String>().toList()
+        : const [],
+    principal: money(j['principal']),
+    flatRate: money(j['flatRate']),
+    interest: money(j['interest']),
+    managementFee: money(j['managementFee']),
+    transactionFee: money(j['transactionFee']),
+    repaymentFees: money(j['repaymentFees']),
+    fees: money(j['fees']),
+    totalRepayable: money(j['totalRepayable']),
+    amountRepaid: money(j['amountRepaid']),
+    outstanding: money(j['outstanding']),
+    pastDue: money(j['pastDue']),
+    missedInstalments: integer(j['missedInstalments']),
+    oldestMissedDue: dateOrNull(j['oldestMissedDue']),
+    daysBehind: integer(j['daysBehind']),
+    installmentCount: integer(j['installmentCount']),
+    installmentsPaid: integer(j['installmentsPaid']),
+    nextDue: dateOrNull(j['nextDue']),
+    nextDueAmount: j['nextDueAmount'] == null ? null : money(j['nextDueAmount']),
+    open: boolean(j['open']),
+    status: str(j['status']),
+    statusLabel: str(j['statusLabel']),
+    weekly: str(j['repaymentFrequency']) == 'WEEKLY',
+    tenureMonths: integer(j['tenureMonths']),
+    purpose: str(j['purpose']),
+    disbursedAt: dateOrNull(j['disbursedAt']),
+    dueDate: dateOrNull(j['dueDate']),
+  );
+}
+
+/// A wallet holding money, for the "Customer money held" list.
+class WalletHolder {
+  const WalletHolder({
+    required this.customerId,
+    required this.customerName,
+    required this.customerRef,
+    this.phone,
+    this.accountStatus,
+    this.balance = 0,
+    this.updatedAt,
+  });
+
+  final String customerId;
+  final String customerName;
+  final String customerRef;
+  final String? phone;
+  final String? accountStatus;
+  final double balance;
+  final DateTime? updatedAt;
+
+  factory WalletHolder.fromApi(Map<String, dynamic> j) => WalletHolder(
+    customerId: str(j['customerId']),
+    customerName: str(j['customerName'], 'Unknown'),
+    customerRef: str(j['customerRef']),
+    phone: j['phone'] is String ? j['phone'] as String : null,
+    accountStatus: j['accountStatus'] is String ? j['accountStatus'] as String : null,
+    balance: money(j['balance']),
+    updatedAt: dateOrNull(j['updatedAt']),
+  );
+}
+
+/// Every loan and wallet the Overview figures are added up from.
+class BookDetail {
+  const BookDetail({this.loans = const [], this.wallets = const [], this.generatedAt});
+
+  final List<BookDetailLoan> loans;
+  final List<WalletHolder> wallets;
+  final DateTime? generatedAt;
+
+  factory BookDetail.fromApi(Map<String, dynamic> j) => BookDetail(
+    loans: list(j['loans']).map(BookDetailLoan.fromApi).toList(),
+    wallets: list(j['wallets']).map(WalletHolder.fromApi).toList(),
+    generatedAt: dateOrNull(j['generatedAt']),
+  );
+}

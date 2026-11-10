@@ -296,6 +296,7 @@ class MetricTile extends StatelessWidget {
     required this.icon,
     this.tint,
     this.footnote,
+    this.onTap,
   });
 
   final String label;
@@ -304,8 +305,12 @@ class MetricTile extends StatelessWidget {
   final Color? tint;
   final String? footnote;
 
+  /// Opens the list the figure was added up from.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) => KCard(
+    onTap: onTap,
     padding: const EdgeInsets.all(AppSpacing.lg),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,

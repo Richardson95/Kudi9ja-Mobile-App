@@ -309,7 +309,7 @@ class ProfileScreen extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign out?'),
         content: Text(
-          'Your savings and history stay safe. You will need your email and password to sign back in.',
+          'Your money and history stay safe. You will need your email and password to sign back in.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         actions: [
@@ -410,7 +410,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Funding your wallet, opening savings or repaying a loan — it '
+                'Funding your wallet or repaying a loan — it '
                 'all goes to this account, always by bank transfer.',
                 style: TextStyle(
                   fontSize: 12.5,
@@ -461,40 +461,41 @@ class ProfileScreen extends StatelessWidget {
               KCard(
                 child: Column(
                   children: [
-                    _Detail(
-                      'Fixed Savings',
-                      '${settings.savingsRatePct.toStringAsFixed(0)}% per annum, paid upfront',
-                    ),
-                    _Detail('Fixed lock period', '1 month to 5 years'),
-                    _Detail('Fixed plans', 'Cannot be broken before maturity'),
-                    _Detail(
-                      'Target Savings',
-                      'Bonus paid on the final day',
-                    ),
-                    _Detail(
-                      '  3 - 5 months',
-                      '${settings.targetShortPct.toStringAsFixed(1)}%',
-                    ),
-                    _Detail(
-                      '  6 - 11 months',
-                      '${settings.targetMediumPct.toStringAsFixed(1)}%',
-                    ),
-                    _Detail(
-                      '  1 year and above',
-                      '${settings.targetLongPct.toStringAsFixed(1)}%',
-                    ),
-                    _Detail(
-                      'Target minimum term',
-                      '${settings.minTargetMonths} months',
-                    ),
-                    _Detail(
-                      'Breaking Target Savings',
-                      'Principal returned in full, bonus forfeited',
-                    ),
-                    _Detail(
-                      'Minimum savings',
-                      settings.minSavingsAmount.asNairaFlat,
-                    ),
+                    // Savings and Ajo circles are switched off for now.
+                    // _Detail(
+                    //   'Fixed Savings',
+                    //   '${settings.savingsRatePct.toStringAsFixed(0)}% per annum, paid upfront',
+                    // ),
+                    // _Detail('Fixed lock period', '1 month to 5 years'),
+                    // _Detail('Fixed plans', 'Cannot be broken before maturity'),
+                    // _Detail(
+                    //   'Target Savings',
+                    //   'Bonus paid on the final day',
+                    // ),
+                    // _Detail(
+                    //   '  3 - 5 months',
+                    //   '${settings.targetShortPct.toStringAsFixed(1)}%',
+                    // ),
+                    // _Detail(
+                    //   '  6 - 11 months',
+                    //   '${settings.targetMediumPct.toStringAsFixed(1)}%',
+                    // ),
+                    // _Detail(
+                    //   '  1 year and above',
+                    //   '${settings.targetLongPct.toStringAsFixed(1)}%',
+                    // ),
+                    // _Detail(
+                    //   'Target minimum term',
+                    //   '${settings.minTargetMonths} months',
+                    // ),
+                    // _Detail(
+                    //   'Breaking Target Savings',
+                    //   'Principal returned in full, bonus forfeited',
+                    // ),
+                    // _Detail(
+                    //   'Minimum savings',
+                    //   settings.minSavingsAmount.asNairaFlat,
+                    // ),
                     _Detail(
                       'Maximum loan',
                       settings.maxLoanAmount.asNairaFlat,

@@ -61,8 +61,8 @@ class _PayoutStepState extends State<PayoutStep> {
         loading: widget.busy,
     headline: 'Where should we\npay you?',
     subhead:
-        'Kudi9ja does not give you a new account number. Your savings '
-        'returns, your loans and anything you withdraw go straight to a bank '
+        'Kudi9ja does not give you a new account number. Your loans and '
+        'anything you withdraw go straight to a bank '
         'account you already have.',
     actionLabel: 'Continue',
     onAction: _ready ? widget.onNext : null,

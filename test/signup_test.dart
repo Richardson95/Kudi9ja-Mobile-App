@@ -2,55 +2,57 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kudi9ja/core/theme/app_theme.dart';
 import 'package:kudi9ja/features/auth/signup/signup_draft.dart';
-import 'package:kudi9ja/data/services/storage_service.dart';
+// import 'package:kudi9ja/data/services/storage_service.dart'; // only the Ajo circle test used it
 import 'package:kudi9ja/features/auth/signup/steps/identity_step.dart';
-import 'package:kudi9ja/features/savings/thrift/create_circle_screen.dart';
-import 'package:kudi9ja/state/app_state.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// Savings and Ajo circles are switched off for now.
+// import 'package:kudi9ja/features/savings/thrift/create_circle_screen.dart';
+// import 'package:kudi9ja/state/app_state.dart'; // only the Ajo circle test used it
+// import 'package:provider/provider.dart'; // only the Ajo circle test used it
+// import 'package:shared_preferences/shared_preferences.dart'; // only the Ajo circle test used it
 
 Widget _host(Widget child) =>
     MaterialApp(theme: AppTheme.dark, home: Scaffold(body: child));
 
 void main() {
-  group('Ajo circle members', () {
-    testWidgets('the member field asks for a customer reference, not a name', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({});
-      final app = AppState(await StorageService.init());
-
-      await tester.pumpWidget(
-        ChangeNotifierProvider<AppState>.value(
-          value: app,
-          child: MaterialApp(
-            theme: AppTheme.dark,
-            home: const CreateCircleScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // The members section sits below the fold.
-      await tester.dragUntilVisible(
-        find.text('Add by customer reference'),
-        find.byType(Scrollable).first,
-        const Offset(0, -180),
-      );
-      await tester.pumpAndSettle();
-
-      // A member is identified by their reference, not their name: every round
-      // debits a real wallet, and a typed name matches nobody.
-      expect(find.text('Add by customer reference'), findsOneWidget);
-      expect(
-        find.textContaining('must already have a Kudi9ja account'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('K9-A1B2C3'), findsWidgets);
-
-      expect(tester.takeException(), isNull);
-    });
-  });
+  // Savings and Ajo circles are switched off for now.
+  // group('Ajo circle members', () {
+  //   testWidgets('the member field asks for a customer reference, not a name', (
+  //     tester,
+  //   ) async {
+  //     SharedPreferences.setMockInitialValues({});
+  //     final app = AppState(await StorageService.init());
+  //
+  //     await tester.pumpWidget(
+  //       ChangeNotifierProvider<AppState>.value(
+  //         value: app,
+  //         child: MaterialApp(
+  //           theme: AppTheme.dark,
+  //           home: const CreateCircleScreen(),
+  //         ),
+  //       ),
+  //     );
+  //     await tester.pumpAndSettle();
+  //
+  //     // The members section sits below the fold.
+  //     await tester.dragUntilVisible(
+  //       find.text('Add by customer reference'),
+  //       find.byType(Scrollable).first,
+  //       const Offset(0, -180),
+  //     );
+  //     await tester.pumpAndSettle();
+  //
+  //     // A member is identified by their reference, not their name: every round
+  //     // debits a real wallet, and a typed name matches nobody.
+  //     expect(find.text('Add by customer reference'), findsOneWidget);
+  //     expect(
+  //       find.textContaining('must already have a Kudi9ja account'),
+  //       findsOneWidget,
+  //     );
+  //     expect(find.textContaining('K9-A1B2C3'), findsWidgets);
+  //
+  //     expect(tester.takeException(), isNull);
+  //   });
+  // });
 
 
   group('Identity step', () {
