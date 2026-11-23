@@ -226,9 +226,9 @@ abstract final class AppConfig {
   // Legal entity -----------------------------------------------------------
   /// Kudi9ja is a product; the company behind it is the one that contracts
   /// with customers, and it is the name that must appear on every agreement.
-  static const legalEntity = 'Quadrilateral Technologies Limited';
-  static const rcNumber = 'RC 1657731';
-  static const registeredAddress = 'Kudi9ja Limited, Lagos, Nigeria';
+  static const legalEntity = 'Kudi9ja Limited';
+  static const rcNumber = 'RC 9405885';
+  static const registeredAddress = 'Lagos, Nigeria';
 
   /// Inboxes, split by the document each one answers for.
   static const legalEmail = 'legal@kudi9ja.com';

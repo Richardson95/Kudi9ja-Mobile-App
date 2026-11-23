@@ -43,7 +43,8 @@ LegalDocument lendingAgreement() {
         const LegalNote(
           'Read the confirmation screen before you press confirm. It shows '
           'exactly what will reach your wallet, exactly what you will repay, '
-          'and exactly when. Nothing is added afterwards.',
+          'and exactly when. Nothing is added afterwards, except a daily late '
+          'charge if the loan is still unpaid after its final due date.',
           title: 'Before you borrow',
         ),
       ]),
@@ -177,15 +178,27 @@ LegalDocument lendingAgreement() {
         const LegalList([
           'an application fee, an insurance premium or a "management" charge;',
           'a fee for repaying early — early settlement earns you a **rebate**, '
-              'not a penalty;',
-          'penalty interest or a late fee if you miss a due date; or',
+              'not a penalty; or',
           'any charge that was not on the screen you confirmed.',
         ]),
         const LegalNote(
-          'The total repayable is fixed on the day you borrow. However long '
-          'the loan is outstanding, and whatever happens afterwards, the debt '
-          'itself does not grow. Interest never accrues on top of interest.',
-          title: 'Your debt cannot grow',
+          'If any amount is still unpaid after your loan\'s **final due date**, '
+          'a late charge of **0.18% of the amount you borrowed** is added to '
+          'what you owe **every day**, starting the day after that date, until '
+          'the loan is repaid in full. It is worked out on the original amount '
+          'borrowed, not on what is left, so it is the same every day — on a '
+          '₦100,000 loan it is ₦180 a day. There is no cap: it continues for as '
+          'long as the loan remains unpaid. Your repayments clear your '
+          'instalments first and the late charges last.',
+          title: 'Late charge',
+          tone: LegalTone.caution,
+        ),
+        const LegalNote(
+          'The total repayable is fixed on the day you borrow. Repaid on time, '
+          'it never changes, and interest never accrues on top of interest. '
+          'The only thing ever added to it is the late charge above, once the '
+          'final due date has passed.',
+          title: 'Your total is fixed',
           tone: LegalTone.positive,
         ),
       ]),
@@ -343,11 +356,11 @@ LegalDocument lendingAgreement() {
               'agreement, which we will evidence to you.',
         ]),
         const LegalNote(
-          'Even in default, **the amount you owe does not increase**. There is '
-          'no penalty interest and no late fee. What you owed on the due date '
-          'is what you owe, plus only such enforcement costs as we can '
-          'actually evidence.',
-          tone: LegalTone.positive,
+          'In default, **what you owe keeps growing**: the late charge of 0.18% '
+          'of the amount you borrowed is added every day after the final due '
+          'date until the loan is repaid in full, plus only such enforcement '
+          'costs as we can actually evidence.',
+          tone: LegalTone.caution,
         ),
         const LegalText(
           'We will always contact you and give you a reasonable chance to put '
