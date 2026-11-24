@@ -124,6 +124,20 @@ class AdminApi {
           .map(SignatureRecord.fromApi)
           .toList();
 
+  /// The three face-check photos from sign-up (pose BLINK, TURN or MOUTH),
+  /// each behind a signed link whose every view is audited.
+  Future<List<Map<String, dynamic>>> customerFacePhotos(String id) async =>
+      _list(await _client.get('/admin/customers/$id/face-photos'));
+
+  /// Credit checks already made for a customer, newest first, and whether the
+  /// server can run one.
+  Future<Map<String, dynamic>> customerCreditChecks(String id) async =>
+      _obj(await _client.get('/admin/customers/$id/credit-checks'));
+
+  /// A fresh credit score by BVN. Charged to the Dojah wallet; logged.
+  Future<Map<String, dynamic>> runCreditCheck(String id) async =>
+      _obj(await _client.post('/admin/customers/$id/credit-checks'));
+
   /// Everything recorded by hand about a customer: loans entered from paper,
   /// documents on any of their loans, repayments taken outside the app.
   Future<LoanRecords> customerLoanRecords(String id) async =>

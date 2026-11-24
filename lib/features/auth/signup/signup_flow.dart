@@ -16,6 +16,7 @@ import '../../../data/services/security_service.dart';
 import '../../../state/app_state.dart';
 import '../../../widgets/primitives.dart';
 import 'signup_draft.dart';
+import 'steps/face_check_step.dart';
 import 'steps/identity_step.dart';
 import 'steps/otp_step.dart';
 import 'steps/passcode_step.dart';
@@ -52,6 +53,7 @@ class _SignupFlowState extends State<SignupFlow> {
     'Your details',
     'Verify email',
     'Identity check',
+    'Face check',
     'Payout account',
     'Secure your account',
     'Sign-in passcode',
@@ -131,12 +133,19 @@ class _SignupFlowState extends State<SignupFlow> {
             state: _draft.stateOfResidence,
           );
         case 3:
+          await api.submitLiveness(
+            _draft.draftId!,
+            blink: _draft.faceBlink,
+            turn: _draft.faceTurn,
+            mouth: _draft.faceMouth,
+          );
+        case 4:
           await api.submitPayout(
             _draft.draftId!,
             bank: _draft.payoutBank,
             accountNumber: _draft.payoutAccountNumber,
           );
-        case 4:
+        case 5:
           await api.submitPassword(
             _draft.draftId!,
             password: _draft.password,
@@ -146,19 +155,19 @@ class _SignupFlowState extends State<SignupFlow> {
             // the answer permanently unverifiable.
             securityAnswer: _draft.securityAnswer.trim(),
           );
-        case 5:
+        case 6:
           await api.submitPasscode(
             _draft.draftId!,
             passcode: _draft.signInPasscode,
             confirmPasscode: _draft.signInPasscode,
           );
-        case 6:
+        case 7:
           await api.submitPin(
             _draft.draftId!,
             pin: _draft.transactionPin,
             confirmPin: _draft.transactionPin,
           );
-        case 7:
+        case 8:
           // The review step submits nothing on its own. Accepting the documents
           // is part of creating the account, so it travels with the call that
           // creates it — see _finish.
@@ -340,6 +349,7 @@ class _SignupFlowState extends State<SignupFlow> {
                         onResend: _online ? _resendEmailCode : null,
                       ),
                       IdentityStep(draft: _draft, onNext: _next),
+                      FaceCheckStep(draft: _draft, onNext: _next, busy: _working),
                       PayoutStep(draft: _draft, onNext: _next, busy: _working),
                       PasswordStep(draft: _draft, onNext: _next, busy: _working),
                       PasscodeStep(

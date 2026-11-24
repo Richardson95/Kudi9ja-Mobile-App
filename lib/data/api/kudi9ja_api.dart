@@ -130,6 +130,17 @@ class Kudi9jaApi {
           authenticated: false,
           body: {'bvn': bvn, 'nin': nin, 'address': address, 'state': state}));
 
+  /// The face check: one JPEG data URL for each movement.
+  Future<Map<String, dynamic>> submitLiveness(
+    String draftId, {
+    required String blink,
+    required String turn,
+    required String mouth,
+  }) async =>
+      _asMap(await _client.post('/auth/signup/$draftId/liveness',
+          authenticated: false,
+          body: {'blink': blink, 'turn': turn, 'mouth': mouth}));
+
   Future<Map<String, dynamic>> submitPayout(
     String draftId, {
     required String bank,

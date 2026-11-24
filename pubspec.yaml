@@ -53,6 +53,8 @@ dependencies:
   webview_flutter: ^4.14.1
   # Calling or emailing a loan officer, and opening the WhatsApp lines.
   url_launcher: ^6.3.2
+  camera: ^0.12.0+2
+  google_mlkit_face_detection: ^0.14.0
 
 dev_dependencies:
   flutter_test:

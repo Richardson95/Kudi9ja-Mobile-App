@@ -22,6 +22,11 @@ class SignupDraft {
   String address = '';
   String stateOfResidence = '';
 
+  /// The three face-check photos (JPEG data URLs): blink, head turn, open mouth.
+  String faceBlink = '';
+  String faceTurn = '';
+  String faceMouth = '';
+
   /// The customer's own bank account — where Kudi9ja pays money out to.
   /// Kudi9ja issues no account numbers of its own.
   String payoutBank = '';

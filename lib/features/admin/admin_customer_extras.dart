@@ -35,6 +35,9 @@ class _CustomerExtrasState extends State<CustomerExtras> {
   List<SignatureRecord> _signatures = const [];
   List<LoanGroup> _groups = const [];
   LoanRecords _records = const LoanRecords();
+  List<Map<String, dynamic>> _facePhotos = const [];
+  Map<String, dynamic>? _credit;
+  bool _checking = false;
   bool _showPaystack = false;
 
   @override
@@ -59,13 +62,108 @@ class _CustomerExtrasState extends State<CustomerExtras> {
       quietly(() => admin.customerSignatures(id)),
       quietly(() => admin.customerGroups(id)),
       quietly(() => admin.customerLoanRecords(id)),
+      quietly(() => admin.customerFacePhotos(id)),
+      quietly(() => admin.customerCreditChecks(id)),
     ]);
     if (!mounted) return;
     setState(() {
       _signatures = (results[0] as List<SignatureRecord>?) ?? const [];
       _groups = (results[1] as List<LoanGroup>?) ?? const [];
       _records = (results[2] as LoanRecords?) ?? const LoanRecords();
+      _facePhotos = (results[3] as List<Map<String, dynamic>>?) ?? const [];
+      _credit = results[4] as Map<String, dynamic>?;
     });
+  }
+
+  Future<void> _runCreditCheck() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Check credit score?'),
+        content: const Text(
+          'Looks up the customer\'s BVN with the credit bureaus through Dojah. Each check is charged to the Dojah wallet.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Check')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final admin = context.read<AppState>().adminApi;
+    if (admin == null) return;
+    setState(() => _checking = true);
+    try {
+      await admin.runCreditCheck(widget.customer.id);
+      final fresh = await admin.customerCreditChecks(widget.customer.id);
+      if (!mounted) return;
+      setState(() => _credit = fresh);
+      showToast(context, 'Credit score updated');
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  Widget _creditCard(bool canAct) {
+    final checks = (_credit?['checks'] as List?) ?? const [];
+    final available = _credit?['available'] == true;
+    final latest = checks.isEmpty ? null : Map<String, dynamic>.from(checks.first as Map);
+    final muted = TextStyle(color: AppColors.textSecondary, height: 1.5);
+    String when(Map<String, dynamic> c) =>
+        '${DateTime.tryParse('${c['checkedAt']}')?.toLocal().asDayTime ?? ''} by ${c['checkedBy']}';
+    Widget row(String k, Object? v) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Expanded(child: Text(k, style: muted)),
+              Flexible(child: Text(v == null ? '-' : '$v', textAlign: TextAlign.right)),
+            ],
+          ),
+        );
+    return KCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (latest == null)
+            Text(available ? 'Not checked yet.' : 'Credit checks are not set up on the server yet.', style: muted)
+          else if (latest['found'] != true)
+            Text('The credit bureaus hold no record for this BVN. Checked ${when(latest)}.', style: muted)
+          else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('${latest['score'] ?? '-'}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800)),
+                const SizedBox(width: AppSpacing.md),
+                if (latest['rating'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('${latest['rating']}',
+                        style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            row('Has loans', latest['hasLoans']),
+            row('Loans in arrears', latest['delinquentFacilities']),
+            row('Last reported', latest['lastReported']),
+            row('Checked', when(latest)),
+            if (latest['reasons'] != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text('${latest['reasons']}', style: muted.copyWith(fontSize: 13)),
+            ],
+          ],
+          if (canAct && available) ...[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton(
+              onPressed: _checking ? null : _runCreditCheck,
+              child: Text(_checking ? 'Checking...' : latest == null ? 'Check' : 'Check again'),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -78,6 +176,37 @@ class _CustomerExtrasState extends State<CustomerExtras> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SizedBox(height: AppSpacing.xl),
+        const AdminSectionLabel('CREDIT SCORE'),
+        _creditCard(canAct),
+        const SizedBox(height: AppSpacing.xl),
+        const AdminSectionLabel('FACE CHECK'),
+        KCard(
+          child: _facePhotos.isEmpty
+              ? Text(
+                  'No face check photos. Accounts opened before the face check, or by the team, have none.',
+                  style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+                )
+              : Column(
+                  children: [
+                    for (final p in _facePhotos)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.face_retouching_natural, color: AppColors.gold),
+                        title: Text(_poseLabel('${p['pose']}')),
+                        subtitle: Text(DateTime.tryParse('${p['capturedAt']}')?.toLocal().asDayTime ?? ''),
+                        trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                        // The link is signed and every view of it is audited.
+                        onTap: () => openAuthedFile(
+                          context,
+                          url: '${p['url']}',
+                          label: '${_poseLabel('${p['pose']}')} of ${c.fullName}',
+                          contentType: 'image/jpeg',
+                        ),
+                      ),
+                  ],
+                ),
+        ),
         const SizedBox(height: AppSpacing.xl),
         const AdminSectionLabel('WHO LOOKS AFTER THEM'),
         OfficersPanel(customerId: c.id, canEdit: canAct),
@@ -210,6 +339,13 @@ class _CustomerExtrasState extends State<CustomerExtras> {
     );
   }
 }
+
+String _poseLabel(String pose) => switch (pose) {
+      'BLINK' => 'Blink',
+      'TURN' => 'Head turn',
+      'MOUTH' => 'Open mouth',
+      _ => pose,
+    };
 
 /// Asks why, then changes the account's status on the server.
 ///
