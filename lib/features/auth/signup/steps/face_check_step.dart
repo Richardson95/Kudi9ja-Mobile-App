@@ -45,8 +45,13 @@ const _prompts = {
   _Pose.mouth: 'Open your mouth wide',
 };
 
-/// Frames a movement must be held for, so a flicker is not counted.
+/// Frames a turn or open mouth must be held for, so a flicker is not counted.
+/// A blink needs only one frame: it lasts a tenth of a second, and a cheap
+/// phone may see only one frame of it.
 const _holdFrames = 2;
+
+/// After this long on one movement with a face in view, the customer may take the photo themselves.
+const _manualAfter = Duration(seconds: 20);
 
 class _FaceCheckStepState extends State<FaceCheckStep> {
   CameraController? _camera;
@@ -60,8 +65,11 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
   bool _processing = false;
   bool _capturing = false;
   int _held = 0;
-  bool _eyesOpenSeen = false;
+  double _openBaseline = 0;
   bool _centred = false;
+  DateTime _stepStarted = DateTime.now();
+  bool _faceInView = false;
+  bool _canTakeManually = false;
 
   bool get _passed => _phase == _Phase.passed;
 
@@ -103,8 +111,10 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
       _step = 0;
       _photos.clear();
       _held = 0;
-      _eyesOpenSeen = false;
+      _openBaseline = 0;
       _centred = false;
+      _faceInView = false;
+      _canTakeManually = false;
     });
     widget.draft
       ..faceBlink = ''
@@ -135,6 +145,7 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
         return;
       }
       _camera = camera;
+      _stepStarted = DateTime.now();
       setState(() => _phase = _Phase.running);
       await camera.startImageStream(_onFrame);
     } on CameraException catch (e) {
@@ -167,6 +178,7 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
     try {
       final faces = await detector.processImage(input);
       if (!mounted || _phase != _Phase.running) return;
+      _faceInView = faces.length == 1;
       if (faces.isEmpty) {
         _setHint('We cannot see your face. Face the camera in good light.');
         _held = 0;
@@ -178,25 +190,32 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
         return;
       }
       _setHint(null);
+      if (!_canTakeManually && DateTime.now().difference(_stepStarted) > _manualAfter) {
+        setState(() => _canTakeManually = true);
+      }
       final face = faces.first;
       final pose = _Pose.values[_step];
-      var doing = false;
+      var done = false;
       switch (pose) {
         case _Pose.blink:
           final left = face.leftEyeOpenProbability;
           final right = face.rightEyeOpenProbability;
           if (left == null || right == null) break;
-          if (left > 0.7 && right > 0.7) _eyesOpenSeen = true;
-          doing = _eyesOpenSeen && left < 0.25 && right < 0.25;
+          // Measured against this person's own open eyes, so small eyes,
+          // glasses or a bright window behind them do not stop a real blink.
+          final open = (left + right) / 2;
+          _openBaseline = math.max(_openBaseline, open);
+          done = _openBaseline > 0 && (open < 0.4 || open < _openBaseline * 0.5);
         case _Pose.turn:
           final yaw = face.headEulerAngleY ?? 0;
-          if (yaw.abs() < 10) _centred = true;
-          doing = _centred && yaw.abs() > 25;
+          if (yaw.abs() < 12) _centred = true;
+          _held = _centred && yaw.abs() > 20 ? _held + 1 : 0;
+          done = _held >= _holdFrames;
         case _Pose.mouth:
-          doing = _mouthOpen(face);
+          _held = _mouthOpen(face) ? _held + 1 : 0;
+          done = _held >= _holdFrames;
       }
-      _held = doing ? _held + 1 : 0;
-      if (_held >= _holdFrames) {
+      if (done) {
         _held = 0;
         await _capture(pose);
       }
@@ -214,7 +233,7 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
     if (upper == null || lower == null || upper.isEmpty || lower.isEmpty) return false;
     double mid(List<math.Point<int>> pts) => pts.map((p) => p.y).reduce((a, b) => a + b) / pts.length;
     final gap = (mid(lower) - mid(upper)).abs();
-    return gap / face.boundingBox.height > 0.08;
+    return gap / face.boundingBox.height > 0.06;
   }
 
   Future<void> _capture(_Pose pose) async {
@@ -232,7 +251,9 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
       setState(() {
         _photos[pose] = dataUrl;
         _step++;
+        _canTakeManually = false;
       });
+      _stepStarted = DateTime.now();
       if (_step >= _Pose.values.length) {
         widget.draft
           ..faceBlink = _photos[_Pose.blink]!
@@ -248,6 +269,17 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
     } finally {
       _capturing = false;
     }
+  }
+
+  /// The fallback after [_manualAfter]: keeps the current frame for this movement.
+  Future<void> _takeManually() async {
+    if (_capturing || !_faceInView || _phase != _Phase.running) return;
+    while (_processing) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    if (_capturing || _phase != _Phase.running) return;
+    _held = 0;
+    await _capture(_Pose.values[_step]);
   }
 
   void _setHint(String? hint) {
@@ -387,6 +419,12 @@ class _FaceCheckStepState extends State<FaceCheckStep> {
               ),
           ],
         ),
+        if (_phase == _Phase.running && _canTakeManually)
+          OutlinedButton.icon(
+            onPressed: _takeManually,
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: const Text('Take the photo'),
+          ),
         if (_phase == _Phase.intro || _phase == _Phase.failed || _passed)
           OutlinedButton.icon(
             onPressed: _start,
